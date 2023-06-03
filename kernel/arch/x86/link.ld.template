@@ -1,0 +1,59 @@
+ENTRY(x86_entry)
+
+#ifdef ULTRA_ARCH_I686
+VIRTUAL_BASE    = 0xC0000000;
+PHYSICAL_OFFSET = 0x100000;
+#define PTR_SIZE 4
+#else
+VIRTUAL_BASE    = 0xFFFFFFFF80000000;
+PHYSICAL_OFFSET = 0;
+#define PTR_SIZE 8
+#endif
+
+#define INT3_OPCODE 0xCC
+
+#include <linker_common.ld.h>
+
+// NOTE: These flags are currently not enforced by anyone
+PHDRS
+{
+    text   PT_LOAD FLAGS(PHDR_READ | PHDR_EXEC);
+    rodata PT_LOAD FLAGS(PHDR_READ);
+    data   PT_LOAD FLAGS(PHDR_READ | PHDR_WRITE);
+}
+
+SECTIONS
+{
+    . = VIRTUAL_BASE + PHYSICAL_OFFSET;
+
+    NORELOCS_GUARD
+
+    .text : VIRTUAL_BASE_RELATIVE(.text)
+    {
+        TEXT
+    } :text =INT3_OPCODE
+
+    . = ALIGN(4K);
+
+    .rodata : VIRTUAL_BASE_RELATIVE(.rodata)
+    {
+        RODATA(PTR_SIZE)
+    } :rodata =0xDEADBEEF
+
+    . = ALIGN(4K);
+
+    .data : VIRTUAL_BASE_RELATIVE(.data)
+    {
+        DATA
+    } :data
+
+    .bss : VIRTUAL_BASE_RELATIVE(.bss)
+    {
+        BSS
+    } :data
+
+    SECTION_DEBUG
+    SECTION_TABS
+
+    DISCARDS
+}

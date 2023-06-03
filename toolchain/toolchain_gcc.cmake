@@ -1,0 +1,25 @@
+include("${ULTRA_TOOLCHAIN_DIR}/toolchain_defaults.cmake")
+
+# Do this because cmake attempts to link against -lc and crt0
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(ULTRA_TOOLCHAIN_ROOT ${CMAKE_CURRENT_LIST_DIR}/tools-gcc-${ULTRA_ARCH})
+set(ULTRA_TOOLCHAIN_PATH ${ULTRA_TOOLCHAIN_ROOT}/bin)
+set(ULTRA_TOOLCHAIN_PREFIX ${ULTRA_TOOLCHAIN_PATH}/${ULTRA_ARCH}-elf-)
+
+set(CMAKE_C_COMPILER ${ULTRA_TOOLCHAIN_PREFIX}gcc)
+set(CMAKE_LINKER ${ULTRA_TOOLCHAIN_PREFIX}ld)
+
+execute_process(
+    COMMAND
+    ${CMAKE_C_COMPILER} -print-libgcc-file-name
+    OUTPUT_VARIABLE
+    ULTRA_LIBGCC_PATH
+    RESULT_VARIABLE
+    ULTRA_LIBGCC_RESULT
+)
+if (NOT ULTRA_LIBGCC_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to detect libgcc path")
+endif ()
+
+string(STRIP "${ULTRA_LIBGCC_PATH}" ULTRA_LIBGCC_PATH)
