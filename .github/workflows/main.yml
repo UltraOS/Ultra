@@ -1,0 +1,34 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        arch: [i686, x86_64]
+        toolchain: [gcc, clang]
+        exclude:
+          # FIXME: the GCC build somehow ends up being corrupted with
+          #        libexec/cc1 containing garbage data.
+          - os: macos-latest
+            toolchain: gcc
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - if: ${{ matrix.toolchain == 'gcc' }}
+        uses: actions/cache@v3.0.2
+        with:
+          path: "${{ github.workspace }}/toolchain/tools_${{ matrix.arch }}"
+          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc"
+
+      # TODO: maybe split these steps
+      - name: Build platform toolchain & Kernel
+        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
+
