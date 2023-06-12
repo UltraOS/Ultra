@@ -18,6 +18,7 @@ target_sources(
     ${ULTRA_KERNEL}
     PRIVATE
     entry.c
+    panic.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}
