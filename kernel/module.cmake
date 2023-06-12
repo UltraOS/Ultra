@@ -62,7 +62,7 @@ function(add_ultra_module)
             OUTPUT
             ${MODULE_OUTPUT}
             DEPENDS
-            ${MODULE_OBJECT_TARGET}
+            ${MODULE_OBJECT_TARGET} ${MODULE_SOURCES}
             COMMAND
             ${CMAKE_LINKER}
             -r -T${ULTRA_MODULE_LD_SCRIPT}
