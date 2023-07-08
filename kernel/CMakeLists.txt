@@ -19,6 +19,7 @@ target_sources(
     PRIVATE
     entry.c
     panic.c
+    console.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}
