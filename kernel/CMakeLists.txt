@@ -50,6 +50,7 @@ target_compile_definitions(
 
     # Always enable for now
     ULTRA_HARDENED_IO
+    ULTRA_GIT_SHA="${ULTRA_GIT_SHA}"
 )
 
 # We have to do this since ${CMAKE_CURRENT_FUNCTION_LIST_DIR}
