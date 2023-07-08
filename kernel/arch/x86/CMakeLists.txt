@@ -1,7 +1,9 @@
 if (ULTRA_ARCH STREQUAL "i686")
     set(ULTRA_X86_POSTFIX 32)
+    target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=4)
 else ()
     set(ULTRA_X86_POSTFIX 64)
+    target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=8)
 endif()
 
 target_sources(
