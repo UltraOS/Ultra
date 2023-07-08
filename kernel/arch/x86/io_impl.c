@@ -234,9 +234,7 @@ static void do_pio_writes(io_window *iow, size_t offset, u8 width,
     size_t i;
     u16 port;
 
-    port = (ptr_t)io_window_get_address(iow);
-    port -= IO_WINDOW_PIO_BASE;
-    port += offset;
+    port = pio_window_get_port(iow, offset, count);
 
     #define WIDTH_SWITCH_ACTION_8(bits)
     #define WIDTH_SWITCH_ACTION(bits)       \
@@ -258,8 +256,7 @@ static void do_mmio_writes(io_window *iow, size_t offset, u8 width,
     size_t i;
     void *ptr;
 
-    ptr = io_window_get_address(iow);
-    ptr += offset;
+    ptr = mmio_window_get_ptr(iow, offset, count);
 
     #define WIDTH_SWITCH_ACTION(bits)                       \
         *((volatile u##bits*)ptr) = *(volatile u##bits*)in; \
