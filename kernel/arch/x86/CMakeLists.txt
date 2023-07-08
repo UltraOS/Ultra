@@ -12,6 +12,7 @@ target_sources(
     entry.c
     io_impl.c
     cpuid.c
+    hypervisor.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}
