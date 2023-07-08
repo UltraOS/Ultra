@@ -70,3 +70,12 @@ if (ULTRA_TOOLCHAIN STREQUAL "gcc")
         ${ULTRA_LIBGCC_PATH}
     )
 endif()
+
+add_ultra_module(
+    NAME
+    e9-console
+    SOURCES
+    e9_console.c
+    TYPE
+    COMPILED_IN
+)
