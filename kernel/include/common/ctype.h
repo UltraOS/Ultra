@@ -1,7 +1,8 @@
 #pragma once
 
 #include "types.h"
-#include "bug.h"
+
+#include <bug.h>
 
 #define LOWER_TO_UPPER_OFFSET ('a' - 'A')
 BUILD_BUG_ON(LOWER_TO_UPPER_OFFSET < 0);
@@ -31,7 +32,7 @@ static inline char tolower(char c)
     return c;
 }
 
-static inline void str_tolower(char* str, size_t size)
+static inline void str_tolower(char *str, size_t size)
 {
     size_t i;
 
@@ -47,7 +48,7 @@ static inline char toupper(char c)
     return c;
 }
 
-static inline void str_toupper(char* str, size_t size)
+static inline void str_toupper(char *str, size_t size)
 {
     size_t i;
 
