@@ -10,6 +10,7 @@ target_sources(
     ${ULTRA_KERNEL}
     PRIVATE
     entry.c
+    io_impl.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}

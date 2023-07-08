@@ -45,6 +45,9 @@ target_compile_definitions(
     ${ULTRA_KERNEL}
     PUBLIC
     ULTRA_ARCH_${ULTRA_ARCH_POSTFIX}
+
+    # Always enable for now
+    ULTRA_HARDENED_IO
 )
 
 # We have to do this since ${CMAKE_CURRENT_FUNCTION_LIST_DIR}
