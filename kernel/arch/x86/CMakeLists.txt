@@ -23,6 +23,12 @@ if (ULTRA_ARCH STREQUAL "x86_64")
         -mcmodel=kernel
         -mno-red-zone
     )
+elseif (NOT ULTRA_TOOLCHAIN_HAS_64BIT_MATH_BUILTINS)
+    target_sources(
+        ${ULTRA_KERNEL}
+        PRIVATE
+        builtins.c
+    )
 endif ()
 
 ultra_target_compile_options(
