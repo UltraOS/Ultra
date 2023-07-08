@@ -45,14 +45,6 @@ function(add_ultra_module)
             ${MODULE_OBJECT_TARGET}
         )
     elseif (MODULE_TYPE STREQUAL "RUNTIME")
-        get_target_property(ULTRA_DEFINITIONS ${ULTRA_KERNEL} COMPILE_DEFINITIONS)
-        target_compile_definitions(
-            ${MODULE_OBJECT_TARGET}
-            PRIVATE
-            ULTRA_RUNTIME_MODULE
-            ${ULTRA_DEFINITIONS}
-        )
-
         set(MODULE_OUTPUT "${CMAKE_BINARY_DIR}/${MODULE_NAME}.ko")
 
         # We use this "hack" because cmake doesn't offer an easy way to override
@@ -74,7 +66,20 @@ function(add_ultra_module)
             ALL DEPENDS
             ${MODULE_OUTPUT}
         )
+
+        target_compile_definitions(
+            ${MODULE_OBJECT_TARGET}
+            PRIVATE
+            ULTRA_RUNTIME_MODULE
+        )
     else ()
         message(FATAL_ERROR "Invalid module type '${MODULE_TYPE}'")
     endif ()
+
+    get_target_property(ULTRA_DEFINITIONS ${ULTRA_KERNEL} COMPILE_DEFINITIONS)
+    target_compile_definitions(
+        ${MODULE_OBJECT_TARGET}
+        PRIVATE
+        ${ULTRA_DEFINITIONS}
+    )
 endfunction()
