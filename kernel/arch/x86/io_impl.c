@@ -61,14 +61,9 @@ static void *io_window_get_address(io_window *iow)
     return iow->address;
 }
 
-static void io_window_check_bounds(io_window *iow, size_t offset,
-                                   size_t requested_count)
+static void io_window_check_bounds(io_window *iow, size_t offset)
 {
     BUG_ON(offset >= iow->length);
-
-    // Make this a separate check to protect against overflows
-    BUG_ON(requested_count > iow->length);
-    BUG_ON((offset + requested_count) > iow->length);
 }
 
 #else
@@ -104,31 +99,28 @@ void io_window_unmap(io_window *iow)
     *iow = (void*)0xACACCACA;
 }
 
-static void io_window_check_bounds(io_window *iow, size_t offset,
-                                   size_t requested_count)
+static void io_window_check_bounds(io_window *iow, size_t offset)
 {
     /*
-     * This could technically check that *iow + offset + requested_count
-     * doesn't overflow or is within a certain range that we could reserve
-     * for such mappings. But for now let's just leave all the checking to
-     * kernels compiled with ULTRA_HARDENED_IO.
+     * This could technically check that *iow + offset doesn't overflow or
+     * is within a certain range that we could reserve for such mappings.
+     * But for now let's just leave all the checking to kernels compiled
+     * with ULTRA_HARDENED_IO.
      */
     UNUSED(iow);
     UNUSED(offset);
-    UNUSED(requested_count);
 }
 
 #endif
 
-static u16 pio_window_get_port(io_window *iow, size_t offset,
-                               size_t requested_count)
+static u16 pio_window_get_port(io_window *iow, size_t offset)
 {
     ptr_t port = (ptr_t)io_window_get_address(iow);
 
     BUG_ON(port < IO_WINDOW_PIO_BASE);
     BUG_ON(port > IO_WINDOW_PIO_END);
 
-    io_window_check_bounds(iow, offset, requested_count);
+    io_window_check_bounds(iow, offset);
 
     port -= IO_WINDOW_PIO_BASE;
     port += offset;
@@ -136,12 +128,11 @@ static u16 pio_window_get_port(io_window *iow, size_t offset,
     return (u16)port;
 }
 
-static void *mmio_window_get_ptr(io_window *iow, size_t offset,
-                                 size_t requested_count)
+static void *mmio_window_get_ptr(io_window *iow, size_t offset)
 {
     void *ptr;
 
-    io_window_check_bounds(iow, offset, requested_count);
+    io_window_check_bounds(iow, offset);
 
     ptr = io_window_get_address(iow);
     ptr += offset;
@@ -176,7 +167,7 @@ static void do_pio_reads(io_window *iow, size_t offset, u8 width,
     size_t i;
     u16 port;
 
-    port = pio_window_get_port(iow, offset, count);
+    port = pio_window_get_port(iow, offset);
 
     #define WIDTH_SWITCH_ACTION_8(bits)
     #define WIDTH_SWITCH_ACTION(bits)          \
@@ -198,14 +189,14 @@ static void do_mmio_reads(io_window *iow, size_t offset, u8 width,
     size_t i;
     void *ptr;
 
-    ptr = mmio_window_get_ptr(iow, offset, count);
+    ptr = mmio_window_get_ptr(iow, offset);
 
     #define WIDTH_SWITCH_ACTION(bits)                        \
         *((volatile u##bits*)out) = *(volatile u##bits*)ptr; \
         break;
     #define WIDTH_SWITCH_ACTION_8(bits) WIDTH_SWITCH_ACTION(bits)
 
-    for (i = 0; i < count; ++i, out += width, ptr += width) {
+    for (i = 0; i < count; ++i, out += width) {
         WIDTH_SWITCH(width)
     }
 
@@ -234,7 +225,7 @@ static void do_pio_writes(io_window *iow, size_t offset, u8 width,
     size_t i;
     u16 port;
 
-    port = pio_window_get_port(iow, offset, count);
+    port = pio_window_get_port(iow, offset);
 
     #define WIDTH_SWITCH_ACTION_8(bits)
     #define WIDTH_SWITCH_ACTION(bits)       \
@@ -249,21 +240,20 @@ static void do_pio_writes(io_window *iow, size_t offset, u8 width,
     #undef WIDTH_SWITCH_ACTION_8
 }
 
-
 static void do_mmio_writes(io_window *iow, size_t offset, u8 width,
                            const void *in, size_t count)
 {
     size_t i;
     void *ptr;
 
-    ptr = mmio_window_get_ptr(iow, offset, count);
+    ptr = mmio_window_get_ptr(iow, offset);
 
     #define WIDTH_SWITCH_ACTION(bits)                       \
         *((volatile u##bits*)ptr) = *(volatile u##bits*)in; \
         break;
     #define WIDTH_SWITCH_ACTION_8(bits) WIDTH_SWITCH_ACTION(bits)
 
-    for (i = 0; i < count; ++i, in += width, ptr += width) {
+    for (i = 0; i < count; ++i, in += width) {
         WIDTH_SWITCH(width)
     }
 
