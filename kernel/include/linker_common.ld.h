@@ -47,7 +47,9 @@
     .debug_line_str    0x000000000 : { *(.debug_line_str) }                 \
     .debug_addr        0x000000000 : { *(.debug_addr) }                     \
     .debug_macro       0x000000000 : { *(.debug_macro) *(.debug_macro[*]) } \
-    .debug_aranges     0x000000000 : { *(.debug_aranges) }
+    .debug_aranges     0x000000000 : { *(.debug_aranges) }                  \
+    .debug_loclists    0x000000000 : { *(.debug_loclists) }                 \
+    .debug_rnglists    0x000000000 : { *(.debug_rnglists) }
 
 #define DISCARDS     \
     /DISCARD/ : {    \
