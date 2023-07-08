@@ -11,6 +11,7 @@ target_sources(
     PRIVATE
     entry.c
     io_impl.c
+    cpuid.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}
