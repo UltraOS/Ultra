@@ -276,29 +276,29 @@ static void do_write_many(io_window *iow, size_t offset, u8 width,
     }
 }
 
-#define MAKE_IO_FN(width)                                               \
-    u##width ioread##width(io_window iow, size_t offset)                \
-    {                                                                   \
-        u##width out;                                                   \
-        do_read_many(&iow, offset, sizeof(out), &out, 1);               \
-        return out;                                                     \
-    }                                                                   \
-                                                                        \
-    void ioread##width##_many(io_window iow, size_t offset,             \
-                              u##width *buf, size_t count)              \
-    {                                                                   \
-        do_read_many(&iow, offset, width / 8, buf, count);              \
-    }                                                                   \
-                                                                        \
-    void iowrite##width(io_window iow, size_t offset, u##width value)   \
-    {                                                                   \
-        do_write_many(&iow, offset, sizeof(value), &value, 1);          \
-    }                                                                   \
-                                                                        \
-    void iowrite##width##_many(io_window iow, size_t offset,            \
-                               const u##width *buf, size_t count)       \
-    {                                                                   \
-        do_write_many(&iow, offset, width / 8, buf, count);             \
+#define MAKE_IO_FN(width)                                                  \
+    u##width ioread##width##_at(io_window iow, size_t offset)              \
+    {                                                                      \
+        u##width out;                                                      \
+        do_read_many(&iow, offset, sizeof(out), &out, 1);                  \
+        return out;                                                        \
+    }                                                                      \
+                                                                           \
+    void ioread##width##_many(io_window iow, size_t offset,                \
+                              u##width *buf, size_t count)                 \
+    {                                                                      \
+        do_read_many(&iow, offset, width / 8, buf, count);                 \
+    }                                                                      \
+                                                                           \
+    void iowrite##width##_at(io_window iow, size_t offset, u##width value) \
+    {                                                                      \
+        do_write_many(&iow, offset, sizeof(value), &value, 1);             \
+    }                                                                      \
+                                                                           \
+    void iowrite##width##_many(io_window iow, size_t offset,               \
+                               const u##width *buf, size_t count)          \
+    {                                                                      \
+        do_write_many(&iow, offset, width / 8, buf, count);                \
     }
 
 MAKE_IO_FN(8)

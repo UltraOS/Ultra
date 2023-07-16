@@ -29,7 +29,7 @@ static error_t e9_console_init(void)
     if (unlikely(ret))
         return ret;
 
-    if (ioread8(e9_iow, 0) != 0xE9)
+    if (ioread8(e9_iow) != 0xE9)
         goto unmap;
 
     ret = register_console(&e9_console);
