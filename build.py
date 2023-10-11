@@ -12,6 +12,7 @@ import scripts.build_utils.wsl_wrap as ww
 import scripts.build_utils.package_manager as pm
 import scripts.build_utils.toolchain_builder as tb
 import scripts.build_utils.toolchain_args as ta
+import scripts.image_utils.ultra as ultr
 
 GENERIC_DEPS = {
     "apt": [
@@ -129,22 +130,17 @@ def make_hyper_iso(arch, build_dir, hyper_installer,
 
     os.makedirs(iso_root_path, exist_ok=True)
     shutil.copy(kernel_path, iso_root_path)
-    shutil.copy(hyper_iso_br, iso_root_path)
 
     with open(cfg_path, "w") as f:
         cfg = make_hyper_config(arch)
         f.write(cfg)
 
-    xorriso_args = [
-        "xorriso", "-as", "mkisofs",
-        "-b", "hyper_iso_boot",
-        "-no-emul-boot", "-boot-load-size", "4",
-        "-boot-info-table", "--protective-msdos-label",
-        iso_root_path, "-o", image_path
-    ]
-    subprocess.run(xorriso_args, check=True)
-
-    subprocess.run([hyper_installer, image_path], check=True)
+    return ultr.DiskImage(
+        iso_root_path, "MBR", "ISO9660",
+        hyper_iso_br_path=hyper_iso_br,
+        hyper_installer_path=hyper_installer,
+        out_path=image_path,
+    )
 
 
 def platform_has_native_hyper() -> bool:
