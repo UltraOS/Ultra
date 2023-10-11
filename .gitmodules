@@ -1,3 +1,6 @@
 [submodule "build_utils"]
 	path = scripts/build_utils
 	url = https://github.com/UltraOS/BuildUtils/
+[submodule "scripts/image_utils"]
+	path = scripts/image_utils
+	url = https://github.com/UltraOS/ImageUtils
