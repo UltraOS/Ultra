@@ -8,10 +8,10 @@ import urllib.request
 import signal
 import sys
 
-import build_utils.wsl_wrap as ww
-import build_utils.package_manager as pm
-import build_utils.toolchain_builder as tb
-import build_utils.toolchain_args as ta
+import scripts.build_utils.wsl_wrap as ww
+import scripts.build_utils.package_manager as pm
+import scripts.build_utils.toolchain_builder as tb
+import scripts.build_utils.toolchain_args as ta
 
 GENERIC_DEPS = {
     "apt": [
