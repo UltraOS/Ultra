@@ -14,6 +14,7 @@ import scripts.build_utils.package_manager as pm
 import scripts.build_utils.toolchain_builder as tb
 import scripts.build_utils.toolchain_args as ta
 import scripts.image_utils.ultra as ultr
+import scripts.image_utils.uefi as uefi
 
 GENERIC_DEPS = {
     "apt": [
@@ -124,7 +125,7 @@ def get_kernel_path(arch, build_dir):
 
 
 def make_hyper_image(br_type, fs_type, arch, build_dir, hyper_installer,
-                     hyper_iso_br, image_path):
+                     hyper_iso_br, hyper_uefi_binaries, image_path):
     kernel_path = get_kernel_path(arch, build_dir)
     image_root_path = os.path.join(build_dir, "image-root")
 
@@ -134,6 +135,7 @@ def make_hyper_image(br_type, fs_type, arch, build_dir, hyper_installer,
     return ultr.DiskImage(
         image_root_path, br_type, fs_type,
         hyper_config=make_hyper_config(arch),
+        hyper_uefi_binary_paths=hyper_uefi_binaries,
         hyper_iso_br_path=hyper_iso_br,
         hyper_installer_path=hyper_installer,
         out_path=image_path,
@@ -200,13 +202,13 @@ def hyper_get_iso_br() -> str:
     return hyper_get_binary("hyper_iso_boot")
 
 
-def run_qemu(arch, image_path, image_type, debug):
+def run_qemu(arch, image_path, image_type, debug, uefi_boot, uefi_firmware):
     basename = "qemu-system"
 
-    if arch == "i686":
-        qemu_binary = f"{basename}-i386"
-    elif arch == "x86_64":
+    if arch == "x86_64" or uefi_boot:
         qemu_binary = f"{basename}-x86_64"
+    elif arch == "i686":
+        qemu_binary = f"{basename}-i386"
 
     disk_arg = "-cdrom" if image_type == "iso" else "-hda"
 
@@ -217,6 +219,13 @@ def run_qemu(arch, image_path, image_type, debug):
 
     if debug:
         args.extend(["-s", "-S"])
+    if uefi_boot:
+        if uefi_firmware is None:
+            uefi_firmware = uefi.get_path_to_qemu_uefi_firmware("x86_64")
+
+        if uefi_firmware is not None:
+            drive_opts = f"file={uefi_firmware},if=pflash,format=raw,readonly=on"
+            args.extend(["-drive", drive_opts])
 
     qp = subprocess.Popen(args, start_new_session=debug)
     if not debug:
@@ -243,6 +252,10 @@ def main():
                         help="Image type to produce (with --make-image)")
     parser.add_argument("--run", action="store_true",
                         help="Automatically run in QEMU after building")
+    parser.add_argument("--uefi", action="store_true",
+                        help="Boot in UEFI mode")
+    parser.add_argument("--uefi-firmware-path",
+                        help="Path to UEFI firmware to use with QEMU")
     parser.add_argument("--debug", action="store_true",
                         help="Start a debugging session after building (implies --run)")
     parser.add_argument("--ide-debug", action="store_true",
@@ -251,6 +264,9 @@ def main():
                         help="Path to the hyper installer")
     parser.add_argument("--hyper-iso-loader", type=str,
                         help="Path to the hyper iso boot record (hyper_iso_boot)")
+    parser.add_argument("--hyper-uefi-binary-paths", nargs='+',
+                        help="Paths to the hyper UEFI binaries "
+                             "(BOOT{X64,AA64}.EFI)")
     parser.add_argument("--no-build", action="store_true",
                         help="Assume the kernel is already built")
     parser.add_argument("--reconfigure", action="store_true",
@@ -273,6 +289,7 @@ def main():
     if should_run or args.make_image:
         hyper_installer = args.hyper_installer
         hyper_iso_br = args.hyper_iso_loader
+        hyper_uefi_binary_paths = args.hyper_uefi_binary_paths
 
         if args.image_type == "iso":
             fs_type = "ISO9660"
@@ -290,13 +307,24 @@ def main():
         if not hyper_iso_br:
             hyper_iso_br = hyper_get_iso_br()
 
+        if not hyper_uefi_binary_paths:
+            hyper_uefi_binary_paths = [
+                hyper_get_binary("BOOTX64.EFI", True),
+                hyper_get_binary("BOOTAA64.EFI", True),
+            ]
+            hyper_uefi_binary_paths = filter(lambda x: x is not None,
+                                             hyper_uefi_binary_paths)
+
         image_path = os.path.join(build_dir, image_name)
 
         make_hyper_image("MBR", fs_type, args.arch, build_dir, hyper_installer,
-                         hyper_iso_br, image_path)
+                         hyper_iso_br, hyper_uefi_binary_paths, image_path)
 
     if should_run:
-        qp = run_qemu(args.arch, image_path, args.image_type, is_debug)
+        uefi_boot = hyper_uefi_binary_paths and args.uefi
+
+        qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
+                      uefi_boot, args.uefi_firmware_path)
 
     if args.debug:
         gdb_args = ["gdb", "--tui", get_kernel_path(args.arch, build_dir),
