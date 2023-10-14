@@ -122,21 +122,17 @@ def get_kernel_path(arch, build_dir):
     return os.path.join(build_dir, f"kernel-{arch}")
 
 
-def make_hyper_iso(arch, build_dir, hyper_installer,
-                   hyper_iso_br, image_path):
+def make_hyper_image(br_type, fs_type, arch, build_dir, hyper_installer,
+                     hyper_iso_br, image_path):
     kernel_path = get_kernel_path(arch, build_dir)
-    iso_root_path = os.path.join(build_dir, "iso_root")
-    cfg_path = os.path.join(iso_root_path, "hyper.cfg")
+    image_root_path = os.path.join(build_dir, "image-root")
 
-    os.makedirs(iso_root_path, exist_ok=True)
-    shutil.copy(kernel_path, iso_root_path)
-
-    with open(cfg_path, "w") as f:
-        cfg = make_hyper_config(arch)
-        f.write(cfg)
+    os.makedirs(image_root_path, exist_ok=True)
+    shutil.copy(kernel_path, image_root_path)
 
     return ultr.DiskImage(
-        iso_root_path, "MBR", "ISO9660",
+        image_root_path, br_type, fs_type,
+        hyper_config=make_hyper_config(arch),
         hyper_iso_br_path=hyper_iso_br,
         hyper_installer_path=hyper_installer,
         out_path=image_path,
@@ -149,7 +145,8 @@ def platform_has_native_hyper() -> bool:
 
     msg = "Hyper loader doesn't get installer releases for {arg}.\n" \
           "Please compile manually and specify with --hyper-installer " \
-          "to be able to produce ISOs with this utility."
+          "to be able to produce bootable raw images or hybrid ISOs with "\
+          "this utility."
 
     if this_os not in ["Linux", "Windows"]:
         print(msg.format(arg=this_os))
@@ -197,7 +194,7 @@ def hyper_get_iso_br() -> str:
     return hyper_get_binary("hyper_iso_boot")
 
 
-def run_qemu(arch, image_path, debug):
+def run_qemu(arch, image_path, image_type, debug):
     basename = "qemu-system"
 
     if arch == "i686":
@@ -205,8 +202,10 @@ def run_qemu(arch, image_path, debug):
     elif arch == "x86_64":
         qemu_binary = f"{basename}-x86_64"
 
+    disk_arg = "-cdrom" if image_type == "iso" else "-hda"
+
     args = [qemu_binary, "-M", "q35",
-            "-cdrom", image_path,
+            disk_arg, image_path,
             "-m", "1G",
             "-debugcon", "stdio"]
 
@@ -232,8 +231,10 @@ def main():
                         help="architecture to build the kernel for")
     parser.add_argument("--skip-generic-dependencies", action="store_true",
                         help="don't attempt to fetch the generic dependencies")
-    parser.add_argument("--make-iso", action="store_true",
-                        help="Produce a bootable .iso image after building")
+    parser.add_argument("--make-image",
+                        help="Produce a bootable image after building")
+    parser.add_argument("--image-type", choices=["iso", "raw"], default="iso",
+                        help="Image type to produce (with --make-image)")
     parser.add_argument("--run", action="store_true",
                         help="Automatically run in QEMU after building")
     parser.add_argument("--debug", action="store_true",
@@ -263,25 +264,33 @@ def main():
     is_debug = args.debug or args.ide_debug
     should_run = args.run or is_debug
 
-    if should_run or args.make_iso:
+    if should_run or args.make_image:
         hyper_installer = args.hyper_installer
         hyper_iso_br = args.hyper_iso_loader
 
-        if not hyper_installer:
-            if not platform_has_native_hyper():
-                exit(1)
+        if args.image_type == "iso":
+            fs_type = "ISO9660"
+            image_name = "image.iso"
+        else:
+            fs_type = "FAT32"
+            image_name = "image.raw"
 
-            hyper_installer = hyper_get_installer()
+        if not hyper_installer:
+            if platform_has_native_hyper():
+                hyper_installer = hyper_get_installer()
+            elif args.image_type != "iso":  # only mandatory for HDDs
+                sys.exit(1)
 
         if not hyper_iso_br:
             hyper_iso_br = hyper_get_iso_br()
 
-        image_path = os.path.join(build_dir, "image.iso")
-        make_hyper_iso(args.arch, build_dir, hyper_installer,
-                       hyper_iso_br, image_path)
+        image_path = os.path.join(build_dir, image_name)
+
+        make_hyper_image("MBR", fs_type, args.arch, build_dir, hyper_installer,
+                         hyper_iso_br, image_path)
 
     if should_run:
-        qp = run_qemu(args.arch, image_path, is_debug)
+        qp = run_qemu(args.arch, image_path, args.image_type, is_debug)
 
     if args.debug:
         gdb_args = ["gdb", "--tui", get_kernel_path(args.arch, build_dir),
