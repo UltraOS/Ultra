@@ -15,6 +15,7 @@ import scripts.build_utils.toolchain_builder as tb
 import scripts.build_utils.toolchain_args as ta
 import scripts.image_utils.ultra as ultr
 import scripts.image_utils.uefi as uefi
+import scripts.image_utils.path_guesser as pg
 
 GENERIC_DEPS = {
     "apt": [
@@ -38,20 +39,18 @@ GENERIC_DEPS = {
 }
 
 
-def get_project_root() -> str:
-    return os.path.dirname(os.path.abspath(__file__))
-
-
 def get_toolchain_dir() -> str:
-    return os.path.join(get_project_root(), "toolchain")
+    return pg.project_root_relative("toolchain")
 
 
 def get_specific_toolchain_dir(type: str, arch: str) -> str:
-    return os.path.join(get_toolchain_dir(), f"tools-{type}-{arch}")
+    return pg.project_root_relative(
+        get_toolchain_dir(), f"tools-{type}-{arch}"
+    )
 
 
 def get_build_dir(arch: str, toolchain: str) -> str:
-    return os.path.join(get_project_root(), f"build-{toolchain}-{arch}")
+    return pg.project_root_relative(f"build-{toolchain}-{arch}")
 
 
 def build_toolchain(args: argparse.Namespace) -> None:
@@ -168,7 +167,7 @@ def platform_has_native_hyper() -> bool:
 
 def hyper_get_binary(name: str, optional: bool = False) -> Optional[str]:
     hyper_version = "v0.6.0"
-    root = os.path.join(get_project_root(), f"hyper-{hyper_version}")
+    root = pg.project_root_relative(f"hyper-{hyper_version}")
     binary_path = os.path.join(root, name)
 
     if not os.path.isdir(root):
@@ -252,6 +251,7 @@ def run_qemu(
 
 def main() -> None:
     ww.relaunch_in_wsl_if_windows()
+    pg.set_project_root(os.path.dirname(os.path.abspath(__file__)))
 
     parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
     ta.add_base_args(parser)
