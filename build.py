@@ -7,6 +7,7 @@ import shutil
 import urllib.request
 import signal
 import sys
+from typing import Optional
 
 import scripts.build_utils.wsl_wrap as ww
 import scripts.build_utils.package_manager as pm
@@ -159,7 +160,7 @@ def platform_has_native_hyper() -> bool:
     return True
 
 
-def hyper_get_binary(name) -> str:
+def hyper_get_binary(name, optional=False) -> Optional[str]:
     hyper_version = "v0.6.0"
     root = os.path.join(get_project_root(), f"hyper-{hyper_version}")
     binary_path = os.path.join(root, name)
@@ -170,7 +171,12 @@ def hyper_get_binary(name) -> str:
     if not os.path.isfile(binary_path):
         base_url = f"https://github.com/UltraOS/Hyper/releases/download/{hyper_version}"
         file_url = f"{base_url}/{name}"
-        urllib.request.urlretrieve(file_url, binary_path)
+        try:
+            urllib.request.urlretrieve(file_url, binary_path)
+        except Exception as ex:
+            print(f"Failed to retrieve {name}:", ex)
+            return None
+
         os.chmod(binary_path, 0o777)
     return binary_path
 
