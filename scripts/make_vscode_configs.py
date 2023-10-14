@@ -2,6 +2,7 @@
 import os
 import json
 from typing import List, Callable
+import image_utils.path_guesser as pg
 
 # Automatically generate .vscode launch.json & tasks.json for kernel debugging
 # and building. This includes all architectures and toolchains.
@@ -79,13 +80,6 @@ def make_launch_command(compiler: str, arch: str) -> dict:
     return launch_template
 
 
-def project_root() -> str:
-    this_file = os.path.abspath(__file__)
-    pardir = os.path.join(this_file, os.pardir, os.pardir)
-
-    return os.path.abspath(pardir)
-
-
 def make_vscode_template(
     arr_key: str, out_file: str, gen_fns: List[Callable]
 ) -> None:
@@ -106,8 +100,10 @@ def make_vscode_template(
 
 
 def main():
-    root = project_root()
-    vscode_dir = os.path.join(root, ".vscode")
+    scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    pg.set_project_root(os.path.join(scripts_dir, os.pardir))
+
+    vscode_dir = pg.project_root_relative(".vscode")
 
     if os.path.exists(vscode_dir):
         if not os.path.isdir(vscode_dir):
