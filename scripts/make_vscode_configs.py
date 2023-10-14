@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import os
 import json
+from typing import List, Callable
 
 # Automatically generate .vscode launch.json & tasks.json for kernel debugging
 # and building. This includes all architectures and toolchains.
@@ -25,11 +26,11 @@ ARCHITECTURES = {
 }
 
 
-def make_rebuild_task_label(compiler, arch):
+def make_rebuild_task_label(compiler: str, arch: str) -> str:
     return f"rebuild-kernel-{compiler}-{arch}"
 
 
-def make_rebuild_task(compiler, arch):
+def make_rebuild_task(compiler: str, arch: str) -> dict:
     task_template = {
         "label": make_rebuild_task_label(compiler, arch),
         "command": "python3",
@@ -43,22 +44,23 @@ def make_rebuild_task(compiler, arch):
     return task_template
 
 
-def make_debug_task_label(compiler, arch):
+def make_debug_task_label(compiler: str, arch: str) -> str:
     return f"rebuild-kernel-and-start-qemu-{compiler}-{arch}"
 
 
-def make_debug_task(compiler, arch):
+def make_debug_task(compiler: str, arch: str) -> dict:
     task_template = {
         "label": make_debug_task_label(compiler, arch),
         "command": "python3",
-        "args": ["${workspaceRoot}/build.py", "--arch", arch, "--ide-debug", "--no-build"],
+        "args": ["${workspaceRoot}/build.py", "--arch", arch,
+                 "--ide-debug", "--no-build"],
         "dependsOn": make_rebuild_task_label(compiler, arch)
     }
 
     return task_template
 
 
-def make_launch_command(compiler, arch):
+def make_launch_command(compiler: str, arch: str) -> dict:
     launch_template = {
         "name": f"Build & debug {arch} with {compiler}",
         "type": "cppdbg",
@@ -77,23 +79,27 @@ def make_launch_command(compiler, arch):
     return launch_template
 
 
-def project_root():
+def project_root() -> str:
     this_file = os.path.abspath(__file__)
     pardir = os.path.join(this_file, os.pardir, os.pardir)
 
     return os.path.abspath(pardir)
 
 
-def make_vscode_template(arr_key, out_file, gen_fns):
+def make_vscode_template(
+    arr_key: str, out_file: str, gen_fns: List[Callable]
+) -> None:
+    objects_list: List[str] = []
+
     objects = {
         "version": VSCODE_FILE_VERSION,
-        arr_key: []
+        arr_key: objects_list,
     }
 
     for compiler in COMPILERS:
         for arch in ARCHITECTURES:
             for gen_fn in gen_fns:
-                objects[arr_key].append(gen_fn(compiler, arch))
+                objects_list.append(gen_fn(compiler, arch))
 
     with open(out_file, "w") as f:
         json.dump(objects, f, indent=4)
