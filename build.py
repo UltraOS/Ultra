@@ -7,7 +7,7 @@ import shutil
 import urllib.request
 import signal
 import sys
-from typing import Optional
+from typing import Optional, List
 
 import scripts.build_utils.wsl_wrap as ww
 import scripts.build_utils.package_manager as pm
@@ -38,25 +38,25 @@ GENERIC_DEPS = {
 }
 
 
-def get_project_root():
+def get_project_root() -> str:
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def get_toolchain_dir():
+def get_toolchain_dir() -> str:
     return os.path.join(get_project_root(), "toolchain")
 
 
-def get_specific_toolchain_dir(type, arch):
+def get_specific_toolchain_dir(type: str, arch: str) -> str:
     return os.path.join(get_toolchain_dir(), f"tools-{type}-{arch}")
 
 
-def get_build_dir(arch, toolchain):
+def get_build_dir(arch: str, toolchain: str) -> str:
     return os.path.join(get_project_root(), f"build-{toolchain}-{arch}")
 
 
-def build_toolchain(args):
+def build_toolchain(args: argparse.Namespace) -> None:
     if not tb.is_supported_system():
-        exit(1)
+        sys.exit(1)
 
     tc_root = get_specific_toolchain_dir(args.toolchain, args.arch)
     tp = ta.params_from_args(args, "elf", tc_root, get_toolchain_dir())
@@ -67,7 +67,7 @@ def build_toolchain(args):
     tb.build_toolchain(tp)
 
 
-def build_ultra(args, build_dir):
+def build_ultra(args: argparse.Namespace, build_dir: str) -> None:
     rerun_cmake = args.reconfigure or not os.path.isdir(build_dir)
 
     if rerun_cmake:
@@ -76,7 +76,8 @@ def build_ultra(args, build_dir):
             build_toolchain(args)
 
         os.makedirs(build_dir, exist_ok=True)
-        cmake_args = [f"-DULTRA_ARCH={args.arch}", f"-DULTRA_TOOLCHAIN={args.toolchain}"]
+        cmake_args = [f"-DULTRA_ARCH={args.arch}",
+                      f"-DULTRA_TOOLCHAIN={args.toolchain}"]
         subprocess.run(["cmake", "..", *cmake_args], check=True, cwd=build_dir)
     else:
         print("Not rerunning cmake since build directory already exists "
@@ -86,7 +87,7 @@ def build_ultra(args, build_dir):
                    cwd=build_dir, check=True)
 
 
-def make_hyper_config(arch):
+def make_hyper_config(arch: str) -> str:
     return \
 f"""
 default-entry = ultra-{arch}
@@ -117,15 +118,18 @@ page-table:
 
 # We don't really need video for now
 video-mode = unset
-"""
+"""  # noqa: E122
 
 
-def get_kernel_path(arch, build_dir):
+def get_kernel_path(arch: str, build_dir: str) -> str:
     return os.path.join(build_dir, f"kernel-{arch}")
 
 
-def make_hyper_image(br_type, fs_type, arch, build_dir, hyper_installer,
-                     hyper_iso_br, hyper_uefi_binaries, image_path):
+def make_hyper_image(
+    br_type: str, fs_type: str, arch: str, build_dir: str,
+    hyper_installer: Optional[str], hyper_iso_br: Optional[str],
+    hyper_uefi_binaries: List[str], image_path: str
+) -> ultr.DiskImage:
     kernel_path = get_kernel_path(arch, build_dir)
     image_root_path = os.path.join(build_dir, "image-root")
 
@@ -162,7 +166,7 @@ def platform_has_native_hyper() -> bool:
     return True
 
 
-def hyper_get_binary(name, optional=False) -> Optional[str]:
+def hyper_get_binary(name: str, optional: bool = False) -> Optional[str]:
     hyper_version = "v0.6.0"
     root = os.path.join(get_project_root(), f"hyper-{hyper_version}")
     binary_path = os.path.join(root, name)
@@ -171,7 +175,8 @@ def hyper_get_binary(name, optional=False) -> Optional[str]:
         os.makedirs(root)
 
     if not os.path.isfile(binary_path):
-        base_url = f"https://github.com/UltraOS/Hyper/releases/download/{hyper_version}"
+        base_url = "https://github.com/UltraOS/Hyper/releases/download/"
+        base_url += hyper_version
         file_url = f"{base_url}/{name}"
         try:
             urllib.request.urlretrieve(file_url, binary_path)
@@ -195,14 +200,21 @@ def hyper_get_installer_name() -> str:
 
 
 def hyper_get_installer() -> str:
-    return hyper_get_binary(hyper_get_installer_name())
+    ret = hyper_get_binary(hyper_get_installer_name())
+    assert ret
+    return ret
 
 
 def hyper_get_iso_br() -> str:
-    return hyper_get_binary("hyper_iso_boot")
+    ret = hyper_get_binary("hyper_iso_boot")
+    assert ret
+    return ret
 
 
-def run_qemu(arch, image_path, image_type, debug, uefi_boot, uefi_firmware):
+def run_qemu(
+    arch: str, image_path: str, image_type: str, debug: bool,
+    uefi_boot: bool, uefi_firmware: str
+) -> subprocess.Popen:
     basename = "qemu-system"
 
     if arch == "x86_64" or uefi_boot:
@@ -224,7 +236,8 @@ def run_qemu(arch, image_path, image_type, debug, uefi_boot, uefi_firmware):
             uefi_firmware = uefi.get_path_to_qemu_uefi_firmware("x86_64")
 
         if uefi_firmware is not None:
-            drive_opts = f"file={uefi_firmware},if=pflash,format=raw,readonly=on"
+            drive_opts = f"file={uefi_firmware}"
+            drive_opts += ",if=pflash,format=raw,readonly=on"
             args.extend(["-drive", drive_opts])
 
     qp = subprocess.Popen(args, start_new_session=debug)
@@ -237,7 +250,7 @@ def run_qemu(arch, image_path, image_type, debug, uefi_boot, uefi_firmware):
     return qp
 
 
-def main():
+def main() -> None:
     ww.relaunch_in_wsl_if_windows()
 
     parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
@@ -257,13 +270,16 @@ def main():
     parser.add_argument("--uefi-firmware-path",
                         help="Path to UEFI firmware to use with QEMU")
     parser.add_argument("--debug", action="store_true",
-                        help="Start a debugging session after building (implies --run)")
+                        help="Start a debugging session after building "
+                             "(implies --run)")
     parser.add_argument("--ide-debug", action="store_true",
-                        help="Start QEMU in debug mode but don't start a debugger")
+                        help="Start QEMU in debug mode but don't start "
+                             "a debugger")
     parser.add_argument("--hyper-installer", type=str,
                         help="Path to the hyper installer")
     parser.add_argument("--hyper-iso-loader", type=str,
-                        help="Path to the hyper iso boot record (hyper_iso_boot)")
+                        help="Path to the hyper iso boot record "
+                             "(hyper_iso_boot)")
     parser.add_argument("--hyper-uefi-binary-paths", nargs='+',
                         help="Paths to the hyper UEFI binaries "
                              "(BOOT{X64,AA64}.EFI)")
@@ -276,7 +292,7 @@ def main():
     this_os = platform.system()
     if this_os not in ["Linux", "Darwin", "Windows"]:
         print(f"{this_os} is not (yet) supported")
-        exit(1)
+        sys.exit(1)
 
     build_dir = get_build_dir(args.arch, args.toolchain)
 
