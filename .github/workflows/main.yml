@@ -53,10 +53,13 @@ jobs:
           submodules: true
 
       - if: ${{ matrix.toolchain == 'gcc' }}
+        name: Restore cache
         uses: actions/cache@v3.0.2
+        env:
+          gcc-version: 13.2.0
         with:
           path: "${{ github.workspace }}/toolchain/tools_${{ matrix.arch }}"
-          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc"
+          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc-${{ env.gcc-version }}"
 
       # TODO: maybe split these steps
       - name: Build platform toolchain & Kernel
