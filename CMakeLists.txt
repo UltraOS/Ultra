@@ -1,7 +1,28 @@
 cmake_minimum_required(VERSION 3.16)
 
 if (NOT ULTRA_ARCH)
-	set(ULTRA_ARCH x86_64)
+    set(ULTRA_ARCH x86)
+elseif (NOT ULTRA_ARCH STREQUAL "x86")
+    message(FATAL_ERROR "Invalid architecture ${ULTRA_ARCH}")
+endif ()
+
+if (NOT ULTRA_ARCH_EXECUTION_MODE)
+    if (ULTRA_ARCH STREQUAL "x86")
+        set(ULTRA_ARCH_EXECUTION_MODE "x86_64")
+    endif ()
+endif ()
+
+set(ULTRA_FULL_ARCH "${ULTRA_ARCH}/${ULTRA_ARCH_EXECUTION_MODE}")
+
+if (ULTRA_ARCH STREQUAL "x86")
+    set(ULTRA_VALID_EXECUTION_MODES i686 x86_64)
+endif ()
+
+if (NOT ULTRA_ARCH_EXECUTION_MODE IN_LIST ULTRA_VALID_EXECUTION_MODES)
+    message(
+        FATAL_ERROR
+        "Invalid arch/execution-mode ${ULTRA_FULL_ARCH}"
+    )
 endif ()
 
 if ($ENV{CLION_IDE})

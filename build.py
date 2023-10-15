@@ -75,7 +75,8 @@ def build_ultra(args: argparse.Namespace, build_dir: str) -> None:
             build_toolchain(args)
 
         os.makedirs(build_dir, exist_ok=True)
-        cmake_args = [f"-DULTRA_ARCH={args.arch}",
+        cmake_args = ["-DULTRA_ARCH=x86",
+                      f"-DULTRA_ARCH_EXECUTION_MODE={args.arch}",
                       f"-DULTRA_TOOLCHAIN={args.toolchain}"]
         subprocess.run(["cmake", "..", *cmake_args], check=True, cwd=build_dir)
     else:
@@ -256,7 +257,8 @@ def main() -> None:
     parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
     ta.add_base_args(parser)
     parser.add_argument("--arch", choices=["x86_64", "i686"], default="x86_64",
-                        help="architecture to build the kernel for")
+                        help="architecture (execution mode) to "
+                             "build the kernel for")
     parser.add_argument("--skip-generic-dependencies", action="store_true",
                         help="don't attempt to fetch the generic dependencies")
     parser.add_argument("--make-image",

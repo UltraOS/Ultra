@@ -1,8 +1,6 @@
-if (ULTRA_ARCH STREQUAL "i686")
-    set(ULTRA_X86_POSTFIX 32)
+if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "i686")
     target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=4)
 else ()
-    set(ULTRA_X86_POSTFIX 64)
     target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=8)
 endif()
 
@@ -20,7 +18,7 @@ target_include_directories(
     include
 )
 
-if (ULTRA_ARCH STREQUAL "x86_64")
+if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "x86_64")
     ultra_target_compile_options(
         ${ULTRA_KERNEL}
         -mcmodel=kernel
@@ -45,7 +43,9 @@ ultra_target_compile_options(
 )
 
 set(ULTRA_LD_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/link.ld.template")
-set(ULTRA_LD_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/link${ULTRA_X86_POSTFIX}.ld")
+set(ULTRA_LD_SCRIPT
+    "${CMAKE_CURRENT_SOURCE_DIR}/link-${ULTRA_ARCH_EXECUTION_MODE}.ld"
+)
 add_ultra_ld_template(
     NAME
     kernel-link-script
