@@ -3,11 +3,9 @@ ENTRY(x86_entry)
 #ifdef ULTRA_ARCH_EXECUTION_MODE_I686
 VIRTUAL_BASE    = 0xC0000000;
 PHYSICAL_OFFSET = 0x100000;
-#define PTR_SIZE 4
 #else
 VIRTUAL_BASE    = 0xFFFFFFFF80000000;
 PHYSICAL_OFFSET = 0;
-#define PTR_SIZE 8
 #endif
 
 #define INT3_OPCODE 0xCC
@@ -37,7 +35,7 @@ SECTIONS
 
     .rodata : VIRTUAL_BASE_RELATIVE(.rodata)
     {
-        RODATA(PTR_SIZE)
+        RODATA(ULTRA_ARCH_WIDTH)
     } :rodata =0xDEADBEEF
 
     . = ALIGN(4K);
