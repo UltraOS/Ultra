@@ -1,2 +1,1 @@
-link32.ld
-link64.ld
+link-*.ld

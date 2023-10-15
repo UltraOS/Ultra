@@ -1,10 +1,4 @@
-if (ULTRA_ARCH STREQUAL "i686" OR ULTRA_ARCH STREQUAL "x86_64")
-    set(ULTRA_ARCH_DIR x86)
-else ()
-    message(FATAL_ERROR "Invalid architecture '${ULTRA_ARCH}'")
-endif ()
-
-set(ULTRA_KERNEL "kernel-${ULTRA_ARCH}")
+set(ULTRA_KERNEL "kernel-${ULTRA_ARCH_EXECUTION_MODE}")
 
 add_executable(${ULTRA_KERNEL})
 
@@ -43,10 +37,12 @@ ultra_target_link_options(
 )
 
 string(TOUPPER ${ULTRA_ARCH} ULTRA_ARCH_POSTFIX)
+string(TOUPPER ${ULTRA_ARCH_EXECUTION_MODE} ULTRA_ARCH_EXECUTION_MODE_POSTFIX)
 target_compile_definitions(
     ${ULTRA_KERNEL}
     PUBLIC
     ULTRA_ARCH_${ULTRA_ARCH_POSTFIX}
+    ULTRA_ARCH_EXECUTION_MODE_${ULTRA_ARCH_EXECUTION_MODE_POSTFIX}
 
     # Always enable for now
     ULTRA_HARDENED_IO
@@ -63,4 +59,4 @@ include(module.cmake)
 include(ld_template.cmake)
 
 add_subdirectory(common)
-add_subdirectory(arch/${ULTRA_ARCH_DIR})
+add_subdirectory(arch/${ULTRA_ARCH})
