@@ -4,6 +4,9 @@ else ()
     target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=8)
 endif()
 
+# Hardcode 8 for now, even for i686 (unconditionally enable PAE if it's present)
+target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_PHYS_ADDR_WIDTH=8)
+
 target_sources(
     ${ULTRA_KERNEL}
     PRIVATE
