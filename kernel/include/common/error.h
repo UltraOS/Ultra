@@ -94,3 +94,14 @@ typedef int nerror_t;
 
 #define is_error(ret) ((ret) != EOK)
 #define is_nerror(ret) ((ret) < EOK)
+
+typedef void *ptr_or_error_t;
+typedef phys_addr_t phys_addr_or_error_t;
+
+#define encode_error_ptr(value) ((void*)((ptr_t)(value)))
+#define decode_error_ptr(value) ((ptr_t)(value))
+#define error_ptr(ret) (((ptr_t)(ret)) <= MAX_ERRNO)
+
+#define encode_error_phys_addr(value) (value)
+#define decode_error_phys_addr(value) (value)
+#define error_phys_addr(ret) (ret <= MAX_ERRNO)
