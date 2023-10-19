@@ -20,6 +20,12 @@ typedef uint64_t u64;
 
 typedef size_t ptr_t;
 
+#if ULTRA_ARCH_PHYS_ADDR_WIDTH == 4
+typedef u32 phys_addr_t;
+#else
+typedef u64 phys_addr_t;
+#endif
+
 #if UINTPTR_MAX == 0xFFFFFFFF
 typedef i32 ssize_t;
 #else
