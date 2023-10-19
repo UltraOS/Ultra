@@ -2,8 +2,8 @@
 
 #include <module.h>
 #include <console.h>
-#include <hypervisor.h>
 #include <io.h>
+#include <arch/private/hypervisor.h>
 
 io_window e9_iow;
 
