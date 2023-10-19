@@ -1,4 +1,4 @@
-#include <cpuid.h>
+#include <arch/private/cpuid.h>
 
 void cpuid(u32 function, struct cpuid_res *id)
 {
