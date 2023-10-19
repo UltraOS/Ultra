@@ -84,6 +84,8 @@
 #define EWOULDBLOCK EAGAIN
 #define EXDEV 80
 
+#define MAX_ERRNO 4095
+
 // positive errno return type
 typedef int error_t;
 
