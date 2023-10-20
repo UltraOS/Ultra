@@ -25,4 +25,4 @@ function(ultra_target_link_options TARGET)
     )
 endfunction()
 
-set(ULTRA_LANGUAGES "C;ASM_NASM")
+set(ULTRA_LANGUAGES "C")
