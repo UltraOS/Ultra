@@ -15,6 +15,7 @@ target_sources(
     panic.c
     console.c
     log.c
+    io.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}

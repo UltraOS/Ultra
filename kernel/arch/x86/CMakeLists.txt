@@ -11,7 +11,7 @@ target_sources(
     ${ULTRA_KERNEL}
     PRIVATE
     entry.c
-    io_impl.c
+    io.c
     cpuid.c
     hypervisor.c
 )
