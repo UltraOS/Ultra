@@ -22,12 +22,14 @@ GENERIC_DEPS = {
         "nasm",
         "xorriso",
         "qemu-system-x86",
+        "qemu-system-arm",
         "cmake",
     ],
     "pacman": [
         "nasm",
         "xorriso",
         "qemu-system-x86",
+        "qemu-system-arm",
         "cmake",
     ],
     "brew": [
@@ -117,6 +119,20 @@ binary = "/kernel-i686"
 
 page-table:
     levels = 3
+    constraint = exactly
+
+# We don't really need video for now
+video-mode = unset
+
+[ultra-aarch64]
+protocol = ultra
+higher-half-exclusive = true
+binary:
+    path = "/kernel-aarch64"
+    allocate-anywhere = true
+
+page-table:
+    levels = 4
     constraint = exactly
 
 # We don't really need video for now
@@ -215,33 +231,52 @@ def hyper_get_iso_br() -> str:
 
 
 def run_qemu(
-    _: str, execution_mode: str, image_path: str, image_type: str,
+    arch: str, execution_mode: str, image_path: str, image_type: str,
     debug: bool, uefi_boot: bool, uefi_firmware: str
 ) -> subprocess.Popen:
-    basename = "qemu-system"
+    extra_args = []
+    force_uefi = False
 
-    if execution_mode == "x86_64" or uefi_boot:
-        qemu_binary = f"{basename}-x86_64"
-    elif execution_mode == "i686":
-        qemu_binary = f"{basename}-i386"
+    if arch == "arm":
+        extra_args.extend([
+            "-M", "virt", "-cpu", "max",
+            "-serial", "stdio"
+        ])
+        qemu_postfix = execution_mode
+        force_uefi = True
+    else:
+        if execution_mode == "x86_64" or uefi_boot:
+            qemu_postfix = "x86_64"
+        else:
+            qemu_postfix = "i386"
+
+        extra_args.extend([
+            "-M", "q35", "-debugcon", "stdio"
+        ])
 
     disk_arg = "-cdrom" if image_type == "iso" else "-hda"
 
-    args = [qemu_binary, "-M", "q35",
-            disk_arg, image_path,
-            "-m", "1G",
-            "-debugcon", "stdio"]
-
     if debug:
-        args.extend(["-s", "-S"])
+        extra_args.extend(["-s", "-S"])
+
+    args = [
+        f"qemu-system-{qemu_postfix}",
+        disk_arg, image_path, "-m", "1G",
+        *extra_args
+    ]
+
     if uefi_boot:
         if uefi_firmware is None:
-            uefi_firmware = uefi.get_path_to_qemu_uefi_firmware("x86_64")
+            uefi_firmware = uefi.get_path_to_qemu_uefi_firmware(qemu_postfix)
 
         if uefi_firmware is not None:
             drive_opts = f"file={uefi_firmware}"
             drive_opts += ",if=pflash,format=raw,readonly=on"
             args.extend(["-drive", drive_opts])
+        elif force_uefi:
+            raise RuntimeError(
+                f"Unable to boot {arch}/{execution_mode} without UEFI firmware"
+            )
 
     qp = subprocess.Popen(args, start_new_session=debug)
     if not debug:
@@ -259,7 +294,8 @@ def main() -> None:
 
     parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
     ta.add_base_args(parser)
-    parser.add_argument("--arch", choices=["x86_64", "i686"], default="x86_64",
+    parser.add_argument("--arch", default="x86_64",
+                        choices=["x86_64", "i686", "aarch64", "aarch32"],
                         help="architecture (execution mode) to "
                              "build the kernel for")
     parser.add_argument("--skip-generic-dependencies", action="store_true",
@@ -301,6 +337,12 @@ def main() -> None:
 
     execution_mode = args.arch
     arch = "x86"
+
+    if execution_mode == "i686" or execution_mode == "x86_64":
+        arch = "x86"
+    elif execution_mode == "aarch32" or execution_mode == "aarch64":
+        arch = "arm"
+        args.uefi = True
 
     build_dir = get_build_dir(execution_mode, args.toolchain)
 
