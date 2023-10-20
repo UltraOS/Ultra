@@ -3,10 +3,28 @@
 #include <common/types.h>
 #include <common/error.h>
 
-#include <io_impl.h>
+enum io_type {
+    IO_TYPE_INVALID = 0,
+    IO_TYPE_PORT_IO = 1,
+    IO_TYPE_MEM_IO = 2,
+};
 
-error_t io_window_map(io_window*, ptr_t phys_base, size_t length);
-error_t io_window_map_pio(io_window*, u16 base, u16 length);
+#ifdef ULTRA_HARDENED_IO
+
+typedef struct io_window_impl {
+    enum io_type type;
+    void *address;
+    size_t length;
+} io_window;
+
+#else
+
+typedef void *io_window;
+
+#endif
+
+error_t io_window_map(io_window*, phys_addr_t phys_base, size_t length);
+error_t io_window_map_pio(io_window*, phys_addr_t phys_base, size_t length);
 
 void io_window_unmap(io_window*);
 
