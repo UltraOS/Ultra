@@ -39,7 +39,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
-        arch: [i686, x86_64]
+        arch: [i686, x86_64, "aarch64"]
         toolchain: [gcc, clang]
         exclude:
           # FIXME: the GCC build somehow ends up being corrupted with
