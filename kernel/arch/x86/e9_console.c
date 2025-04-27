@@ -9,7 +9,7 @@ io_window e9_iow;
 
 static void e9_write(struct console *con, const char *str, size_t count)
 {
-    UNUSED(con);
+    UNREFERENCED_PARAMETER(con);
     iowrite8_many(e9_iow, 0, (const u8*)str, count);
 }
 

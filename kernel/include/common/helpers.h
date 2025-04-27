@@ -24,7 +24,7 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-#define UNUSED(x) (void)(x)
+#define UNREFERENCED_PARAMETER(x) (void)(x)
 
 #define BUILD_BUG_ON_WITH_MSG(expr, msg) _Static_assert(!(expr), msg)
 #define BUILD_BUG_ON(expr) BUILD_BUG_ON_WITH_MSG(expr, "BUILD BUG: " #expr " evaluated to true")

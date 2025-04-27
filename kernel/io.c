@@ -93,8 +93,8 @@ static void io_window_check_bounds(io_window *iow, size_t offset)
      * But for now let's just leave all the checking to kernels compiled
      * with ULTRA_HARDENED_IO.
      */
-    UNUSED(iow);
-    UNUSED(offset);
+    UNREFERENCED_PARAMETER(iow);
+    UNREFERENCED_PARAMETER(offset);
 #endif
 }
 

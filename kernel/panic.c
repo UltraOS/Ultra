@@ -4,6 +4,6 @@
 
 void panic(const char *reason, ...)
 {
-    UNUSED(reason);
+    UNREFERENCED_PARAMETER(reason);
     for (;;);
 }

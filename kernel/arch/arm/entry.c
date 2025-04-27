@@ -7,6 +7,6 @@ void arm_entry(struct ultra_boot_context *ctx, uint32_t magic)
     if (magic != ULTRA_MAGIC)
         for (;;);
 
-    UNUSED(ctx);
+    UNREFERENCED_PARAMETER(ctx);
     entry();
 }
