@@ -15,7 +15,7 @@ void entry(void)
 {
     do_initcalls(initcalls_earlycon_begin, initcalls_earlycon_end);
 
-    infoln("Booting ultra kernel v0.1-%s for %s...",
-           ULTRA_GIT_SHA, ULTRA_ARCH_EXECUTION_MODE_STRING);
+    pr_info("Booting ultra kernel v0.1-%s for %s...\n",
+            ULTRA_GIT_SHA, ULTRA_ARCH_EXECUTION_MODE_STRING);
     for (;;);
 }

@@ -1,46 +1,47 @@
+#include "common/helpers.h"
 #include <common/string.h>
 #include <common/format.h>
 #include <console.h>
 #include <log.h>
 
-#define PREFIX_SIZE 7
-#define INFO_PREFIX "[INFO] "
-#define WARN_PREFIX "[WARN] "
-#define ERR_PREFIX "[ERR ] "
+static size_t extract_msg_level(const char *msg, enum log_level *out_level)
+{
+    u8 level;
 
-static char (level_to_prefix[LOG_LEVEL_MAX + 1])[PREFIX_SIZE] = {
-    [LOG_LEVEL_INFO] = INFO_PREFIX,
-    [LOG_LEVEL_WARN] = WARN_PREFIX,
-    [LOG_LEVEL_ERR] = ERR_PREFIX,
-};
+    if (msg[0] != LOG_LEVEL_PREFIX_CHAR)
+        return 0;
+    if (unlikely(msg[1] == '\0'))
+        return 1;
 
-void vprint(enum log_level lvl, const char *msg, va_list vlist)
+    level = msg[1] - '0';
+    if (likely(level < LOG_LEVEL_COUNT))
+        *out_level = level;
+
+    return 2;
+}
+
+void vprint(const char *msg, va_list vlist)
 {
     static char log_buf[256];
-    char *buf = log_buf;
-    int chars = sizeof(log_buf);
+    enum log_level level = LOG_LEVEL_DEFAULT;
+    int chars;
 
     if (unlikely(!msg))
         return;
-    if (unlikely((u32)lvl > LOG_LEVEL_MAX))
-        return;
 
-    memcpy(buf, level_to_prefix[lvl], PREFIX_SIZE);
-    buf += PREFIX_SIZE;
-    chars -= PREFIX_SIZE;
+    msg += extract_msg_level(msg, &level);
 
-    chars = vscnprintf(buf, chars, msg, vlist);
+    chars = vscnprintf(log_buf, sizeof(log_buf), msg, vlist);
     if (unlikely(chars < 0))
         return;
-    chars += PREFIX_SIZE;
 
     console_write(log_buf, chars);
 }
 
-void print(enum log_level lvl, const char *msg, ...)
+void print(const char *msg, ...)
 {
     va_list vlist;
     va_start(vlist, msg);
-    vprint(lvl, msg, vlist);
+    vprint(msg, vlist);
     va_end(vlist);
 }
