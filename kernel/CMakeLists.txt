@@ -11,6 +11,7 @@ set_target_properties(
 target_sources(
     ${ULTRA_KERNEL}
     PRIVATE
+    alloc.c
     entry.c
     panic.c
     console.c
