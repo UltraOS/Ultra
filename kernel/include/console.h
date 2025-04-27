@@ -5,6 +5,7 @@
 struct console {
     const char *name;
     void (*write)(struct console *con, const char *str, size_t count);
+    void *priv;
 
     struct console *next;
 };
