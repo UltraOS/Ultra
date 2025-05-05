@@ -24,7 +24,7 @@ enum log_level {
     LOG_LEVEL_ALERT   = SYSLOG_ALERT,
     LOG_LEVEL_CRIT    = SYSLOG_CRIT,
     LOG_LEVEL_ERR     = SYSLOG_ERR,
-    LOG_LEVEL_WARNING = SYSLOG_WARNING,
+    LOG_LEVEL_WARN    = SYSLOG_WARNING,
     LOG_LEVEL_NOTICE  = SYSLOG_NOTICE,
     LOG_LEVEL_INFO    = SYSLOG_INFO,
     LOG_LEVEL_DEBUG   = SYSLOG_DEBUG,
@@ -40,7 +40,7 @@ enum log_level {
 #define LOG_ALERT   LOG_LEVEL_PREFIX TO_STR(SYSLOG_ALERT)
 #define LOG_CRIT    LOG_LEVEL_PREFIX TO_STR(SYSLOG_CRIT)
 #define LOG_ERR     LOG_LEVEL_PREFIX TO_STR(SYSLOG_ERR)
-#define LOG_WARNING LOG_LEVEL_PREFIX TO_STR(SYSLOG_WARNING)
+#define LOG_WARN    LOG_LEVEL_PREFIX TO_STR(SYSLOG_WARNING)
 #define LOG_NOTICE  LOG_LEVEL_PREFIX TO_STR(SYSLOG_NOTICE)
 #define LOG_INFO    LOG_LEVEL_PREFIX TO_STR(SYSLOG_INFO)
 #define LOG_DEBUG   LOG_LEVEL_PREFIX TO_STR(SYSLOG_DEBUG)
@@ -58,7 +58,7 @@ void print(const char *msg, ...);
 #define pr_alert(msg, ...)   print(LOG_ALERT   MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_crit(msg, ...)    print(LOG_CRIT    MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_err(msg, ...)     print(LOG_ERR     MSG_FMT(msg), ##__VA_ARGS__)
-#define pr_warning(msg, ...) print(LOG_WARNING MSG_FMT(msg), ##__VA_ARGS__)
+#define pr_warn(msg, ...)    print(LOG_WARN    MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_notice(msg, ...)  print(LOG_NOTICE  MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_info(msg, ...)    print(LOG_INFO    MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_debug(msg, ...)   print(LOG_DEBUG   MSG_FMT(msg), ##__VA_ARGS__)
