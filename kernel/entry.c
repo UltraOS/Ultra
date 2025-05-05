@@ -1,4 +1,4 @@
-#include <boot/entry.h>
+#include <boot/boot.h>
 #include <initcall.h>
 #include <log.h>
 
