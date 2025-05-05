@@ -1,10 +1,11 @@
 #include <common/helpers.h>
 #include <common/error.h>
 
+#include <memory/alloc.h>
+
 #include <bug.h>
 #include <io.h>
 #include <switch.h>
-#include <alloc.h>
 #include <arch/io_types.h>
 
 #include <private/arch/io.h>
