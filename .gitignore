@@ -4,6 +4,7 @@
 .cache
 build-*-*
 *-build-*
+build/
 hyper-*
 toolchain/tools-*
 __pycache__
