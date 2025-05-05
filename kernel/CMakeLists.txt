@@ -11,7 +11,6 @@ set_target_properties(
 target_sources(
     ${ULTRA_KERNEL}
     PRIVATE
-    alloc.c
     entry.c
     panic.c
     console.c
@@ -60,4 +59,5 @@ include(module.cmake)
 include(ld_template.cmake)
 
 add_subdirectory(common)
+add_subdirectory(memory)
 add_subdirectory(arch/${ULTRA_ARCH})
