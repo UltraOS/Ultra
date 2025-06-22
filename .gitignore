@@ -5,6 +5,10 @@
 build-*-*
 *-build-*
 build/
+build-*/
+kernel-include/
+kernel-source/
+bin/
 hyper-*
 toolchain/tools-*
 __pycache__
