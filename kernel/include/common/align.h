@@ -2,6 +2,10 @@
 
 #include <arch/constants.h>
 
+#ifdef _MSC_VER
+#define typeof __typeof__
+#endif
+
 #define ALIGN_UP_MASK(x, mask)   (((x) + (mask)) & ~(mask))
 #define ALIGN_UP(x, val)         ALIGN_UP_MASK(x, (typeof(x))(val) - 1)
 
