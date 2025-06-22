@@ -8,7 +8,7 @@ enum alloc_behavior {
      * retry, or otherwise do things that may cause unpredictable
      * delays.
      */
-     ALLOC_GENERIC = 0 << 0,
+    ALLOC_GENERIC = 0 << 0,
 
     /*
      * Zero the allocated memory.
