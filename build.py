@@ -7,7 +7,7 @@ import shutil
 import urllib.request
 import signal
 import sys
-from typing import Optional, List
+from typing import Optional, List, Callable
 
 import scripts.build_utils.wsl_wrap as ww
 import scripts.build_utils.package_manager as pm
@@ -55,6 +55,27 @@ def get_build_dir(execution_mode: str, toolchain: str) -> str:
     return pg.project_root_relative(f"build-{toolchain}-{execution_mode}")
 
 
+def get_tests_dir() -> str:
+    return pg.project_root_relative("tests")
+
+
+def get_tests_build_dir(this_os: str) -> str:
+    return pg.project_root_relative(get_tests_dir(), f"build-{this_os}")
+
+
+def platform_name_for_binary(binary: str, this_os: str) -> str:
+    if this_os == "windows":
+        binary += ".exe"
+
+    return binary
+
+
+def test_runner_binary(this_os: str) -> str:
+    return os.path.join(
+        "tests", "bin", platform_name_for_binary("run_tests", this_os)
+    )
+
+
 def build_toolchain(args: argparse.Namespace, execution_mode: str) -> None:
     if not tb.is_supported_system():
         sys.exit(1)
@@ -68,28 +89,39 @@ def build_toolchain(args: argparse.Namespace, execution_mode: str) -> None:
     tb.build_toolchain(tp)
 
 
-def build_ultra(
-    args: argparse.Namespace, arch: str, execution_mode: str,
-    build_dir: str
+def cmake_build(
+    args: argparse.Namespace, build_dir: str, extra_args: List[str] = [],
+    reconfigure_cb: Optional[Callable[[], None]] = None
 ) -> None:
     rerun_cmake = args.reconfigure or not os.path.isdir(build_dir)
 
     if rerun_cmake:
-        # Only rerun toolchain builder if reconfigure is not artificial
-        if not args.reconfigure:
-            build_toolchain(args, execution_mode)
-
+        if reconfigure_cb is not None:
+            reconfigure_cb()
         os.makedirs(build_dir, exist_ok=True)
-        cmake_args = [f"-DULTRA_ARCH={arch}",
-                      f"-DULTRA_ARCH_EXECUTION_MODE={execution_mode}",
-                      f"-DULTRA_TOOLCHAIN={args.toolchain}"]
-        subprocess.run(["cmake", "..", *cmake_args], check=True, cwd=build_dir)
+        subprocess.run(["cmake", "..", *extra_args], check=True, cwd=build_dir)
     else:
         print("Not rerunning cmake since build directory already exists "
               "(--reconfigure)")
 
     subprocess.run(["cmake", "--build", ".", "-j", str(os.cpu_count())],
                    cwd=build_dir, check=True)
+
+
+def build_ultra(
+    args: argparse.Namespace, arch: str, execution_mode: str,
+    build_dir: str
+) -> None:
+    cmake_args = [f"-DULTRA_ARCH={arch}",
+                  f"-DULTRA_ARCH_EXECUTION_MODE={execution_mode}",
+                  f"-DULTRA_TOOLCHAIN={args.toolchain}"]
+
+    def rebuild_toolchain() -> None:
+        # Only rerun toolchain builder if reconfigure is not artificial
+        if not args.reconfigure:
+            build_toolchain(args, execution_mode)
+
+    cmake_build(args, build_dir, cmake_args, reconfigure_cb=rebuild_toolchain)
 
 
 def make_hyper_config(execution_mode: str) -> str:
@@ -288,6 +320,14 @@ def run_qemu(
     return qp
 
 
+def run_unit_tests(args: argparse.Namespace, this_os: str) -> int:
+    dir = get_tests_build_dir(this_os)
+
+    cmake_build(args, dir)
+    binary = test_runner_binary(this_os)
+    return subprocess.run([binary]).returncode
+
+
 def main() -> None:
     ww.relaunch_in_wsl_if_windows()
     pg.set_project_root(os.path.dirname(os.path.abspath(__file__)))
@@ -328,12 +368,17 @@ def main() -> None:
                         help="Assume the kernel is already built")
     parser.add_argument("--reconfigure", action="store_true",
                         help="Reconfigure cmake before building")
+    parser.add_argument("--unit-tests", action="store_true",
+                        help="Run the userspace test suite")
     args = parser.parse_args()
 
     this_os = platform.system()
     if this_os not in ["Linux", "Darwin", "Windows"]:
         print(f"{this_os} is not (yet) supported")
         sys.exit(1)
+
+    if args.unit_tests:
+        sys.exit(run_unit_tests(args, this_os.lower()))
 
     execution_mode = args.arch
     arch = "x86"
