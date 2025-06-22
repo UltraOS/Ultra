@@ -66,3 +66,5 @@ jobs:
       - name: Build platform toolchain & Kernel
         run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
+      - name: Run the userspace unit tests
+        run: "${{ github.workspace }}/build.py --unit-tests"
