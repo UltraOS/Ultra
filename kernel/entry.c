@@ -7,6 +7,7 @@
 #include <initcall.h>
 #include <log.h>
 #include <bug.h>
+#include <boot/alloc.h>
 
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
@@ -104,5 +105,8 @@ void entry(struct ultra_boot_context *ctx)
         "Direct map set at 0x%016zX (%d pt levels)\n",
         g_direct_map_base, pi->page_table_depth
     );
+
+    boot_alloc_init();
+
     for (;;);
 }
