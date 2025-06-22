@@ -28,10 +28,14 @@ typedef u64 phys_addr_t;
 
 typedef ptr_t virt_addr_t;
 
+#if !defined(ULTRA_TEST) || defined(_MSC_VER)
 #if UINTPTR_MAX == 0xFFFFFFFF
 typedef i32 ssize_t;
 #else
 typedef i64 ssize_t;
+#endif
+#else
+#include <sys/types.h>
 #endif
 
 BUILD_BUG_ON(sizeof(i8) != 1);
