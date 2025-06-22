@@ -18,7 +18,6 @@
 #define SYSLOG_INFO    6
 #define SYSLOG_DEBUG   7
 
-
 enum log_level {
     LOG_LEVEL_EMERG   = SYSLOG_EMERG,
     LOG_LEVEL_ALERT   = SYSLOG_ALERT,
