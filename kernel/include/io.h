@@ -3,6 +3,18 @@
 #include <common/types.h>
 #include <common/error.h>
 
+extern ptr_t g_direct_map_base;
+
+static inline phys_addr_t virt_to_phys(void *virt)
+{
+    return (ptr_t)virt - g_direct_map_base;
+}
+
+static inline void *phys_to_virt(phys_addr_t phys)
+{
+    return (void*)(phys + g_direct_map_base);
+}
+
 #ifdef ULTRA_HARDENED_IO
 typedef struct io_window_impl io_window;
 #else
