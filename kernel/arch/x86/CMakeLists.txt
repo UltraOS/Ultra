@@ -14,6 +14,7 @@ target_sources(
     io.c
     cpuid.c
     hypervisor.c
+    memory.c
 )
 target_include_directories(
     ${ULTRA_KERNEL}
