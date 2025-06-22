@@ -1,15 +1,21 @@
 #pragma once
 
+#ifdef __cplusplus
+#define NORETURN [[noreturn]]
+#else
+#define NORETURN _Noreturn
+#endif
+
+#ifdef __GNUC__
+
 #define PACKED __attribute__((packed))
 
-#define NORETURN _Noreturn
-
 #ifdef __clang__
-#define PRINTF_DECL(fmt_idx, args_idx) __attribute__((format(printf, fmt_idx, args_idx)))
-#elif defined(__GNUC__)
-#define PRINTF_DECL(fmt_idx, args_idx) __attribute__((format(gnu_printf, fmt_idx, args_idx)))
+#define PRINTF_DECL(fmt_idx, args_idx) \
+    __attribute__((format(printf, fmt_idx, args_idx)))
 #else
-#define PRINTF_DECL(fmt_idx, args_idx)
+#define PRINTF_DECL(fmt_idx, args_idx) \
+    __attribute__((format(gnu_printf, fmt_idx, args_idx)))
 #endif
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
@@ -21,3 +27,18 @@
 #define USED __attribute__((used))
 #define WEAK __attribute__((weak))
 #define UNUSED_DECL __attribute__((unused))
+
+#elif defined(_MSC_VER) // Support for running tests on Windows
+
+#define PACKED
+#define ALWAYS_INLINE
+#define PRINTF_DECL(fmt_idx, args_idx)
+#define ERROR_EMITTER(msg)
+#define ALIAS_OF(func)
+#define SECTION(sec)
+#define WEAK
+#define UNUSED_DECL
+
+#else
+#error Unknown/unsupported compiler
+#endif
