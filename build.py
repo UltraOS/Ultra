@@ -186,7 +186,7 @@ def platform_has_native_hyper() -> bool:
 
 
 def hyper_get_binary(name: str, optional: bool = False) -> Optional[str]:
-    hyper_version = "v0.6.0"
+    hyper_version = "v0.10.0"
     root = pg.project_root_relative(f"hyper-{hyper_version}")
     binary_path = os.path.join(root, name)
 
