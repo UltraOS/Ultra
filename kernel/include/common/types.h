@@ -26,6 +26,8 @@ typedef u32 phys_addr_t;
 typedef u64 phys_addr_t;
 #endif
 
+typedef ptr_t virt_addr_t;
+
 #if UINTPTR_MAX == 0xFFFFFFFF
 typedef i32 ssize_t;
 #else
