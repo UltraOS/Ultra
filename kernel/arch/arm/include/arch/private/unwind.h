@@ -1,0 +1,38 @@
+#pragma once
+
+#define DWARF_REG_X0 0
+#define DWARF_REG_X1 1
+#define DWARF_REG_X2 2
+#define DWARF_REG_X3 3
+#define DWARF_REG_X4 4
+#define DWARF_REG_X5 5
+#define DWARF_REG_X6 6
+#define DWARF_REG_X7 7
+#define DWARF_REG_X8 8
+#define DWARF_REG_X9 9
+#define DWARF_REG_X10 10
+#define DWARF_REG_X11 11
+#define DWARF_REG_X12 12
+#define DWARF_REG_X13 13
+#define DWARF_REG_X14 14
+#define DWARF_REG_X15 15
+#define DWARF_REG_X16 16
+#define DWARF_REG_X17 17
+#define DWARF_REG_X18 18
+#define DWARF_REG_X19 19
+#define DWARF_REG_X20 20
+#define DWARF_REG_X21 21
+#define DWARF_REG_X22 22
+#define DWARF_REG_X23 23
+#define DWARF_REG_X24 24
+#define DWARF_REG_X25 25
+#define DWARF_REG_X26 26
+#define DWARF_REG_X27 27
+#define DWARF_REG_X28 28
+#define DWARF_REG_X29 29
+#define DWARF_REG_X30 30
+#define DWARF_REG_SP 31
+#define DWARF_REG_PC 32
+
+#define ARCH_NUM_DWARF_REGISTERS 33
+#define ARCH_DWARF_PC_REG DWARF_REG_PC

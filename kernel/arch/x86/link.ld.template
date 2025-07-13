@@ -40,6 +40,16 @@ SECTIONS
         RODATA(ULTRA_ARCH_WIDTH)
     } :rodata =0xDEADBEEF
 
+    .eh_frame_hdr : VIRTUAL_BASE_RELATIVE(.eh_frame_hdr)
+    {
+        EH_FRAME_HDR
+    } :rodata =0xDEADBEEF
+
+    .eh_frame : VIRTUAL_BASE_RELATIVE(.eh_frame)
+    {
+        EH_FRAME
+    } :rodata =0xDEADBEEF
+
     . = ALIGN(4K);
 
     .data : VIRTUAL_BASE_RELATIVE(.data)

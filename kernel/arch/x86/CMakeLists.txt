@@ -13,6 +13,8 @@ ultra_sources(
     cpuid.c
     hypervisor.c
     memory.c
+    unwind.c
+    unwind.S
 )
 ultra_include_directories(include)
 

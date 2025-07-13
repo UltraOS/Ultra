@@ -9,6 +9,7 @@
 #include <initcall.h>
 #include <log.h>
 #include <bug.h>
+#include <private/unwind.h>
 #include <boot/alloc.h>
 
 struct boot_context g_boot_ctx;
@@ -83,6 +84,7 @@ static void do_initcalls(initcall_t *begin, initcall_t *end)
 void entry(struct ultra_boot_context *ctx)
 {
     struct ultra_platform_info_attribute *pi;
+    error_t ret;
 
     do_initcalls(
         g_linker_symbol_initcalls_earlycon_begin,
@@ -110,6 +112,10 @@ void entry(struct ultra_boot_context *ctx)
         "direct map set at 0x%016zX (%d pt levels)\n",
         g_direct_map_base, pi->page_table_depth
     );
+
+    ret = unwind_init();
+    if (is_error(ret))
+        pr_warn("unwind_init() error %d, stack traces won't available\n", ret);
 
     boot_alloc_init();
 

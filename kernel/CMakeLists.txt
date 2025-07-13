@@ -41,18 +41,21 @@ ultra_sources(
     log.c
     io.c
     symbols.c
+    unwind.c
 )
 ultra_include_directories(include)
 
 ultra_compile_options(
     -std=gnu17
     -ffreestanding
+    -fasynchronous-unwind-tables
     -ggdb3
     -Wall
     -Wextra
     -Werror
     -Wstrict-prototypes
     -Wimplicit-fallthrough
+    -fomit-frame-pointer
 )
 if (ULTRA_CONFIG_LTO)
     ultra_compile_options(-flto=full)
@@ -60,6 +63,7 @@ endif ()
 
 ultra_link_options(
     -nostdlib
+    --eh-frame-hdr
     --orphan-handling=error
 )
 
