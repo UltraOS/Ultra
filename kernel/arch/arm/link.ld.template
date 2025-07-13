@@ -26,7 +26,9 @@ SECTIONS
 
     .text : VIRTUAL_BASE_RELATIVE(.text)
     {
+        TEXT_BEGIN
         TEXT
+        TEXT_END
     } :text
 
     . = ALIGN(4K);

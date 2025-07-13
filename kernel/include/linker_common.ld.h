@@ -6,6 +6,9 @@
 
 #define VIRTUAL_BASE_RELATIVE(type) AT (ADDR (type) - VIRTUAL_BASE)
 
+#define TEXT_BEGIN g_linker_symbol_text_begin = .;
+#define TEXT_END g_linker_symbol_text_end = .;
+
 #define TEXT  \
     *(.text)  \
     *(.text.*)

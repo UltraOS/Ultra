@@ -22,7 +22,7 @@ function(add_ultra_module)
         ${MODULE_SOURCES}
     )
 
-    get_target_property(ULTRA_CFLAGS ${ULTRA_KERNEL} COMPILE_OPTIONS)
+    get_target_property(ULTRA_CFLAGS ${ULTRA_KERNEL_OBJECTS} COMPILE_OPTIONS)
     ultra_target_compile_options(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
@@ -30,7 +30,7 @@ function(add_ultra_module)
         ${EXTRA_CFLAGS}
     )
 
-    get_target_property(ULTRA_INCLUDES ${ULTRA_KERNEL} INCLUDE_DIRECTORIES)
+    get_target_property(ULTRA_INCLUDES ${ULTRA_KERNEL_OBJECTS} INCLUDE_DIRECTORIES)
     target_include_directories(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
@@ -39,11 +39,7 @@ function(add_ultra_module)
     )
 
     if (MODULE_TYPE STREQUAL "COMPILED_IN")
-        target_link_libraries(
-            ${ULTRA_KERNEL}
-            PRIVATE
-            ${MODULE_OBJECT_TARGET}
-        )
+        ultra_link_libraries(${MODULE_OBJECT_TARGET})
     elseif (MODULE_TYPE STREQUAL "RUNTIME")
         set(MODULE_OUTPUT "${CMAKE_BINARY_DIR}/${MODULE_NAME}.ko")
 
@@ -76,7 +72,7 @@ function(add_ultra_module)
         message(FATAL_ERROR "Invalid module type '${MODULE_TYPE}'")
     endif ()
 
-    get_target_property(ULTRA_DEFINITIONS ${ULTRA_KERNEL} COMPILE_DEFINITIONS)
+    get_target_property(ULTRA_DEFINITIONS ${ULTRA_KERNEL_OBJECTS} COMPILE_DEFINITIONS)
     target_compile_definitions(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
