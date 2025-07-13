@@ -27,6 +27,7 @@
 #define USED __attribute__((used))
 #define WEAK __attribute__((weak))
 #define UNUSED_DECL __attribute__((unused))
+#define FALLTHROUGH __attribute__((fallthrough))
 
 #elif defined(_MSC_VER) // Support for running tests on Windows
 
@@ -38,6 +39,7 @@
 #define SECTION(sec)
 #define WEAK
 #define UNUSED_DECL
+#define FALLTHROUGH
 
 #else
 #error Unknown/unsupported compiler
