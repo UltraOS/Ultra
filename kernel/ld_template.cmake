@@ -18,10 +18,21 @@ function(add_ultra_ld_template)
         message(FATAL_ERROR "TEMPLATE_PATH & OUT_PATH must be specified if PATH is omitted")
     endif ()
 
-    get_target_property(DEPENDANT_INCLUDES ${SCRIPT_DEPENDANT} INCLUDE_DIRECTORIES)
+    # We assume all dependants have the same compile flags/definitions
+    list(GET SCRIPT_DEPENDANT 0 FIRST_DEPENDANT)
+
+    get_target_property(
+        DEPENDANT_INCLUDES
+        ${FIRST_DEPENDANT}
+        INCLUDE_DIRECTORIES
+    )
     list(TRANSFORM DEPENDANT_INCLUDES PREPEND "-I")
 
-    get_target_property(DEPENDANT_DEFINITIONS ${SCRIPT_DEPENDANT} COMPILE_DEFINITIONS)
+    get_target_property(
+        DEPENDANT_DEFINITIONS
+        ${FIRST_DEPENDANT}
+        COMPILE_DEFINITIONS
+    )
     list(TRANSFORM DEPENDANT_DEFINITIONS PREPEND "-D")
 
     set(SCRIPT_DEP_FILE "${SCRIPT_NAME}.d")
@@ -56,8 +67,10 @@ function(add_ultra_ld_template)
         CMAKE_POLICY(POP)
     endif ()
 
-
     add_custom_target(${SCRIPT_NAME} ALL DEPENDS ${SCRIPT_OUT_PATH})
-    add_dependencies(${SCRIPT_DEPENDANT} ${SCRIPT_NAME})
-    set_target_properties(${SCRIPT_DEPENDANT} PROPERTIES LINK_DEPENDS ${SCRIPT_OUT_PATH})
+
+    foreach (DEP IN LISTS SCRIPT_DEPENDANT)
+        add_dependencies(${DEP} ${SCRIPT_NAME})
+        set_target_properties(${DEP} PROPERTIES LINK_DEPENDS ${SCRIPT_OUT_PATH})
+    endforeach ()
 endfunction()
