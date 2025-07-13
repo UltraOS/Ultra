@@ -20,6 +20,8 @@ endif()
 ultra_sources(
     entry.c
     io.c
+    unwind.c
+    unwind.S
 )
 ultra_include_directories(include)
 

@@ -25,7 +25,7 @@ function(ultra_target_link_options TARGET)
     )
 endfunction()
 
-set(ULTRA_LANGUAGES "C")
+set(ULTRA_LANGUAGES "C;ASM")
 
 set(ULTRA_TARGET_PREFIX ${ULTRA_ARCH_EXECUTION_MODE})
 if (ULTRA_TARGET_PREFIX STREQUAL "aarch32")

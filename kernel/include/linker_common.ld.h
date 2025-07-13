@@ -27,6 +27,16 @@
     . = ALIGN(init_align);  \
     INITCALLS
 
+#define EH_FRAME_HDR                         \
+    g_linker_symbol_eh_frame_hdr_begin = .;  \
+    *(.eh_frame_hdr)                         \
+    g_linker_symbol_eh_frame_hdr_end = .;
+
+#define EH_FRAME                        \
+    g_linker_symbol_eh_frame_begin = .; \
+    *(.eh_frame)                        \
+    g_linker_symbol_eh_frame_end = .;
+
 #define DATA \
     *(.data) \
     *(.data.*)
@@ -60,7 +70,6 @@
 #define DISCARDS     \
     /DISCARD/ : {    \
         *(.comment)  \
-        *(.eh_frame) \
     }
 
 #define EXPECT_EMPTY_RELOC(type, input)                                             \
