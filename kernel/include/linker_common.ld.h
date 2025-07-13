@@ -6,8 +6,9 @@
 
 #define VIRTUAL_BASE_RELATIVE(type) AT (ADDR (type) - VIRTUAL_BASE)
 
-#define TEXT \
-    *(.text)
+#define TEXT  \
+    *(.text)  \
+    *(.text.*)
 
 #define INITCALLS                 \
     initcalls_earlycon_begin = .; \
@@ -24,7 +25,8 @@
     INITCALLS
 
 #define DATA \
-    *(.data)
+    *(.data) \
+    *(.data.*)
 
 #define BSS        \
     *(COMMON)      \
