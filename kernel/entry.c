@@ -1,3 +1,5 @@
+#define MSG_FMT(msg) "entry: " msg
+
 #include <common/helpers.h>
 #include <common/types.h>
 
@@ -87,7 +89,7 @@ void entry(struct ultra_boot_context *ctx)
         g_linker_symbol_initcalls_earlycon_end
     );
 
-    pr_info(
+    print(
         "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
         ULTRA_ARCH_EXECUTION_MODE_STRING, ULTRA_GIT_SHA, __DATE__, __TIME__
     );
@@ -98,14 +100,14 @@ void entry(struct ultra_boot_context *ctx)
     BUG_ON(pi == NULL);
 
     pr_info(
-        "Booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
+        "booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
         pi->loader_name
     );
 
     g_direct_map_base = pi->higher_half_base;
 
     pr_info(
-        "Direct map set at 0x%016zX (%d pt levels)\n",
+        "direct map set at 0x%016zX (%d pt levels)\n",
         g_direct_map_base, pi->page_table_depth
     );
 
