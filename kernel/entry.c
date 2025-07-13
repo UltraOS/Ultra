@@ -82,7 +82,10 @@ void entry(struct ultra_boot_context *ctx)
 {
     struct ultra_platform_info_attribute *pi;
 
-    do_initcalls(initcalls_earlycon_begin, initcalls_earlycon_end);
+    do_initcalls(
+        g_linker_symbol_initcalls_earlycon_begin,
+        g_linker_symbol_initcalls_earlycon_end
+    );
 
     pr_info(
         "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",

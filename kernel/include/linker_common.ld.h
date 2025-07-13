@@ -10,14 +10,14 @@
     *(.text)  \
     *(.text.*)
 
-#define INITCALLS                 \
-    initcalls_earlycon_begin = .; \
-    KEEP(*(.initcall_earlycon))   \
-    initcalls_earlycon_end = .;   \
-                                  \
-    initcalls_normal_begin = .;   \
-    KEEP(*(.initcall_normal))     \
-    initcalls_normal_end = .;
+#define INITCALLS                                 \
+    g_linker_symbol_initcalls_earlycon_begin = .; \
+    KEEP(*(.initcall_earlycon))                   \
+    g_linker_symbol_initcalls_earlycon_end = .;   \
+                                                  \
+    g_linker_symbol_initcalls_normal_begin = .;   \
+    KEEP(*(.initcall_normal))                     \
+    g_linker_symbol_initcalls_normal_end = .;
 
 #define RODATA(init_align)  \
     *(.rodata .rodata.*)    \

@@ -58,14 +58,10 @@ SECTIONS
      * otherwise linker complains.
      */
 	.ARM.exidx : {
-		unwind_idx_begin = .;
 		*(.ARM.exidx*)
-		unwind_idx_end = .;
 	}
     .ARM.extab : {
-        unwind_table_begin = .;
         *(.ARM.extab*)
-        unwind_table_end = .;
     }
 
     ARM.attributes 0x000000000 : {
