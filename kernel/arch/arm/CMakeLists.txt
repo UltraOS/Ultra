@@ -1,43 +1,27 @@
 if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "aarch32")
-    target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=4)
-    target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_PHYS_ADDR_WIDTH=4)
-    ultra_target_compile_options(
-        ${ULTRA_KERNEL}
-        -mfloat-abi=soft
-    )
+    ultra_compile_definitions(ULTRA_ARCH_WIDTH=4)
+    ultra_compile_definitions(ULTRA_PHYS_ADDR_WIDTH=4)
+    ultra_compile_options(-mfloat-abi=soft)
     message(
         FATAL_ERROR
         "aarch32 is not implemented (TODO: soft math helpers, loader support)"
     )
 else ()
-    target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_ARCH_WIDTH=8)
-    target_compile_definitions(${ULTRA_KERNEL} PUBLIC ULTRA_PHYS_ADDR_WIDTH=8)
-    ultra_target_compile_options(
-        ${ULTRA_KERNEL}
-        -mgeneral-regs-only
-    )
+    ultra_compile_definitions(ULTRA_ARCH_WIDTH=8)
+    ultra_compile_definitions(ULTRA_PHYS_ADDR_WIDTH=8)
+    ultra_compile_options(-mgeneral-regs-only)
 
     # GCC doesn't support red-zone on aarch64
     if (ULTRA_TOOLCHAIN STREQUAL "clang")
-        ultra_target_compile_options(
-            ${ULTRA_KERNEL}
-            PRIVATE
-            -mno-red-zone
-        )
+        ultra_compile_options(-mno-red-zone)
     endif()
 endif()
 
-target_sources(
-    ${ULTRA_KERNEL}
-    PRIVATE
+ultra_sources(
     entry.c
     io.c
 )
-target_include_directories(
-    ${ULTRA_KERNEL}
-    PRIVATE
-    include
-)
+ultra_include_directories(include)
 
 set(ULTRA_LD_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/link.ld.template")
 set(ULTRA_LD_SCRIPT
@@ -50,11 +34,10 @@ add_ultra_ld_template(
     OUT_PATH
     ${ULTRA_LD_SCRIPT}
     DEPENDANT
-    ${ULTRA_KERNEL}
+    ${ULTRA_KERNEL_TARGETS}
 )
 
-ultra_target_link_options(
-    ${ULTRA_KERNEL}
+ultra_link_options(
     -T${ULTRA_LD_SCRIPT}
     -z max-page-size=4096
 )

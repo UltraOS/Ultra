@@ -1,6 +1,4 @@
-target_sources(
-    ${ULTRA_KERNEL}
-    PRIVATE
+ultra_sources(
     conversions.c
     format.c
     string_view.c

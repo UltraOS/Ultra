@@ -1,6 +1,4 @@
-target_sources(
-    ${ULTRA_KERNEL}
-    PRIVATE
+ultra_sources(
     alloc.c
     boot_alloc.c
 )

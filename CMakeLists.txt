@@ -42,6 +42,8 @@ endif ()
 set(ULTRA_TOOLCHAIN_DIR "${CMAKE_SOURCE_DIR}/toolchain")
 include("${ULTRA_TOOLCHAIN_DIR}/toolchain_${ULTRA_TOOLCHAIN}.cmake")
 
+set(ULTRA_SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/scripts")
+
 project(Ultra ${ULTRA_LANGUAGES})
 
 execute_process(
@@ -54,5 +56,7 @@ execute_process(
 if (NOT ULTRA_GIT_SHA)
     set(ULTRA_GIT_SHA "0000000")
 endif ()
+
+option(ULTRA_CONFIG_LTO, "Enables link time optimizations")
 
 add_subdirectory(kernel)
