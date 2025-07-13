@@ -51,6 +51,8 @@ ultra_compile_options(
     -Wall
     -Wextra
     -Werror
+    -Wstrict-prototypes
+    -Wimplicit-fallthrough
 )
 if (ULTRA_CONFIG_LTO)
     ultra_compile_options(-flto=full)
