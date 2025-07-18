@@ -87,8 +87,8 @@ void entry(struct ultra_boot_context *ctx)
     error_t ret;
 
     do_initcalls(
-        g_linker_symbol_initcalls_earlycon_begin,
-        g_linker_symbol_initcalls_earlycon_end
+        LINKER_SYMBOL(initcalls_earlycon_begin),
+        LINKER_SYMBOL(initcalls_earlycon_end)
     );
 
     print(

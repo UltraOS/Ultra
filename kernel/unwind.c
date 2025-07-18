@@ -166,10 +166,10 @@ static error_t decode_value(
         *out_value = (ptr_t)data->cursor;
         break;
     case DW_EH_PE_textrel:
-        *out_value = (ptr_t)g_linker_symbol_text_begin;
+        *out_value = (ptr_t)LINKER_SYMBOL(text_begin);
         break;
     case DW_EH_PE_datarel:
-        *out_value = (ptr_t)g_linker_symbol_eh_frame_hdr_begin;
+        *out_value = (ptr_t)LINKER_SYMBOL(eh_frame_hdr_begin);
         break;
     case DW_EH_PE_funcrel:
     case DW_EH_PE_aligned:
@@ -210,9 +210,9 @@ error_t unwind_init(void)
 {
     error_t ret;
     struct eh_data data = {
-        .cursor = g_linker_symbol_eh_frame_hdr_begin,
-        .bytes_left = g_linker_symbol_eh_frame_hdr_end -
-                      g_linker_symbol_eh_frame_hdr_begin,
+        .cursor = LINKER_SYMBOL(eh_frame_hdr_begin),
+        .bytes_left = LINKER_SYMBOL(eh_frame_hdr_end) -
+                      LINKER_SYMBOL(eh_frame_hdr_begin),
     };
     u8 version, eh_frame_ptr_encoding, fde_count_encoding;
     u64 value;
@@ -252,7 +252,7 @@ error_t unwind_init(void)
     if (is_error(ret))
         return ret;
 
-    if (unlikely((ptr_t)g_linker_symbol_eh_frame_begin != value))
+    if (unlikely((ptr_t)LINKER_SYMBOL(eh_frame_begin) != value))
         return EINVAL;
 
     ret = decode_value(&data, fde_count_encoding, &g_num_fdes);

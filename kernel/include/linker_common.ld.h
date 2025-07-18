@@ -1,41 +1,43 @@
 #include <common/helpers.h>
 
+#include <linker.h>
+
 #define PHDR_READ  (1 << 2)
 #define PHDR_WRITE (1 << 1)
 #define PHDR_EXEC  (1 << 0)
 
 #define VIRTUAL_BASE_RELATIVE(type) AT (ADDR (type) - VIRTUAL_BASE)
 
-#define TEXT_BEGIN g_linker_symbol_text_begin = .;
-#define TEXT_END g_linker_symbol_text_end = .;
+#define TEXT_BEGIN LINKER_SYMBOL(text_begin) = .;
+#define TEXT_END LINKER_SYMBOL(text_end) = .;
 
 #define TEXT  \
     *(.text)  \
     *(.text.*)
 
-#define INITCALLS                                 \
-    g_linker_symbol_initcalls_earlycon_begin = .; \
-    KEEP(*(.initcall_earlycon))                   \
-    g_linker_symbol_initcalls_earlycon_end = .;   \
-                                                  \
-    g_linker_symbol_initcalls_normal_begin = .;   \
-    KEEP(*(.initcall_normal))                     \
-    g_linker_symbol_initcalls_normal_end = .;
+#define INITCALLS                                \
+    LINKER_SYMBOL(initcalls_earlycon_begin) = .; \
+    KEEP(*(.initcall_earlycon))                  \
+    LINKER_SYMBOL(initcalls_earlycon_end) = .;   \
+                                                 \
+    LINKER_SYMBOL(initcalls_normal_begin) = .;   \
+    KEEP(*(.initcall_normal))                    \
+    LINKER_SYMBOL(initcalls_normal_end) = .;
 
-#define RODATA(init_align)  \
-    *(.rodata .rodata.*)    \
-    . = ALIGN(init_align);  \
+#define RODATA(init_align) \
+    *(.rodata .rodata.*)   \
+    . = ALIGN(init_align); \
     INITCALLS
 
-#define EH_FRAME_HDR                         \
-    g_linker_symbol_eh_frame_hdr_begin = .;  \
-    *(.eh_frame_hdr)                         \
-    g_linker_symbol_eh_frame_hdr_end = .;
+#define EH_FRAME_HDR                       \
+    LINKER_SYMBOL(eh_frame_hdr_begin) = .; \
+    *(.eh_frame_hdr)                       \
+    LINKER_SYMBOL(eh_frame_hdr_end) = .;
 
-#define EH_FRAME                        \
-    g_linker_symbol_eh_frame_begin = .; \
-    *(.eh_frame)                        \
-    g_linker_symbol_eh_frame_end = .;
+#define EH_FRAME                       \
+    LINKER_SYMBOL(eh_frame_begin) = .; \
+    *(.eh_frame)                       \
+    LINKER_SYMBOL(eh_frame_end) = .;
 
 #define DATA \
     *(.data) \
