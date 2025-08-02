@@ -30,11 +30,6 @@ if (NOT ULTRA_ARCH_EXECUTION_MODE IN_LIST ULTRA_VALID_EXECUTION_MODES)
     )
 endif ()
 
-if ($ENV{CLION_IDE})
-    set(ULTRA_TOOLCHAIN dummy)
-    message("Detected CLion, using a dummy toolchain file")
-endif ()
-
 if (NOT ULTRA_TOOLCHAIN)
     set(ULTRA_TOOLCHAIN clang)
 endif ()
