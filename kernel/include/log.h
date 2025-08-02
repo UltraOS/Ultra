@@ -61,3 +61,12 @@ void print(const char *msg, ...);
 #define pr_notice(msg, ...)  print(LOG_NOTICE  MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_info(msg, ...)    print(LOG_INFO    MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_debug(msg, ...)   print(LOG_DEBUG   MSG_FMT(msg), ##__VA_ARGS__)
+
+// Defined in arch/registers.h
+struct registers;
+
+/*
+ * Dump the current stack trace or the stack trace of the register state
+ * specified in registers with the provided log_level
+ */
+void dump_stack(enum log_level, struct registers*);
