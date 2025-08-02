@@ -259,9 +259,6 @@ error_t unwind_init(void)
     if (is_error(ret))
         return ret;
 
-    if (unlikely(g_num_fdes > g_symbol_count))
-        return EINVAL;
-
     g_fde_binary_search_table = data.cursor;
 
     ret = decode_value(&data, g_fde_table_encoding, &value);
