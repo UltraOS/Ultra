@@ -24,6 +24,7 @@ GENERIC_DEPS = {
         "qemu-system-x86",
         "qemu-system-arm",
         "cmake",
+        "mtools",
     ],
     "pacman": [
         "nasm",
@@ -31,12 +32,14 @@ GENERIC_DEPS = {
         "qemu-system-x86",
         "qemu-system-arm",
         "cmake",
+        "mtools",
     ],
     "brew": [
         "nasm",
         "xorriso",
         "qemu",
         "cmake",
+        "mtools",
     ],
 }
 
