@@ -30,8 +30,9 @@ struct registers {
     u64 rdi;
 
     union {
+        // Treat as a u8 because it's pushed as a sign-extended IMM8
+        u8 interrupt_idx;
         u64 error_code;
-        u64 interrupt_idx;
         u64 syscall_number;
     };
 
