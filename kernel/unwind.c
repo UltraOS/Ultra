@@ -570,14 +570,24 @@ static error_t dwarf_exec(
         case DW_CFA_offset: {
             u8 reg = LOW_6_BITS(opcode);
 
-            if (unlikely(reg >= ARCH_NUM_DWARF_REGISTERS))
-                return EINVAL;
-
-            ret = decode_value(data, DW_EH_PE_uleb128, &rules[reg].offset);
+            ret = decode_value(data, DW_EH_PE_uleb128, &value);
             if (is_error(ret))
                 return ret;
 
-            rules[reg].rule = DW_CFA_offset;
+            /*
+             * Silently skip restore rules for registers we don't care about.
+             *
+             * We have manual CFI annotations in some places, e.g. the context
+             * switch/interrupt code to make it nicer to debug under GDB, but
+             * the kernel unwind code doesn't have to care about those. If
+             * they're ever used to compute the CFA value we return EINVAL
+             * below in DW_CFA_def_cfa etc.
+             */
+            if (likely(reg < ARCH_NUM_DWARF_REGISTERS)) {
+                rules[reg].offset = value;
+                rules[reg].rule = DW_CFA_offset;
+            }
+
             continue;
         }
         default:
