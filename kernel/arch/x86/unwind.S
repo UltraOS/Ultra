@@ -1,13 +1,11 @@
 #include <arch/private/unwind.h>
+#include <arch/private/asm_helpers.h>
 
-.intel_syntax noprefix
-.section ".text", "ax", @progbits
+ASM_PRELUDE
 
 .extern unwind_current_begin
 
-.globl arch_unwind_current_begin
-.type arch_unwind_current_begin, @function
-arch_unwind_current_begin:
+ASM_GLOBAL_FUNCTION arch_unwind_current_begin
     mov [rdi + 8 * DWARF_REG_RAX], rax
     mov [rdi + 8 * DWARF_REG_RDX], rdx
     mov [rdi + 8 * DWARF_REG_RCX], rcx
@@ -31,4 +29,4 @@ arch_unwind_current_begin:
     mov r15, [rdi + 8 * DWARF_REG_R15]
 
     jmp unwind_current_begin
-.size arch_unwind_current_begin, . - arch_unwind_current_begin
+ASM_FUNCTION_END arch_unwind_current_begin
