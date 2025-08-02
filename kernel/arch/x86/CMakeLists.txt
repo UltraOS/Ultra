@@ -36,6 +36,7 @@ ultra_compile_options(
     -mno-sse2
     -mno-3dnow
     -mno-avx
+    -mskip-rax-setup
 )
 
 set(ULTRA_LD_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/link.ld.template")
