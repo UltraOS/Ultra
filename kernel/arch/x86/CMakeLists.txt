@@ -1,3 +1,5 @@
+include(CheckCompilerFlag)
+
 if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "i686")
     ultra_compile_definitions(ULTRA_ARCH_WIDTH=4)
 else ()
@@ -17,6 +19,23 @@ ultra_sources(
     unwind.S
 )
 ultra_include_directories(include)
+
+check_compiler_flag(
+    C -mpreferred-stack-boundary=4
+    HAVE_PREFERRED_STACK_BOUNDARY
+)
+check_compiler_flag(
+    C -mstack-alignment=16
+    HAVE_STACK_ALIGNMENT
+)
+
+if (HAVE_PREFERRED_STACK_BOUNDARY)
+    ultra_compile_options(-mpreferred-stack-boundary=3)
+elseif (HAVE_STACK_ALIGNMENT)
+    ultra_compile_options(-mstack-alignment=8)
+else ()
+    message(FATAL_ERROR "This compiler doesn't support setting stack alignment")
+endif()
 
 if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "x86_64")
     ultra_compile_options(
