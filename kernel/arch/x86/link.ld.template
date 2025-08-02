@@ -8,7 +8,7 @@ VIRTUAL_BASE    = 0xFFFFFFFF80000000;
 PHYSICAL_OFFSET = 0;
 #endif
 
-#define INT3_OPCODE 0xCC
+#define INT3_OPCODE 0xCCCCCCCC
 
 #include <linker_common.ld.h>
 
