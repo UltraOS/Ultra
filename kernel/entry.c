@@ -9,8 +9,10 @@
 #include <initcall.h>
 #include <log.h>
 #include <bug.h>
-#include <private/unwind.h>
 #include <boot/alloc.h>
+
+#include <private/unwind.h>
+#include <private/arch/init.h>
 
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
@@ -96,6 +98,7 @@ void entry(struct ultra_boot_context *ctx)
         ULTRA_ARCH_EXECUTION_MODE_STRING, ULTRA_GIT_SHA, __DATE__, __TIME__
     );
 
+    arch_init_early();
     boot_context_init(ctx);
 
     pi = g_boot_ctx.platform_info;
