@@ -1,8 +1,11 @@
-#include "common/helpers.h"
-#include <common/string.h>
+#include <common/helpers.h>
 #include <common/format.h>
+#include <common/error.h>
+
 #include <console.h>
 #include <log.h>
+#include <symbols.h>
+#include <unwind.h>
 
 static size_t extract_msg_level(const char *msg, enum log_level *out_level)
 {
@@ -44,4 +47,44 @@ void print(const char *msg, ...)
     va_start(vlist, msg);
     vprint(msg, vlist);
     va_end(vlist);
+}
+
+struct dump_state {
+    enum log_level level;
+    size_t depth;
+};
+
+static bool do_dump_frame(void *user, ptr_t addr, bool addr_after_call)
+{
+    struct dump_state *state = user;
+    char sym[MAX_SYMBOL_LENGTH];
+    ptr_t lookup_addr;
+    size_t offset;
+
+    lookup_addr = addr_after_call ? addr - 1 : addr;
+
+    if (is_error(symbol_lookup_by_address(lookup_addr, sym, &offset))) {
+        print(
+        "    #%zu in unknown/garbage <0x%016zX>\n", state->depth, addr
+        );
+        goto out;
+    }
+
+    print("    #%zu in %s+%zu\n", state->depth, sym, offset);
+
+out:
+    state->depth++;
+    return true;
+}
+
+void dump_stack(enum log_level level, struct registers *regs)
+{
+    struct dump_state state = {
+        // FIXME: support extracting the log level via %s
+        .level = level,
+        .depth = 0,
+    };
+
+    print("Call trace (most recent call first):\n");
+    unwind_walk(regs, do_dump_frame, &state);
 }
