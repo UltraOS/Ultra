@@ -401,6 +401,18 @@ static error_t parse_cie(struct unwind_state *state, struct eh_data *cie)
             return ret;
 
         if (unlikely(aug_ch != EXPECTED_AUG_STRING[aug_idx])) {
+            /*
+             * One extra augmentation we allow:
+             *     S: signal frame (PC points to the instruction before call)
+             */
+            if (likely(aug_ch == 'S')) {
+                state->signal_frame = true;
+
+                // Skip this char, pretend it never happened
+                aug_idx--;
+                continue;
+            }
+
             pr_warn(
                 "unhandled DWARF augmentation @%zu: '%c'\n", aug_idx, aug_ch
             );
