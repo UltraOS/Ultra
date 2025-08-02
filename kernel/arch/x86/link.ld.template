@@ -29,7 +29,14 @@ SECTIONS
     .text : VIRTUAL_BASE_RELATIVE(.text)
     {
         TEXT_BEGIN
+
+        . = ALIGN(8);
+        LINKER_SYMBOL(idt_thunks) = .;
+        *(.text.idt_thunks)
+
+        . = ALIGN(16);
         TEXT
+
         TEXT_END
     } :text =INT3_OPCODE
 

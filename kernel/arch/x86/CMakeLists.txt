@@ -18,6 +18,10 @@ ultra_sources(
     unwind.c
     unwind.S
     arch_helpers.S
+    interrupts.S
+    idt.c
+    irq.c
+    exceptions.c
 )
 ultra_include_directories(include)
 
