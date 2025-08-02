@@ -17,6 +17,7 @@ ultra_sources(
     memory.c
     unwind.c
     unwind.S
+    arch_helpers.S
 )
 ultra_include_directories(include)
 

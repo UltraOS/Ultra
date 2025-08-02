@@ -95,4 +95,6 @@ BUILD_BUG_ON(sizeof(struct descriptor_ptr) != 10);
 ))
 #define INTERRUPT_DESCRIPTOR_HIGH(addr) ((descriptor_t)((addr) >> 32))
 
+void load_gdt(struct descriptor_ptr *ptr);
+
 #endif
