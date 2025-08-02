@@ -35,7 +35,10 @@ def make_rebuild_task(compiler: str, arch: str) -> dict:
     task_template = {
         "label": make_rebuild_task_label(compiler, arch),
         "command": "python3",
-        "args": ["${workspaceRoot}/build.py", "--arch", arch],
+        "args": [
+            "${workspaceRoot}/build.py", "--toolchain", compiler,
+            "--arch", arch
+        ],
         "group": {
             "kind": "build",
             "isDefault": True
@@ -53,8 +56,10 @@ def make_debug_task(compiler: str, arch: str) -> dict:
     task_template = {
         "label": make_debug_task_label(compiler, arch),
         "command": "python3",
-        "args": ["${workspaceRoot}/build.py", "--arch", arch,
-                 "--ide-debug", "--no-build"],
+        "args": [
+            "${workspaceRoot}/build.py", "--arch", arch,
+            "--ide-debug", "--no-build", "--toolchain", compiler,
+        ],
         "dependsOn": make_rebuild_task_label(compiler, arch)
     }
 
