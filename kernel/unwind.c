@@ -535,6 +535,7 @@ enum dw_cfa_opcode {
     DW_CFA_def_cfa_offset = 0x0E,
     DW_CFA_advance_loc = HIGH_2_BITS_OP(0x01),
     DW_CFA_offset = HIGH_2_BITS_OP(0x02),
+    DW_CFA_restore = HIGH_2_BITS_OP(0x03),
 };
 
 struct register_rule {
@@ -567,12 +568,19 @@ static error_t dwarf_exec(
             state->pc += LOW_6_BITS(opcode) * state->code_alignment_factor;
             continue;
 
-        case DW_CFA_offset: {
+        case DW_CFA_offset:
+        case DW_CFA_restore: {
             u8 reg = LOW_6_BITS(opcode);
+            u8 rule = AS_HIGH_2_BITS_OP(opcode);
 
-            ret = decode_value(data, DW_EH_PE_uleb128, &value);
-            if (is_error(ret))
-                return ret;
+            if (rule == DW_CFA_offset) {
+                ret = decode_value(data, DW_EH_PE_uleb128, &value);
+                if (is_error(ret))
+                    return ret;
+            } else {
+                value = 0;
+                rule = DW_CFA_same_value;
+            }
 
             /*
              * Silently skip restore rules for registers we don't care about.
@@ -585,7 +593,7 @@ static error_t dwarf_exec(
              */
             if (likely(reg < ARCH_NUM_DWARF_REGISTERS)) {
                 rules[reg].offset = value;
-                rules[reg].rule = DW_CFA_offset;
+                rules[reg].rule = rule;
             }
 
             continue;
