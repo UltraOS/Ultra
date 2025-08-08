@@ -182,10 +182,19 @@ def get_kernel_path(execution_node: str, build_dir: str) -> str:
 def make_hyper_image(
     br_type: str, fs_type: str, execution_mode: str, build_dir: str,
     hyper_installer: Optional[str], hyper_iso_br: Optional[str],
-    hyper_uefi_binaries: List[str], image_path: str
-) -> ultr.DiskImage:
+    hyper_uefi_binaries: List[str], image_path: str, force_regenerate: bool
+) -> Optional[ultr.DiskImage]:
     kernel_path = get_kernel_path(execution_mode, build_dir)
     image_root_path = os.path.join(build_dir, "image-root")
+
+    try:
+        if (not force_regenerate and
+           os.path.getmtime(kernel_path) < os.path.getmtime(image_path)):
+            print("Image is newer than the kernel binary, not regenerating "
+                  "(--make-image)")
+            return None
+    except OSError:
+        pass
 
     os.makedirs(image_root_path, exist_ok=True)
     shutil.copy(kernel_path, image_root_path)
@@ -432,7 +441,8 @@ def main() -> None:
         image_path = os.path.join(build_dir, image_name)
 
         make_hyper_image("MBR", fs_type, args.arch, build_dir, hyper_installer,
-                         hyper_iso_br, hyper_uefi_binary_paths, image_path)
+                         hyper_iso_br, hyper_uefi_binary_paths, image_path,
+                         args.make_image)
 
     if should_run:
         uefi_boot = hyper_uefi_binary_paths and args.uefi
