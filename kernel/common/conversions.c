@@ -198,4 +198,33 @@ error_t str_to_u8_with_base(struct string str, u8 *res, unsigned int base)
     *res = (u8)ures;
     return EOK;
 }
+
+error_t str_to_bool(struct string str, bool *res)
+{
+    size_t i;
+
+    static const struct string options[] = {
+        // True options
+        STR_CONSTEXPR("y"),
+        STR_CONSTEXPR("t"),
+        STR_CONSTEXPR("on"),
+        STR_CONSTEXPR("1"),
+        #define NUM_TRUE_OPTIONS 4
+
+        // False options
+        STR_CONSTEXPR("n"),
+        STR_CONSTEXPR("f"),
+        STR_CONSTEXPR("off"),
+        STR_CONSTEXPR("0"),
+    };
+
+    for (i = 0; i < ARRAY_SIZE(options); i++) {
+        if (!str_equals_caseless(str, options[i]))
+            continue;
+
+        *res = i < NUM_TRUE_OPTIONS;
+        return EOK;
+    }
+
+    return EINVAL;
 }
