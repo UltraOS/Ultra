@@ -6,15 +6,18 @@
 #include <bug.h>
 
 struct string {
-    const char *text;
+    union {
+        const char *text;
+        char *mutable_text;
+    };
     size_t size;
 };
 
-#define STR_CONSTEXPR(str) (struct string) { (str), sizeof((str)) - 1 }
+#define STR_CONSTEXPR(str) (struct string) { { (str) }, sizeof((str)) - 1 }
 #define STR(str)                                                    \
     __builtin_choose_expr(__builtin_constant_p((str)),              \
                           STR_CONSTEXPR((str)),                     \
-                          (struct string) { (str), strlen((str)) })
+                          (struct string) { { (str) }, strlen((str)) })
 
 bool str_equals(struct string lhs, struct string rhs);
 bool str_equals_caseless(struct string lhs, struct string rhs);
