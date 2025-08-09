@@ -292,7 +292,7 @@ int vsnprintf(char *buffer, size_t capacity, const char *fmt, va_list vlist)
         }
 
         if (consume_digits(&fmt, &digits)) {
-            if (!str_to_u32(digits, &fm.min_width))
+            if (is_error(str_to_u32(digits, &fm.min_width)))
                 return -1;
         }
 

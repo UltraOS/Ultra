@@ -27,7 +27,7 @@ static unsigned int consume_base(struct string *str)
     return 0;
 }
 
-static bool do_str_to_u64_unchecked(
+static error_t do_str_to_u64_unchecked(
     struct string str, u64 *res, unsigned int base
 )
 {
@@ -41,139 +41,161 @@ static bool do_str_to_u64_unchecked(
         } else {
             char l = tolower(c);
             if (l < 'a' || l > 'f')
-                return false;
+                return EINVAL;
             next = 10 + l - 'a';
         }
 
         next = number * base + next;
         if (next / base != number)
-            return false;
+            return ERANGE;
         number = next;
     }
 
     *res = number;
-    return true;
+    return EOK;
 }
 
-static bool do_str_to_u64(struct string str, u64 *res, unsigned int base)
+static error_t do_str_to_u64(struct string str, u64 *res, unsigned int base)
 {
     unsigned int cb = consume_base(&str);
     if (!base && !cb)
-        return false;
+        return EINVAL;
 
     return do_str_to_u64_unchecked(str, res, base ?: cb);
 }
 
-bool str_to_i64_with_base(struct string str, i64 *res, unsigned int base)
+error_t str_to_i64_with_base(struct string str, i64 *res, unsigned int base)
 {
     u64 ures;
+    error_t ret;
 
     if (str_starts_with(str, STR("-"))) {
         str_offset_by(&str, 1);
 
-        if (!do_str_to_u64(str, &ures, base))
-            return false;
+        ret = do_str_to_u64(str, &ures, base);
+        if (is_error(ret))
+            return ret;
         if ((i64)-ures > 0)
-            return false;
+            return ERANGE;
     } else {
         if (str_starts_with(str, STR("+")))
             str_offset_by(&str, 1);
 
-        if (!do_str_to_u64(str, &ures, base))
-            return false;
+        ret = do_str_to_u64(str, &ures, base);
+        if (is_error(ret))
+            return ret;
         if (ures > (u64)INT64_MAX)
-            return false;
+            return ERANGE;
     }
 
     *res = (i64)ures;
-    return true;
+    return EOK;
 }
 
-bool str_to_u64_with_base(struct string str, u64 *res, unsigned int base)
+error_t str_to_u64_with_base(struct string str, u64 *res, unsigned int base)
 {
     if (str_starts_with(str, STR("+")))
         str_offset_by(&str, 1);
 
     if (str_starts_with(str, STR("-")))
-        return false;
+        return EINVAL;
 
     return do_str_to_u64(str, res, base);
 }
 
-bool str_to_i32_with_base(struct string str, i32 *res, unsigned int base)
+error_t str_to_i32_with_base(struct string str, i32 *res, unsigned int base)
 {
     i64 ires;
-    if (!str_to_i64_with_base(str, &ires, base))
-        return false;
+    error_t ret;
+
+    ret = str_to_i64_with_base(str, &ires, base);
+    if (is_error(ret))
+        return ret;
 
     if ((i32)ires != ires)
-        return false;
+        return ERANGE;
 
     *res = (i32)ires;
-    return true;
+    return EOK;
 }
 
-bool str_to_u32_with_base(struct string str, u32 *res, unsigned int base)
+error_t str_to_u32_with_base(struct string str, u32 *res, unsigned int base)
 {
     u64 ures;
-    if (!str_to_u64_with_base(str, &ures, base))
-        return false;
+    error_t ret;
+
+    ret = str_to_u64_with_base(str, &ures, base);
+    if (is_error(ret))
+        return ret;
 
     if ((u32)ures != ures)
-        return false;
+        return ERANGE;
 
     *res = (u32)ures;
-    return true;
+    return EOK;
 }
 
-bool str_to_i16_with_base(struct string str, i16 *res, unsigned int base)
+error_t str_to_i16_with_base(struct string str, i16 *res, unsigned int base)
 {
     i64 ires;
-    if (!str_to_i64_with_base(str, &ires, base))
-        return false;
+    error_t ret;
+
+    ret = str_to_i64_with_base(str, &ires, base);
+    if (is_error(ret))
+        return ret;
 
     if ((i16)ires != ires)
-        return false;
+        return ERANGE;
 
     *res = (i16)ires;
-    return true;
+    return EOK;
 }
 
-bool str_to_u16_with_base(struct string str, u16 *res, unsigned int base)
+error_t str_to_u16_with_base(struct string str, u16 *res, unsigned int base)
 {
     u64 ures;
-    if (!str_to_u64_with_base(str, &ures, base))
-        return false;
+    error_t ret;
+
+    ret = str_to_u64_with_base(str, &ures, base);
+    if (is_error(ret))
+        return ret;
 
     if ((u16)ures != ures)
-        return false;
+        return ERANGE;
 
     *res = (u16)ures;
-    return true;
+    return EOK;
 }
 
-bool str_to_i8_with_base(struct string str, i8 *res, unsigned int base)
+error_t str_to_i8_with_base(struct string str, i8 *res, unsigned int base)
 {
     i64 ires;
-    if (!str_to_i64_with_base(str, &ires, base))
-        return false;
+    error_t ret;
+
+    ret = str_to_i64_with_base(str, &ires, base);
+    if (is_error(ret))
+        return ret;
 
     if ((i8)ires != ires)
-        return false;
+        return ERANGE;
 
     *res = (i8)ires;
-    return true;
+    return EOK;
 }
 
-bool str_to_u8_with_base(struct string str, u8 *res, unsigned int base)
+error_t str_to_u8_with_base(struct string str, u8 *res, unsigned int base)
 {
     u64 ures;
-    if (!str_to_u64_with_base(str, &ures, base))
-        return false;
+    error_t ret;
+
+    ret = str_to_u64_with_base(str, &ures, base);
+    if (is_error(ret))
+        return ret;
 
     if ((u8)ures != ures)
-        return false;
+        return ERANGE;
 
     *res = (u8)ures;
-    return true;
+    return EOK;
+}
 }
