@@ -8,6 +8,13 @@
 
 #define VIRTUAL_BASE_RELATIVE(type) AT (ADDR (type) - VIRTUAL_BASE)
 
+#define SPECIAL_SECTION(name) KEEP(*(name))
+
+#define MARKED_SECTION(name)                 \
+    CONCAT(LINKER_SYMBOL(name), _begin) = .; \
+    SPECIAL_SECTION(name)                    \
+    CONCAT(LINKER_SYMBOL(name), _end) = .;
+
 #define TEXT_BEGIN LINKER_SYMBOL(text_begin) = .;
 #define TEXT_END LINKER_SYMBOL(text_end) = .;
 
