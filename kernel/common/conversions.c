@@ -1,23 +1,23 @@
-#include "common/conversions.h"
-#include "common/ctype.h"
+#include <common/conversions.h>
+#include <common/ctype.h>
 
-static unsigned int consume_base(struct string_view *str)
+static unsigned int consume_base(struct string *str)
 {
-    if (unlikely(sv_empty(*str)))
+    if (unlikely(str_empty(*str)))
         return 0;
 
-    if (sv_starts_with(*str, SV("0x"))) {
-        sv_offset_by(str, 2);
+    if (str_starts_with(*str, STR("0x"))) {
+        str_offset_by(str, 2);
         return 16;
     }
 
-    if (sv_starts_with(*str, SV("0b"))) {
-        sv_offset_by(str, 2);
+    if (str_starts_with(*str, STR("0b"))) {
+        str_offset_by(str, 2);
         return 2;
     }
 
-    if (sv_starts_with(*str, SV("0"))) {
-        sv_offset_by(str, 1);
+    if (str_starts_with(*str, STR("0"))) {
+        str_offset_by(str, 1);
         return 8;
     }
 
@@ -27,13 +27,15 @@ static unsigned int consume_base(struct string_view *str)
     return 0;
 }
 
-static bool do_str_to_u64_unchecked(struct string_view str, u64 *res, unsigned int base)
+static bool do_str_to_u64_unchecked(
+    struct string str, u64 *res, unsigned int base
+)
 {
     u64 number = 0;
     u64 next;
     char c;
 
-    while (sv_pop_one(&str, &c)) {
+    while (str_pop_one(&str, &c)) {
         if (c >= '0' && c <= '9') {
             next = c - '0';
         } else {
@@ -53,7 +55,7 @@ static bool do_str_to_u64_unchecked(struct string_view str, u64 *res, unsigned i
     return true;
 }
 
-static bool do_str_to_u64(struct string_view str, u64 *res, unsigned int base)
+static bool do_str_to_u64(struct string str, u64 *res, unsigned int base)
 {
     unsigned int cb = consume_base(&str);
     if (!base && !cb)
@@ -62,20 +64,20 @@ static bool do_str_to_u64(struct string_view str, u64 *res, unsigned int base)
     return do_str_to_u64_unchecked(str, res, base ?: cb);
 }
 
-bool str_to_i64_with_base(struct string_view str, i64 *res, unsigned int base)
+bool str_to_i64_with_base(struct string str, i64 *res, unsigned int base)
 {
     u64 ures;
 
-    if (sv_starts_with(str, SV("-"))) {
-        sv_offset_by(&str, 1);
+    if (str_starts_with(str, STR("-"))) {
+        str_offset_by(&str, 1);
 
         if (!do_str_to_u64(str, &ures, base))
             return false;
         if ((i64)-ures > 0)
             return false;
     } else {
-        if (sv_starts_with(str, SV("+")))
-            sv_offset_by(&str, 1);
+        if (str_starts_with(str, STR("+")))
+            str_offset_by(&str, 1);
 
         if (!do_str_to_u64(str, &ures, base))
             return false;
@@ -87,18 +89,18 @@ bool str_to_i64_with_base(struct string_view str, i64 *res, unsigned int base)
     return true;
 }
 
-bool str_to_u64_with_base(struct string_view str, u64 *res, unsigned int base)
+bool str_to_u64_with_base(struct string str, u64 *res, unsigned int base)
 {
-    if (sv_starts_with(str, SV("+")))
-        sv_offset_by(&str, 1);
+    if (str_starts_with(str, STR("+")))
+        str_offset_by(&str, 1);
 
-    if (sv_starts_with(str, SV("-")))
+    if (str_starts_with(str, STR("-")))
         return false;
 
     return do_str_to_u64(str, res, base);
 }
 
-bool str_to_i32_with_base(struct string_view str, i32 *res, unsigned int base)
+bool str_to_i32_with_base(struct string str, i32 *res, unsigned int base)
 {
     i64 ires;
     if (!str_to_i64_with_base(str, &ires, base))
@@ -111,7 +113,7 @@ bool str_to_i32_with_base(struct string_view str, i32 *res, unsigned int base)
     return true;
 }
 
-bool str_to_u32_with_base(struct string_view str, u32 *res, unsigned int base)
+bool str_to_u32_with_base(struct string str, u32 *res, unsigned int base)
 {
     u64 ures;
     if (!str_to_u64_with_base(str, &ures, base))
@@ -124,7 +126,7 @@ bool str_to_u32_with_base(struct string_view str, u32 *res, unsigned int base)
     return true;
 }
 
-bool str_to_i16_with_base(struct string_view str, i16 *res, unsigned int base)
+bool str_to_i16_with_base(struct string str, i16 *res, unsigned int base)
 {
     i64 ires;
     if (!str_to_i64_with_base(str, &ires, base))
@@ -137,7 +139,7 @@ bool str_to_i16_with_base(struct string_view str, i16 *res, unsigned int base)
     return true;
 }
 
-bool str_to_u16_with_base(struct string_view str, u16 *res, unsigned int base)
+bool str_to_u16_with_base(struct string str, u16 *res, unsigned int base)
 {
     u64 ures;
     if (!str_to_u64_with_base(str, &ures, base))
@@ -150,7 +152,7 @@ bool str_to_u16_with_base(struct string_view str, u16 *res, unsigned int base)
     return true;
 }
 
-bool str_to_i8_with_base(struct string_view str, i8 *res, unsigned int base)
+bool str_to_i8_with_base(struct string str, i8 *res, unsigned int base)
 {
     i64 ires;
     if (!str_to_i64_with_base(str, &ires, base))
@@ -163,7 +165,7 @@ bool str_to_i8_with_base(struct string_view str, i8 *res, unsigned int base)
     return true;
 }
 
-bool str_to_u8_with_base(struct string_view str, u8 *res, unsigned int base)
+bool str_to_u8_with_base(struct string str, u8 *res, unsigned int base)
 {
     u64 ures;
     if (!str_to_u64_with_base(str, &ures, base))

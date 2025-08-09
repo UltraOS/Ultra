@@ -3,7 +3,7 @@
 #include <common/conversions.h>
 #include <common/string.h>
 #include <common/minmax.h>
-#include <common/string_view.h>
+#include <common/string_container.h>
 
 struct fmt_buf_state {
     char *buffer;
@@ -143,7 +143,7 @@ static bool string_has_at_least(const char *string, size_t characters)
     return false;
 }
 
-static bool consume_digits(const char **string, struct string_view *digit_view)
+static bool consume_digits(const char **string, struct string *digit_view)
 {
     digit_view->text = *string;
     digit_view->size = 0;
@@ -153,7 +153,7 @@ static bool consume_digits(const char **string, struct string_view *digit_view)
         if (c < '0' || c > '9')
             return digit_view->size != 0;
 
-        sv_extend_by(digit_view, 1);
+        str_extend_by(digit_view, 1);
         *string += 1;
     }
 }
@@ -250,7 +250,7 @@ int vsnprintf(char *buffer, size_t capacity, const char *fmt, va_list vlist)
     size_t next_offset;
     char flag;
 
-    struct string_view digits;
+    struct string digits;
 
     while (*fmt) {
         next_conversion = find_next_conversion(fmt, &next_offset);
@@ -300,13 +300,17 @@ int vsnprintf(char *buffer, size_t capacity, const char *fmt, va_list vlist)
             char c = va_arg(vlist, int);
             write_one(&fb_state, c);
             continue;
-        } else if (consume(&fmt, "s")) {
+        }
+
+        if (consume(&fmt, "s")) {
             const char* string = va_arg(vlist, char*);
             write_many(&fb_state, string, strlen(string));
             continue;
-        } else if (consume(&fmt, "p")) {
-            if (consume(&fmt, "SV")) {
-                struct string_view *str = va_arg(vlist, struct string_view*);
+        }
+
+        if (consume(&fmt, "p")) {
+            if (consume(&fmt, "S")) {
+                struct string *str = va_arg(vlist, struct string*);
                 write_many(&fb_state, str->text, str->size);
                 continue;
             }
