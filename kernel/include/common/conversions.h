@@ -26,3 +26,5 @@ STR_TO_N_DECL(8)
 STR_TO_N_DECL(16)
 STR_TO_N_DECL(32)
 STR_TO_N_DECL(64)
+
+error_t str_to_bool(struct string, bool *res);
