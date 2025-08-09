@@ -1,7 +1,7 @@
-#include <common/string_view.h>
+#include <common/string_container.h>
 #include <common/ctype.h>
 
-bool sv_equals(struct string_view lhs, struct string_view rhs)
+bool str_equals(struct string lhs, struct string rhs)
 {
     size_t i;
 
@@ -16,7 +16,7 @@ bool sv_equals(struct string_view lhs, struct string_view rhs)
     return true;
 }
 
-bool sv_equals_caseless(struct string_view lhs, struct string_view rhs)
+bool str_equals_caseless(struct string lhs, struct string rhs)
 {
     size_t i;
 
@@ -31,7 +31,7 @@ bool sv_equals_caseless(struct string_view lhs, struct string_view rhs)
     return true;
 }
 
-bool sv_starts_with(struct string_view str, struct string_view prefix)
+bool str_starts_with(struct string str, struct string prefix)
 {
     size_t i;
 
@@ -48,7 +48,7 @@ bool sv_starts_with(struct string_view str, struct string_view prefix)
     return true;
 }
 
-ssize_t sv_find(struct string_view str, struct string_view needle, size_t starting_at)
+ssize_t str_find(struct string str, struct string needle, size_t starting_at)
 {
     size_t i, j, k;
 
@@ -56,7 +56,7 @@ ssize_t sv_find(struct string_view str, struct string_view needle, size_t starti
 
     if (needle.size > (str.size - starting_at))
         return -1;
-    if (sv_empty(needle))
+    if (str_empty(needle))
         return starting_at;
 
     for (i = starting_at; i < str.size - needle.size + 1; ++i) {
