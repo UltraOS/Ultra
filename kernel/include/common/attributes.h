@@ -22,6 +22,7 @@
 
 #define ALIAS_OF(func) __attribute__((alias(#func)))
 #define SECTION(sec) __attribute__((section(#sec)))
+#define ALIGN(value) _Alignas(value)
 #define USED __attribute__((used))
 #define WEAK __attribute__((weak))
 #define UNUSED_DECL __attribute__((unused))
