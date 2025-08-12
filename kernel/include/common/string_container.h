@@ -26,6 +26,10 @@ struct string {
 bool str_equals(struct string lhs, struct string rhs);
 bool str_equals_caseless(struct string lhs, struct string rhs);
 bool str_starts_with(struct string str, struct string prefix);
+
+ssize_t str_find_with_cb(
+    struct string str, bool (*is_match)(struct string str), size_t starting_at
+);
 ssize_t str_find(struct string str, struct string needle, size_t starting_at);
 
 static inline struct string str_substring(

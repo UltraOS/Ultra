@@ -48,6 +48,24 @@ bool str_starts_with(struct string str, struct string prefix)
     return true;
 }
 
+ssize_t str_find_with_cb(
+    struct string str, bool (*is_match)(struct string str), size_t offset
+)
+{
+    BUG_ON(offset > str.size);
+    str_offset_by(&str, offset);
+
+    while (!str_empty(str)) {
+        if (is_match(str))
+            return offset;
+
+        str_offset_by(&str, 1);
+        offset += 1;
+    }
+
+    return -1;
+}
+
 ssize_t str_find(struct string str, struct string needle, size_t starting_at)
 {
     size_t i, j, k;
