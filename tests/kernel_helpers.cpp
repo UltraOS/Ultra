@@ -16,7 +16,9 @@ struct boot_context g_boot_ctx;
 
 void vprint(const char *msg, va_list vlist)
 {
-    std::vprintf(msg, vlist);
+    // TODO: save to a buffer and only show if a test fails
+    UNREFERENCED_PARAMETER(msg);
+    UNREFERENCED_PARAMETER(vlist);
 }
 
 void print(const char *msg, ...)
