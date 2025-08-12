@@ -45,7 +45,7 @@ unmap:
     io_window_unmap(iow);
     return ret;
 }
-INITCALL_EARLYCON(e9_console_init);
+INITCALL(e9_console_init);
 
 static error_t e9_console_fini(void)
 {

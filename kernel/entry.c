@@ -85,24 +85,10 @@ static const char *platform_type_to_string(u32 type)
     }
 }
 
-static void do_initcalls(initcall_t *begin, initcall_t *end)
-{
-    initcall_t *fn;
-
-    for (fn = begin; fn < end; fn++) {
-        (*fn)();
-    }
-}
-
 void entry(struct ultra_boot_context *ctx)
 {
     struct ultra_platform_info_attribute *pi;
     error_t ret;
-
-    do_initcalls(
-        LINKER_SYMBOL(initcalls_earlycon_begin),
-        LINKER_SYMBOL(initcalls_earlycon_end)
-    );
 
     print(
         "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
