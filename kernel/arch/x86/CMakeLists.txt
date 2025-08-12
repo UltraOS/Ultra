@@ -22,6 +22,7 @@ ultra_sources(
     idt.c
     irq.c
     exceptions.c
+    earlycon.c
 )
 ultra_include_directories(include)
 
@@ -86,12 +87,3 @@ ultra_link_options(
 if (ULTRA_TOOLCHAIN STREQUAL "gcc")
     ultra_link_libraries(${ULTRA_LIBGCC_PATH})
 endif()
-
-add_ultra_module(
-    NAME
-    e9-console
-    SOURCES
-    e9_console.c
-    TYPE
-    COMPILED_IN
-)
