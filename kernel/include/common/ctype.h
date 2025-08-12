@@ -1,57 +1,81 @@
 #pragma once
 
-#include "types.h"
+#ifndef ULTRA_TEST
 
-#include <bug.h>
+#include <common/types.h>
 
-#define LOWER_TO_UPPER_OFFSET ('a' - 'A')
-BUILD_BUG_ON(LOWER_TO_UPPER_OFFSET < 0);
+enum char_type {
+    CHAR_TYPE_CONTROL = 1 << 0,
+    CHAR_TYPE_SPACE = 1 << 1,
+    CHAR_TYPE_BLANK = 1 << 2,
+    CHAR_TYPE_PUNCTUATION = 1 << 3,
+    CHAR_TYPE_LOWER = 1 << 4,
+    CHAR_TYPE_UPPER = 1 << 5,
+    CHAR_TYPE_DIGIT = 1 << 6,
+    CHAR_TYPE_HEX_DIGIT  = 1 << 7,
+    CHAR_TYPE_ALPHA = CHAR_TYPE_LOWER | CHAR_TYPE_UPPER,
+    CHAR_TYPE_ALHEX = CHAR_TYPE_ALPHA | CHAR_TYPE_HEX_DIGIT,
+    CHAR_TYPE_ALNUM = CHAR_TYPE_ALPHA | CHAR_TYPE_DIGIT,
+};
+
+extern const u8 g_ascii_map[256];
+
+static inline bool is_char_of_type(char c, enum char_type type)
+{
+    return (g_ascii_map[(u8)c] & type) == type;
+}
 
 static inline bool isupper(char c)
 {
-    return c >= 'A' && c <= 'Z';
+    return is_char_of_type(c, CHAR_TYPE_UPPER);
 }
 
 static inline bool islower(char c)
 {
-    return c >= 'a' && c <= 'z';
+    return is_char_of_type(c, CHAR_TYPE_LOWER);
 }
 
 static inline bool isalnum(char c)
 {
-    return (c >= 'A' && c <= 'Z') ||
-           (c >= 'a' && c <= 'z') ||
-           (c >= '0' && c <= '9');
+    return is_char_of_type(c, CHAR_TYPE_ALNUM);
 }
+
+static inline bool isspace(char c)
+{
+    return is_char_of_type(c, CHAR_TYPE_SPACE);
+}
+
+static inline bool isdigit(char c)
+{
+    return is_char_of_type(c, CHAR_TYPE_DIGIT);
+}
+
+static inline bool isxdigit(char c)
+{
+    return is_char_of_type(c, CHAR_TYPE_HEX_DIGIT);
+}
+
+#define CHAR_LOWER_TO_UPPER_OFFSET ('a' - 'A')
+BUILD_BUG_ON(CHAR_LOWER_TO_UPPER_OFFSET < 0);
 
 static inline char tolower(char c)
 {
     if (isupper(c))
-        return c + LOWER_TO_UPPER_OFFSET;
+        return c + CHAR_LOWER_TO_UPPER_OFFSET;
 
     return c;
-}
-
-static inline void str_tolower(char *str, size_t size)
-{
-    size_t i;
-
-    for (i = 0; i < size; ++i)
-        str[i] = tolower(str[i]);
 }
 
 static inline char toupper(char c)
 {
     if (islower(c))
-        return c - LOWER_TO_UPPER_OFFSET;
+        return c - CHAR_LOWER_TO_UPPER_OFFSET;
 
     return c;
 }
 
-static inline void str_toupper(char *str, size_t size)
-{
-    size_t i;
+#else // ULTRA_TEST
 
-    for (i = 0; i < size; ++i)
-        str[i] = toupper(str[i]);
-}
+#include <ctype.h>
+
+#endif
