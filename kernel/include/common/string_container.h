@@ -28,6 +28,21 @@ bool str_equals_caseless(struct string lhs, struct string rhs);
 bool str_starts_with(struct string str, struct string prefix);
 ssize_t str_find(struct string str, struct string needle, size_t starting_at);
 
+static inline struct string str_substring(
+    struct string str, size_t start_idx, size_t end_idx
+)
+{
+    if (unlikely(start_idx > end_idx))
+        return (struct string) { 0 };
+
+    BUG_ON(end_idx > str.size);
+
+    return (struct string) {
+        .text = str.text + start_idx,
+        .size = end_idx - start_idx,
+    };
+}
+
 static inline bool str_empty(struct string str)
 {
     return str.size == 0;
