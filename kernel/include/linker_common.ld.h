@@ -22,10 +22,8 @@
     *(.text)  \
     *(.text.*)
 
-#define INITCALLS                                \
-    LINKER_SYMBOL(initcalls_normal_begin) = .;   \
-    KEEP(*(.initcall_normal))                    \
-    LINKER_SYMBOL(initcalls_normal_end) = .;
+#define INITCALLS                  \
+    MARKED_SECTION(initcall_normal)
 
 #define RODATA(init_align) \
     *(.rodata .rodata.*)   \
