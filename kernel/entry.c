@@ -60,6 +60,13 @@ static void boot_context_init(struct ultra_boot_context *ctx)
             break;
         }
     }
+
+    // Verify that all mandatory attributes are provided
+    BUG_ON(
+        g_boot_ctx.kernel_info == NULL ||
+        g_boot_ctx.platform_info == NULL ||
+        g_boot_ctx.memory_map == NULL
+    );
 }
 
 static const char *platform_type_to_string(u32 type)
@@ -102,7 +109,6 @@ void entry(struct ultra_boot_context *ctx)
     boot_context_init(ctx);
 
     pi = g_boot_ctx.platform_info;
-    BUG_ON(pi == NULL);
 
     pr_info(
         "booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
