@@ -13,8 +13,6 @@
 #define STATIC_ASSERT _Static_assert
 #endif
 
-#ifdef __GNUC__
-
 #define ARE_SAME_TYPE(x, y) __builtin_types_compatible_p(typeof(x), typeof(y))
 
 #define DO_CONTAINER_OF(ptr, ptr_name, type, member) ({                    \
@@ -34,26 +32,6 @@
 #define BUILD_BUG_ON_WITH_MSG(expr, msg) STATIC_ASSERT(!(expr), msg)
 #define BUILD_BUG_ON(expr) \
     BUILD_BUG_ON_WITH_MSG(expr, "BUILD BUG: " #expr " evaluated to true")
-
-#elif defined(_MSC_VER)
-
-#ifndef ULTRA_TEST
-#error MSVC is only supported in test mode
-#endif
-
-#include <windows.h>
-#define container_of(ptr, type, member) CONTAINING_RECORD(ptr, type, member)
-// UNREFERENCED_PARAMETER also defined by windows.h
-
-#define likely(expr) expr
-#define unlikely(expr) expr
-
-#define BUILD_BUG_ON_WITH_MSG(expr, msg)
-#define BUILD_BUG_ON(expr)
-
-#else
-#error Unknown/unsupported compiler
-#endif
 
 #define CEILING_DIVIDE(x, y) (!!(x) + (((x) - !!(x)) / (y)))
 

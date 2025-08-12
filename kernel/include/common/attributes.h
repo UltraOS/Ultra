@@ -6,8 +6,6 @@
 #define NORETURN _Noreturn
 #endif
 
-#ifdef __GNUC__
-
 #define PACKED __attribute__((packed))
 
 #ifdef __clang__
@@ -28,19 +26,3 @@
 #define WEAK __attribute__((weak))
 #define UNUSED_DECL __attribute__((unused))
 #define FALLTHROUGH __attribute__((fallthrough))
-
-#elif defined(_MSC_VER) // Support for running tests on Windows
-
-#define PACKED
-#define ALWAYS_INLINE
-#define PRINTF_DECL(fmt_idx, args_idx)
-#define ERROR_EMITTER(msg)
-#define ALIAS_OF(func)
-#define SECTION(sec)
-#define WEAK
-#define UNUSED_DECL
-#define FALLTHROUGH
-
-#else
-#error Unknown/unsupported compiler
-#endif
