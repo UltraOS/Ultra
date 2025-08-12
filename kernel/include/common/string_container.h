@@ -14,10 +14,14 @@ struct string {
 };
 
 #define STR_CONSTEXPR(str) (struct string) { { (str) }, sizeof((str)) - 1 }
-#define STR(str)                                                    \
-    __builtin_choose_expr(__builtin_constant_p((str)),              \
-                          STR_CONSTEXPR((str)),                     \
-                          (struct string) { { (str) }, strlen((str)) })
+#define STR_RUNTIME(str) (struct string) { { (str) }, strlen((str)) }
+
+#define STR(str)                     \
+    __builtin_choose_expr(           \
+        __builtin_constant_p((str)), \
+        STR_CONSTEXPR((str)),        \
+        STR_RUNTIME(str)             \
+    )
 
 bool str_equals(struct string lhs, struct string rhs);
 bool str_equals_caseless(struct string lhs, struct string rhs);
