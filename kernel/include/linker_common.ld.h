@@ -23,10 +23,6 @@
     *(.text.*)
 
 #define INITCALLS                                \
-    LINKER_SYMBOL(initcalls_earlycon_begin) = .; \
-    KEEP(*(.initcall_earlycon))                  \
-    LINKER_SYMBOL(initcalls_earlycon_end) = .;   \
-                                                 \
     LINKER_SYMBOL(initcalls_normal_begin) = .;   \
     KEEP(*(.initcall_normal))                    \
     LINKER_SYMBOL(initcalls_normal_end) = .;
