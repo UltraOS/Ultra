@@ -16,7 +16,10 @@ bool str_equals(struct string lhs, struct string rhs)
     return true;
 }
 
-bool str_equals_caseless(struct string lhs, struct string rhs)
+bool str_equals_with_cb(
+    struct string lhs, struct string rhs,
+    bool (*are_equal)(char, char)
+)
 {
     size_t i;
 
@@ -24,7 +27,7 @@ bool str_equals_caseless(struct string lhs, struct string rhs)
         return false;
 
     for (i = 0; i < lhs.size; ++i) {
-        if (tolower(lhs.text[i]) != tolower(rhs.text[i]))
+        if (!are_equal(lhs.text[i], rhs.text[i]))
             return false;
     }
 

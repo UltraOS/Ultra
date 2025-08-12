@@ -2,6 +2,7 @@
 
 #include <common/types.h>
 #include <common/string.h>
+#include <common/ctype.h>
 
 #include <bug.h>
 
@@ -24,7 +25,21 @@ struct string {
     )
 
 bool str_equals(struct string lhs, struct string rhs);
-bool str_equals_caseless(struct string lhs, struct string rhs);
+bool str_equals_with_cb(
+    struct string lhs, struct string rhs,
+    bool (*are_equal)(char, char)
+);
+
+static inline bool chars_caseless_compare(char lhs, char rhs)
+{
+    return tolower(lhs) == tolower(rhs);
+}
+
+static inline bool str_equals_caseless(struct string lhs, struct string rhs)
+{
+    return str_equals_with_cb(lhs, rhs, chars_caseless_compare);
+}
+
 bool str_starts_with(struct string str, struct string prefix);
 
 ssize_t str_find_with_cb(
