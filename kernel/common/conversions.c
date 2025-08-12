@@ -77,6 +77,7 @@ error_t str_to_i64_with_base(struct string str, i64 *res, unsigned int base)
             return ret;
         if ((i64)-ures > 0)
             return ERANGE;
+        ures = -ures;
     } else {
         if (str_starts_with(str, STR("+")))
             str_offset_by(&str, 1);
