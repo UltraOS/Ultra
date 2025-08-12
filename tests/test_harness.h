@@ -15,6 +15,7 @@ extern "C" {
 void add_test_case(struct test_case *test, const char *file);
 
 void do_assert_eq(uint64_t lhs, uint64_t rhs, const char *file, size_t line);
+#define ASSERT(val) do_assert_eq(val, 1, __FILE__, __LINE__)
 #define ASSERT_EQ(lhs, rhs) do_assert_eq(lhs, rhs, __FILE__, __LINE__)
 
 void malloc_phys_range(uint64_t start, uint64_t size);
