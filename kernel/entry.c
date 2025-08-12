@@ -41,9 +41,13 @@ static void boot_context_init(struct ultra_boot_context *ctx)
             UATTR_EXTRACT(g_boot_ctx.memory_map, hdr);
             break;
 
-        case ULTRA_ATTRIBUTE_COMMAND_LINE:
-            UATTR_EXTRACT(g_boot_ctx.cmdline, hdr);
+        case ULTRA_ATTRIBUTE_COMMAND_LINE: {
+            struct ultra_command_line_attribute *cmdline;
+
+            cmdline = container_of(hdr, typeof(*cmdline), header);
+            g_boot_ctx.cmdline = STR_RUNTIME(cmdline->text);
             break;
+        }
 
         case ULTRA_ATTRIBUTE_FRAMEBUFFER_INFO:
             UATTR_EXTRACT(g_boot_ctx.fb, hdr);
@@ -120,6 +124,11 @@ void entry(struct ultra_boot_context *ctx)
     pr_info(
         "direct map set at 0x%016zX (%d pt levels)\n",
         g_direct_map_base, pi->page_table_depth
+    );
+
+    print(
+        "Kernel command line: \"%s\"\n",
+        str_empty(g_boot_ctx.cmdline) ? "<empty>" : g_boot_ctx.cmdline.text
     );
 
     ret = unwind_init();
