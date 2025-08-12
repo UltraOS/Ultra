@@ -25,9 +25,11 @@
 #define INITCALLS                  \
     MARKED_SECTION(initcall_normal)
 
-#define RODATA(init_align) \
-    *(.rodata .rodata.*)   \
-    . = ALIGN(init_align); \
+#define RODATA(align)                        \
+    *(.rodata .rodata.*)                     \
+    . = ALIGN(align);                        \
+    MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
+    MARKED_SECTION(PARAMETERS_SECTION)       \
     INITCALLS
 
 #define EH_FRAME_HDR                       \

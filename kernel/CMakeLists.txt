@@ -42,6 +42,7 @@ ultra_sources(
     io.c
     symbols.c
     unwind.c
+    param.c
 )
 ultra_include_directories(include)
 

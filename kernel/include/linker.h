@@ -10,3 +10,6 @@
 
 #define SECTION_ARRAY_ARGS(x) \
     SECTION_ARRAY_BEGIN(x), SECTION_ARRAY_SIZE(x)
+
+#define EARLY_PARAMETERS_SECTION early_parameters
+#define PARAMETERS_SECTION parameters
