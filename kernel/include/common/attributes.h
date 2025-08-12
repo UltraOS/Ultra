@@ -27,3 +27,6 @@
 #define WEAK __attribute__((weak))
 #define UNUSED_DECL __attribute__((unused))
 #define FALLTHROUGH __attribute__((fallthrough))
+
+#define SECTION_VAR(section, qualifiers, type) \
+    USED SECTION(section) ALIGN(type) qualifiers type
