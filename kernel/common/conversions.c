@@ -21,7 +21,7 @@ static unsigned int consume_base(struct string *str)
         return 8;
     }
 
-    if (str->text[0] >= '1' && str->text[0] <= '9')
+    if (isdigit(str->text[0]))
         return 10;
 
     return 0;
@@ -36,11 +36,11 @@ static error_t do_str_to_u64_unchecked(
     char c;
 
     while (str_pop_one(&str, &c)) {
-        if (c >= '0' && c <= '9') {
+        if (isdigit(c)) {
             next = c - '0';
         } else {
             char l = tolower(c);
-            if (l < 'a' || l > 'f')
+            if (!isxdigit(c))
                 return EINVAL;
             next = 10 + l - 'a';
         }
