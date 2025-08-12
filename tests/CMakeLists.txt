@@ -90,6 +90,7 @@ KERNEL_FILE(
     SOURCE_PATH "memory" SOURCE_FILE "boot_alloc.c"
     INCLUDE_PATH "boot" INCLUDE_FILE "alloc.h"
 )
+KERNEL_FILE(SOURCE_FILE "param.c"  INCLUDE_FILE "param.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "helpers.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "types.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "string.h")
@@ -97,11 +98,25 @@ KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "attributes.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "minmax.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "align.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "error.h")
+KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "ctype.h")
+KERNEL_FILE(
+    SOURCE_PATH "common" SOURCE_FILE "string_container.c"
+    INCLUDE_PATH "common" INCLUDE_FILE "string_container.h"
+)
+KERNEL_FILE(
+    SOURCE_PATH "common" SOURCE_FILE "conversions.c"
+    INCLUDE_PATH "common" INCLUDE_FILE "conversions.h"
+)
+KERNEL_FILE(
+    SOURCE_PATH "common" SOURCE FILE "format.c"
+    INCLUDE_PATH "common" INCLUDE_FILE "format.h"
+)
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "boot.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "ultra_protocol.h")
 KERNEL_FILE(INCLUDE_FILE "log.h")
 KERNEL_FILE(INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_FILE "panic.h")
+KERNEL_FILE(INCLUDE_FILE "linker.h")
 
 get_property(EXTERNAL_KERNEL_FILES_LOCAL GLOBAL PROPERTY EXTERNAL_KERNEL_FILES)
 add_custom_target(external_files DEPENDS ${EXTERNAL_KERNEL_FILES_LOCAL})
