@@ -57,7 +57,7 @@ jobs:
         name: Restore cache
         uses: actions/cache@v4.2.2
         env:
-          gcc-version: 13.2.0
+          gcc-version: 15.1.0
         with:
           path: "${{ github.workspace }}/toolchain/tools_${{ matrix.arch }}"
           key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc-${{ env.gcc-version }}"
