@@ -144,6 +144,8 @@ page-table:
     levels = 5
     constraint = maximum
 
+cmdline = "earlycon=e9"
+
 # We don't really need video for now
 video-mode = unset
 
