@@ -99,13 +99,12 @@ void entry(struct ultra_boot_context *ctx)
     boot_context_init(ctx);
 
     pi = g_boot_ctx.platform_info;
+    g_direct_map_base = pi->higher_half_base;
 
     pr_info(
         "booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
         pi->loader_name
     );
-
-    g_direct_map_base = pi->higher_half_base;
 
     pr_info(
         "direct map set at 0x%016zX (%d pt levels)\n",
