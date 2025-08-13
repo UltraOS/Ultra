@@ -2,6 +2,7 @@
 
 #include <common/helpers.h>
 #include <common/types.h>
+#include <common/string_container.h>
 
 #include <boot/boot.h>
 #include <boot/ultra_protocol.h>
@@ -10,8 +11,10 @@
 #include <log.h>
 #include <bug.h>
 #include <boot/alloc.h>
+#include <param.h>
 
 #include <private/unwind.h>
+#include <private/param.h>
 #include <private/arch/init.h>
 
 struct boot_context g_boot_ctx;
@@ -100,6 +103,10 @@ void entry(struct ultra_boot_context *ctx)
 
     pi = g_boot_ctx.platform_info;
     g_direct_map_base = pi->higher_half_base;
+
+    cmdline_parse(
+        g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(EARLY_PARAMETERS_SECTION), NULL
+    );
 
     pr_info(
         "booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
