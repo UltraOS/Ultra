@@ -59,7 +59,7 @@ jobs:
         env:
           gcc-version: 15.1.0
         with:
-          path: "${{ github.workspace }}/toolchain/tools_${{ matrix.arch }}"
+          path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
           key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc-${{ env.gcc-version }}"
 
       # TODO: maybe split these steps
