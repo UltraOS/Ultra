@@ -1,6 +1,6 @@
+#include <kernel-source/param.c>
 #include <kernel-source/common/string_container.c>
 #include <kernel-source/common/conversions.c>
-#include <kernel-source/param.c>
 #include <test_harness.h>
 
 struct param g_params[16];
