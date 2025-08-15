@@ -98,7 +98,12 @@ typedef int nerror_t;
 typedef void *ptr_or_error_t;
 typedef phys_addr_t phys_addr_or_error_t;
 
+/*
+ * These macros are used as a hint to the reader that a function may also return
+ * an error code even though its return type is not {n}error_t.
+ */
 #define MAYBE_ERR(value) value
+#define MAYBE_NERR(value) value
 
 #define encode_error_ptr(value) ((void*)((ptr_t)(value)))
 #define decode_error_ptr(value) ((error_t)((ptr_t)(value)))
