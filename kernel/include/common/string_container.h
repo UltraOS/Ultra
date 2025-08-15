@@ -47,6 +47,22 @@ ssize_t str_find_with_cb(
 );
 ssize_t str_find(struct string str, struct string needle, size_t starting_at);
 
+static inline ssize_t str_find_one(
+    struct string str, char needle, size_t starting_at
+)
+{
+    size_t i;
+
+    for (i = starting_at; i < str.size; ++i) {
+        if (str.text[i] != needle)
+            continue;
+
+        return i;
+    }
+
+    return -1;
+}
+
 static inline struct string str_substring(
     struct string str, size_t start_idx, size_t end_idx
 )
