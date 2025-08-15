@@ -169,7 +169,7 @@ struct string cmdline_parse(
 
                 if (!str_empty(cmdline) && cmdline.text[0] == '"') {
                     str_offset_by(&cmdline, 1);
-                    value_end = str_find(cmdline, STR("\""), 0);
+                    value_end = str_find_one(cmdline, '\"', 0);
                 } else {
                     value_end = str_find_with_cb(cmdline, match_whitespace, 0);
                 }
