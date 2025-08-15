@@ -15,7 +15,7 @@ struct string {
 };
 
 #define STR_CONSTEXPR(str) (struct string) { { (str) }, sizeof((str)) - 1 }
-#define STR_RUNTIME(str) (struct string) { { (str) }, strlen((str)) }
+#define STR_RUNTIME(str) (struct string) { { (str) }, (str) ? strlen((str)) : 0 }
 
 #define STR(str)                     \
     __builtin_choose_expr(           \
