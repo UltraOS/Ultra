@@ -125,7 +125,7 @@ void entry(struct ultra_boot_context *ctx)
 
     ret = unwind_init();
     if (is_error(ret))
-        pr_warn("unwind_init() error %d, stack traces won't available\n", ret);
+        pr_warn("unwind_init() error %d, stack traces won't be available\n", ret);
 
     boot_alloc_init();
 
