@@ -1,16 +1,24 @@
 #pragma once
 
 #include <stdarg.h>
+
 #include <common/attributes.h>
 #include <common/types.h>
+#include <common/error.h>
 
-int vsnprintf(char *restrict buffer, size_t capacity, const char *fmt, va_list vlist);
+MAYBE_NERR(int) vsnprintf(
+    char *restrict buffer, size_t capacity, const char *fmt, va_list vlist
+);
 
-static inline int vscnprintf(char *restrict buffer, size_t capacity, const char *fmt, va_list vlist)
+static inline MAYBE_NERR(int) vscnprintf(
+    char *restrict buffer, size_t capacity, const char *fmt, va_list vlist
+)
 {
-    int would_have_been_written = vsnprintf(buffer, capacity, fmt, vlist);
+    int would_have_been_written;
 
-    if (would_have_been_written < 0)
+    would_have_been_written = vsnprintf(buffer, capacity, fmt, vlist);
+
+    if (is_error(would_have_been_written < 0))
         return would_have_been_written;
     if ((size_t)would_have_been_written < capacity)
         return would_have_been_written;
@@ -19,7 +27,9 @@ static inline int vscnprintf(char *restrict buffer, size_t capacity, const char 
 }
 
 PRINTF_DECL(3, 4)
-static inline int snprintf(char *restrict buffer, size_t capacity, const char *fmt, ...)
+static inline MAYBE_NERR(int) snprintf(
+    char *restrict buffer, size_t capacity, const char *fmt, ...
+)
 {
     va_list list;
     int written;
@@ -31,7 +41,9 @@ static inline int snprintf(char *restrict buffer, size_t capacity, const char *f
 }
 
 PRINTF_DECL(3, 4)
-static inline int scnprintf(char *restrict buffer, size_t capacity, const char *fmt, ...)
+static inline MAYBE_NERR(int) scnprintf(
+    char *restrict buffer, size_t capacity, const char *fmt, ...
+)
 {
     va_list list;
     int written;
