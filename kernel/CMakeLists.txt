@@ -43,6 +43,7 @@ ultra_sources(
     symbols.c
     unwind.c
     param.c
+    log_ring.c
 )
 ultra_include_directories(include)
 
