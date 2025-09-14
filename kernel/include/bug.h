@@ -16,10 +16,10 @@
             BUG();          \
     } while (0)
 
-#define BUG_ON_WITH_MSG(expr, msg, ...)     \
-    do {                                    \
-        if (unlikely(expr))                 \
-            BUG_WITH_MSG(msg, __VA_ARGS__); \
+#define BUG_ON_WITH_MSG(expr, msg, ...)       \
+    do {                                      \
+        if (unlikely(expr))                   \
+            BUG_WITH_MSG(msg, ##__VA_ARGS__); \
     } while (0)
 
 #define WARN()                                            \
@@ -29,7 +29,7 @@
 #define WARN_ON_WITH_MSG(expr, msg, ...) ({ \
     bool true_cond = !!((expr));            \
     if (unlikely(true_cond))                \
-        pr_warn(msg, __VA_ARGS__);          \
+        pr_warn(msg, ##__VA_ARGS__);        \
     unlikely(true_cond);                    \
 })
 
