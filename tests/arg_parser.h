@@ -88,6 +88,18 @@ public:
         }
 
         const ArgSpec* active_spec = nullptr;
+        auto ensure_param_parsed = [this, &active_spec]() {
+            if (!active_spec)
+                return;
+            if (!(active_spec->is_param() || active_spec->is_list()))
+                return;
+
+            if (m_parsed_args[active_spec->as_full].empty()) {
+                throw std::runtime_error(
+                    "expected an argument for " + active_spec->as_full
+                );
+            }
+        };
 
         for (auto arg_index = 1 + m_num_positional_args; arg_index < num_args;
              ++arg_index) {
@@ -115,12 +127,7 @@ public:
                     continue;
                 }
 
-                if ((active_spec->is_param() || active_spec->is_list()) &&
-                    m_parsed_args[active_spec->as_full].empty()) {
-                    throw std::runtime_error(
-                        "expected an argument for " + active_spec->as_full
-                    );
-                }
+                ensure_param_parsed();
             }
 
             auto as_full_arg = extract_full_arg(current_arg);
@@ -142,6 +149,7 @@ public:
             continue;
         }
 
+        ensure_param_parsed();
         ensure_mandatory_args_are_satisfied();
     }
 
