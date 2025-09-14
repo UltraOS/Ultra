@@ -42,3 +42,5 @@
     (offset_of(var, member) + sizeof(((typeof(var)*)0)->member))
 
 #define sizeof_after(var, member) (sizeof(var) - offset_of_after(var, member))
+
+#define PTR_ADD(ptr, count) ((void*)(((char*)(ptr)) + count))
