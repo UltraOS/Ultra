@@ -338,7 +338,7 @@ def run_unit_tests(args: argparse.Namespace, this_os: str) -> int:
     dir = get_tests_build_dir(this_os)
 
     cmake_build(args, dir)
-    binary = test_runner_binary(this_os)
+    binary = pg.project_root_relative(test_runner_binary(this_os))
     return subprocess.run([binary]).returncode
 
 
