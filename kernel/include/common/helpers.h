@@ -38,3 +38,7 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define offset_of(var, member) __builtin_offsetof(typeof(var), member)
+#define offset_of_after(var, member) \
+    (offset_of(var, member) + sizeof(((typeof(var)*)0)->member))
+
+#define sizeof_after(var, member) (sizeof(var) - offset_of_after(var, member))
