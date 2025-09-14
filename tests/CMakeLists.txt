@@ -140,18 +140,5 @@ set_property(
 add_dependencies(run_tests external_files)
 target_compile_definitions(run_tests PUBLIC ULTRA_TEST)
 
-if (MSVC)
-    target_compile_options(
-        run_tests
-        PRIVATE
-        # nonstandard extension used: zero-sized array in struct/union
-        /wd4200
-        # function assumed not to throw an exception but does
-        /wd4297
-        # unary minus operator applied to unsigned type, result still unsigned
-        /wd4146
-    )
-endif ()
-
 set_property(TARGET run_tests PROPERTY C_STANDARD 17)
 set_property(TARGET run_tests PROPERTY CXX_STANDARD 20)
