@@ -23,4 +23,4 @@ private:
     bool disarmed{ false };
 };
 
-extern std::unordered_map<std::string, std::vector<test_case*>> g_test_groups;
+std::unordered_map<std::string, std::vector<test_case*>>& test_groups();
