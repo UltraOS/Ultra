@@ -26,3 +26,5 @@
 
 #define PAGE_ROUND_UP(size)   ALIGN_UP(size, PAGE_SIZE)
 #define PAGE_ROUND_DOWN(size) ALIGN_DOWN(size, PAGE_SIZE)
+
+#define ALIGN_OF(x) _Alignof(x)
