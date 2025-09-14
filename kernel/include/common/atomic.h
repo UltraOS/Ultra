@@ -54,7 +54,7 @@ enum memory_order {
 #define atomic_xchg(ptr, x, mo) __atomic_exchange_n(ptr, x, mo)
 
 #define atomic_cmpxchg_explicit(ptr, expected, desired, success_mo, fail_mo) \
-    __atomic_compare_exchange_n(ptr, &expected, desired, 0, success_mo, fail_mo)
+    __atomic_compare_exchange_n(ptr, expected, desired, 0, success_mo, fail_mo)
 
 #define atomic_cmpxchg_acq_rel(ptr, expected, desired) \
     atomic_cmpxchg_explicit(ptr, expected, desired, MO_ACQ_REL, MO_ACQUIRE)
