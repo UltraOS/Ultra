@@ -115,7 +115,11 @@ void* translate_phys_to_virt(uint64_t phys)
     return it->virt_from_phys(phys);
 }
 
-std::unordered_map<std::string, std::vector<test_case*>> g_test_groups;
+std::unordered_map<std::string, std::vector<test_case*>>& test_groups()
+{
+    static std::unordered_map<std::string, std::vector<test_case*>> groups;
+    return groups;
+}
 
 void add_test_case(struct test_case *test, const char *file)
 {
@@ -129,5 +133,5 @@ void add_test_case(struct test_case *test, const char *file)
     if (filename.starts_with("test_"))
         filename.erase(0, std::strlen("test_"));
 
-    g_test_groups[filename].push_back(test);
+    test_groups()[filename].push_back(test);
 }

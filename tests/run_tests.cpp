@@ -8,8 +8,8 @@
 
 auto get_test_group(const std::string& name)
 {
-    auto it = g_test_groups.find(name);
-    if (it == g_test_groups.end()) {
+    auto it = test_groups().find(name);
+    if (it == test_groups().end()) {
         std::fprintf(
             stderr, "No such test group: %s\n", name.c_str()
         );
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
             std::cout << "Available test groups: ";
             bool first = true;
 
-            for (auto &group : g_test_groups) {
+            for (auto &group : test_groups()) {
                 if (!first)
                     std::cout << ", ";
 
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     };
 
     if (!args.is_set("select")) {
-        for (auto& group : g_test_groups)
+        for (auto& group : test_groups())
             run_group(group.first, group.second);
     } else {
         auto name = args.get("select");
