@@ -68,7 +68,12 @@ int main(int argc, char **argv)
         }
     );
 
-    args.parse(argc, argv);
+    try {
+        args.parse(argc, argv);
+    } catch (const std::exception& e) {
+        std::cout << "Unexpected error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 
     if (args.is_set("ls")) {
         const auto& name = args.get("ls");
