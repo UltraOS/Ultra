@@ -19,6 +19,9 @@ typedef unsigned int u32;
 typedef unsigned long long u64;
 
 typedef size_t ptr_t;
+typedef size_t reg_t;
+
+typedef reg_t irq_state_t;
 
 #if ULTRA_ARCH_PHYS_ADDR_WIDTH == 4
 typedef u32 phys_addr_t;
