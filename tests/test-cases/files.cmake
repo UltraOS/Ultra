@@ -1,4 +1,5 @@
 add_test_cases(
     test_boot_alloc.c
     test_parameter.c
+    test_log_ring.c
 )
