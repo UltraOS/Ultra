@@ -14,8 +14,9 @@ struct string {
     size_t size;
 };
 
-#define STR_CONSTEXPR(str) (struct string) { { (str) }, sizeof((str)) - 1 }
-#define STR_RUNTIME(str) (struct string) { { (str) }, (str) ? strlen((str)) : 0 }
+#define MAKE_STR(ptr, size) (struct string) { { (ptr) }, (size) }
+#define STR_CONSTEXPR(str) MAKE_STR(str, sizeof((str)) - 1)
+#define STR_RUNTIME(str) MAKE_STR(str, (str) ? strlen((str)) : 0)
 
 #define STR(str)                     \
     __builtin_choose_expr(           \
