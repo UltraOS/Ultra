@@ -22,14 +22,24 @@
             BUG_WITH_MSG(msg, ##__VA_ARGS__); \
     } while (0)
 
-#define WARN()                                            \
-    pr_warn("WARNING: At %s() in file %s:%d\n", __func__, \
-            __FILE__, __LINE__)
+#ifdef ULTRA_DEADLY_WARNINGS
+#define DIE_IF_DEADLY_WARNINGS() panic("Warnings are configured as deadly")
+#else
+#define DIE_IF_DEADLY_WARNINGS()
+#endif
+
+#define WARN() do {                                           \
+        pr_warn("WARNING: At %s() in file %s:%d\n", __func__, \
+                __FILE__, __LINE__);                          \
+        DIE_IF_DEADLY_WARNINGS();                             \
+    } while (0)
 
 #define WARN_ON_WITH_MSG(expr, msg, ...) ({ \
     bool true_cond = !!((expr));            \
-    if (unlikely(true_cond))                \
+    if (unlikely(true_cond)) {              \
         pr_warn(msg, ##__VA_ARGS__);        \
+        DIE_IF_DEADLY_WARNINGS();           \
+    }                                       \
     unlikely(true_cond);                    \
 })
 
