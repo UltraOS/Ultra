@@ -5,6 +5,8 @@
 
 #include <stdarg.h>
 
+#define SYSLOG_FACILITY_KERN 0
+
 /*
  * Copy log levels from the syslog standard since we have to expose a /dev/kmsg
  * anyway, might as well keep our native implementation compatible.
