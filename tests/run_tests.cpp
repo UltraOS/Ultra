@@ -95,6 +95,7 @@ int main(int argc, char **argv)
             auto guard = ScopeGuard(reset_phys_ranges);
 
             std::printf("Running test %s...", test->name);
+            std::fflush(stdout);
             test->run();
             std::puts("OK");
         } catch (const std::exception& ex) {
