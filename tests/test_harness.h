@@ -54,8 +54,9 @@ void *translate_phys_to_virt(uint64_t phys);
         __pragma(comment(linker, "/include:" #case_name "_hook")) \
         static void case_name(void)
 #else
-    #define TEST_CASE(case_name)                                         \
-        __attribute__((constructor)) static void case_name##_init(void); \
-        DO_MAKE_TEST_CASE(case_name)                                     \
+    #define TEST_CASE(case_name)                    \
+        __attribute__((constructor))                \
+        static void CONCAT(case_name, _init)(void); \
+        DO_MAKE_TEST_CASE(case_name)                \
         static void case_name(void)
 #endif
