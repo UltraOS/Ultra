@@ -42,8 +42,8 @@ struct test_param {
 
 #define DEFINE_PARAM(type, name, init, expected) \
     {                                            \
-        .value.as_##type = init,                 \
-        .expect.as_##type = expected,            \
+        .value = { .as_##type = init, },         \
+        .expect = { .as_##type = expected, },    \
         .stored_type = st_##type,                \
         {                                        \
             STR(#name),                          \
