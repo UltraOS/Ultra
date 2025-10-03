@@ -26,6 +26,8 @@ void reset_phys_ranges(void);
 uint64_t translate_virt_to_phys(void* virt);
 void *translate_phys_to_virt(uint64_t phys);
 
+uint64_t ns_timer(void);
+
 #ifdef __cplusplus
 }
 #endif
