@@ -3,6 +3,12 @@
 #include <set>
 #include <filesystem>
 
+#ifdef __APPLE__
+#include <mach/mach_time.h>
+#else
+#include <ctime>
+#endif
+
 #include "test_harness.h"
 #include "test_helpers.h"
 
@@ -134,4 +140,26 @@ void add_test_case(struct test_case *test, const char *file)
         filename.erase(0, std::strlen("test_"));
 
     test_groups()[filename].push_back(test);
+}
+
+#define NANOSECONDS_PER_SECOND 1000000000ull
+
+uint64_t ns_timer()
+{
+#if defined(__APPLE__)
+    static struct mach_timebase_info tb;
+    static bool initialized;
+
+    if (!initialized) {
+        ASSERT_EQ(mach_timebase_info(&tb), KERN_SUCCESS);
+        initialized = true;
+    }
+
+    return (mach_absolute_time() * tb.numer) / tb.denom;
+#else
+    struct timespec ts;
+
+    ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &ts), 0);
+    return ts.tv_sec * NANOSECONDS_PER_SECOND + ts.tv_nsec;
+#endif
 }
