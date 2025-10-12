@@ -7,6 +7,7 @@
 #include <boot/boot.h>
 #include <boot/ultra_protocol.h>
 
+#include <acpi.h>
 #include <initcall.h>
 #include <free_after_init.h>
 #include <log.h>
@@ -129,6 +130,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
         pr_warn("unwind_init() error %d, stack traces won't be available\n", ret);
 
     boot_alloc_init();
+    acpi_setup_tables();
 
     for (;;);
 }
