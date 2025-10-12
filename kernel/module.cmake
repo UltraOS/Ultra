@@ -3,7 +3,7 @@ function(add_ultra_module)
         MODULE
         ""
         "NAME;TYPE"
-        "SOURCES;EXTRA_CFLAGS;EXTRA_INCLUDE_DIRS"
+        "SOURCES;PUBLIC_CFLAGS;PRIVATE_CFLAGS;PUBLIC_DEFINITIONS;PRIVATE_DEFINITIONS;PUBLIC_INCLUDE_DIRS;PRIVATE_INCLUDE_DIRS"
         ${ARGN}
     )
 
@@ -22,20 +22,22 @@ function(add_ultra_module)
         ${MODULE_SOURCES}
     )
 
+    ultra_compile_options(${MODULE_PUBLIC_CFLAGS})
     get_target_property(ULTRA_CFLAGS ${ULTRA_KERNEL_OBJECTS} COMPILE_OPTIONS)
     ultra_target_compile_options(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
         ${ULTRA_CFLAGS}
-        ${EXTRA_CFLAGS}
+        ${MODULE_PRIVATE_CFLAGS}
     )
 
+    ultra_include_directories(${MODULE_PUBLIC_INCLUDE_DIRS})
     get_target_property(ULTRA_INCLUDES ${ULTRA_KERNEL_OBJECTS} INCLUDE_DIRECTORIES)
     target_include_directories(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
         ${ULTRA_INCLUDES}
-        ${EXTRA_INCLUDE_DIRS}
+        ${MODULE_PRIVATE_INCLUDE_DIRS}
     )
 
     if (MODULE_TYPE STREQUAL "COMPILED_IN")
@@ -72,10 +74,12 @@ function(add_ultra_module)
         message(FATAL_ERROR "Invalid module type '${MODULE_TYPE}'")
     endif ()
 
+    ultra_compile_definitions(${MODULE_PUBLIC_DEFINITIONS})
     get_target_property(ULTRA_DEFINITIONS ${ULTRA_KERNEL_OBJECTS} COMPILE_DEFINITIONS)
     target_compile_definitions(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
         ${ULTRA_DEFINITIONS}
+        ${MODULE_PRIVATE_DEFINITIONS}
     )
 endfunction()
