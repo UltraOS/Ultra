@@ -278,7 +278,7 @@ def hyper_get_iso_br() -> str:
 
 def run_qemu(
     arch: str, execution_mode: str, image_path: str, image_type: str,
-    debug: bool, uefi_boot: bool, uefi_firmware: str
+    debug: bool, uefi_boot: bool, uefi_firmware: str, kvm: bool
 ) -> subprocess.Popen:
     extra_args = []
     force_uefi = False
@@ -304,6 +304,9 @@ def run_qemu(
 
     if debug:
         extra_args.extend(["-s", "-S"])
+
+    if kvm:
+        extra_args.append("--enable-kvm")
 
     args = [
         f"qemu-system-{qemu_postfix}",
@@ -360,6 +363,8 @@ def main() -> None:
                         help="Image type to produce (with --make-image)")
     parser.add_argument("--run", action="store_true",
                         help="Automatically run in QEMU after building")
+    parser.add_argument("--kvm", action="store_true",
+                        help="Run QEMU with KVM enabled (implies --run)")
     parser.add_argument("--uefi", action="store_true",
                         help="Boot in UEFI mode")
     parser.add_argument("--uefi-firmware-path",
@@ -409,7 +414,7 @@ def main() -> None:
         build_ultra(args, arch, execution_mode, build_dir)
 
     is_debug = args.debug or args.ide_debug
-    should_run = args.run or is_debug
+    should_run = args.run or args.kvm or is_debug
 
     if should_run or args.make_image:
         hyper_installer = args.hyper_installer
@@ -450,7 +455,7 @@ def main() -> None:
         uefi_boot = hyper_uefi_binary_paths and args.uefi
 
         qp = run_qemu(arch, execution_mode, image_path, args.image_type,
-                      is_debug, uefi_boot, args.uefi_firmware_path)
+                      is_debug, uefi_boot, args.uefi_firmware_path, args.kvm)
 
     if args.debug:
         gdb_args = ["gdb", "--tui", get_kernel_path(args.arch, build_dir),
