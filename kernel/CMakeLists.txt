@@ -90,9 +90,10 @@ ultra_compile_definitions(
 # (e.g. Ubuntu 20.04 ships with 3.16.3 by default)
 set(ULTRA_MODULE_LD_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/link_module.ld")
 
+add_subdirectory(arch/${ULTRA_ARCH})
 add_subdirectory(common)
 add_subdirectory(memory)
-add_subdirectory(arch/${ULTRA_ARCH})
+add_subdirectory(drivers)
 
 set(ULTRA_ALL_OBJECTS "")
 get_property(ULTRA_OBJECT_TARGETS_FINAL GLOBAL PROPERTY ULTRA_OBJECT_TARGETS)
