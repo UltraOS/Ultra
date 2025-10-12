@@ -51,6 +51,11 @@ enum memory_order {
 #define atomic_and_fetch(ptr, x, mo) __atomic_and_fetch(ptr, x, mo)
 #define atomic_or_fetch(ptr, x, mo)  __atomic_or_fetch(ptr, x, mo)
 #define atomic_xor_fetch(ptr, x, mo) __atomic_xor_fetch(ptr, x, mo)
+#define atomic_fetch_add(ptr, x, mo) __atomic_fetch_add(ptr, x, mo)
+#define atomic_fetch_sub(ptr, x, mo) __atomic_fetch_sub(ptr, x, mo)
+#define atomic_fetch_and(ptr, x, mo) __atomic_fetch_and(ptr, x, mo)
+#define atomic_fetch_or(ptr, x, mo)  __atomic_fetch_or(ptr, x, mo)
+#define atomic_fetch_xor(ptr, x, mo) __atomic_fetch_xor(ptr, x, mo)
 #define atomic_xchg(ptr, x, mo) __atomic_exchange_n(ptr, x, mo)
 
 #define atomic_cmpxchg_explicit(ptr, expected, desired, success_mo, fail_mo) \
