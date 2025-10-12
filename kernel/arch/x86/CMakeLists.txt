@@ -6,8 +6,13 @@ else ()
     ultra_compile_definitions(ULTRA_ARCH_WIDTH=8)
 endif()
 
-# Hardcode 8 for now, even for i686 (unconditionally enable PAE if it's present)
-ultra_compile_definitions(ULTRA_ARCH_PHYS_ADDR_WIDTH=8)
+ultra_compile_definitions(
+    ULTRA_ARCH_LITTLE_ENDIAN
+
+    # Hardcode 8 for now, even for i686
+    # (unconditionally enable PAE if it's present)
+    ULTRA_ARCH_PHYS_ADDR_WIDTH=8
+)
 
 ultra_sources(
     entry.c

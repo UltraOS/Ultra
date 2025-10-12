@@ -1,3 +1,6 @@
+# Big endian mode is not supported
+ultra_compile_definitions(ULTRA_ARCH_LITTLE_ENDIAN)
+
 if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "aarch32")
     ultra_compile_definitions(ULTRA_ARCH_WIDTH=4)
     ultra_compile_definitions(ULTRA_PHYS_ADDR_WIDTH=4)
