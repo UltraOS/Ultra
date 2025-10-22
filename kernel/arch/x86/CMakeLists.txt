@@ -17,7 +17,7 @@ ultra_compile_definitions(
 ultra_sources(
     entry.c
     io.c
-    cpuid.c
+    cpu.c
     hypervisor.c
     memory.c
     unwind.c

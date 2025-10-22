@@ -1,5 +1,5 @@
 #include <arch/private/hypervisor.h>
-#include <arch/private/cpuid.h>
+#include <arch/private/cpu.h>
 
 static int is_in_hyperv = -1;
 
