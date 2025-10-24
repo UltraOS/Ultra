@@ -48,7 +48,7 @@ ultra_sources(
 ultra_include_directories(include)
 
 ultra_compile_options(
-    -std=gnu17
+    -std=gnu23
     -ffreestanding
     -fasynchronous-unwind-tables
     -ggdb3
