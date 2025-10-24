@@ -3,6 +3,7 @@
 
 #include <arch/private/descriptors.h>
 #include <arch/private/idt.h>
+#include <arch/private/cpu.h>
 
 #include <private/arch/init.h>
 
@@ -25,6 +26,14 @@ void INIT_CODE arch_init_early(void)
     load_gdt(&gdt_ptr);
 
     idt_init();
+
+    cpu_info_setup(&g_cpu_info);
+
+    pr_info(
+        "Running on %s (%d:%d:%d)\n",
+        g_cpu_info.name, g_cpu_info.family, g_cpu_info.model,
+        g_cpu_info.stepping
+    );
 }
 
 ULTRA_ENTRYPOINT(x86)

@@ -8,7 +8,7 @@
 #include <console.h>
 #include <io.h>
 #include <param.h>
-#include <arch/private/hypervisor.h>
+#include <arch/private/cpu.h>
 
 static void e9_write(struct console *con, const char *str, size_t count)
 {
@@ -25,8 +25,8 @@ static error_t e9_console_init(void)
     error_t ret = EOK;
     io_window *iow;
 
-    if (!in_hypervisor())
-        return ret;
+    if (!all_cpus_have(X86_FEATURE_HYPERVISOR))
+        return ENODEV;
 
     iow = io_window_map_pio(0xE9, 1);
     if (error_ptr(iow))
