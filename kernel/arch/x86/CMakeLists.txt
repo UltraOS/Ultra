@@ -18,7 +18,6 @@ ultra_sources(
     entry.c
     io.c
     cpu.c
-    hypervisor.c
     memory.c
     unwind.c
     unwind.S
