@@ -47,6 +47,8 @@ SECTIONS
     .rodata : VIRTUAL_BASE_RELATIVE(.rodata)
     {
         RODATA(ULTRA_ARCH_WIDTH)
+        . = ALIGN(ULTRA_ARCH_WIDTH);
+        MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)
     } :rodata =0xDEADBEEF
 
     .eh_frame_hdr : VIRTUAL_BASE_RELATIVE(.eh_frame_hdr)

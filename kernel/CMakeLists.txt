@@ -47,6 +47,7 @@ ultra_sources(
     unwind.c
     param.c
     log_ring.c
+    abortable_instructions.c
 )
 ultra_include_directories(include)
 
