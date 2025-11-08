@@ -278,8 +278,8 @@ def hyper_get_iso_br() -> str:
 
 def run_qemu(
     arch: str, execution_mode: str, image_path: str, image_type: str,
-    debug: bool, uefi_boot: bool, uefi_firmware: str, kvm: bool
-) -> subprocess.Popen:
+    debug: bool, uefi_boot: bool, uefi_firmware: str, kvm: bool, dry: bool
+) -> Optional[subprocess.Popen]:
     extra_args = []
     force_uefi = False
 
@@ -327,6 +327,10 @@ def run_qemu(
                 f"Unable to boot {arch}/{execution_mode} without UEFI firmware"
             )
 
+    if dry:
+        print(" ".join(args))
+        return None
+
     qp = subprocess.Popen(args, start_new_session=debug)
     if not debug:
         try:
@@ -365,6 +369,8 @@ def main() -> None:
                         help="Automatically run in QEMU after building")
     parser.add_argument("--kvm", action="store_true",
                         help="Run QEMU with KVM enabled (implies --run)")
+    parser.add_argument("--dry", action="store_true",
+                        help="Dump the QEMU command line instead of running")
     parser.add_argument("--uefi", action="store_true",
                         help="Boot in UEFI mode")
     parser.add_argument("--uefi-firmware-path",
@@ -455,9 +461,11 @@ def main() -> None:
         uefi_boot = hyper_uefi_binary_paths and args.uefi
 
         qp = run_qemu(arch, execution_mode, image_path, args.image_type,
-                      is_debug, uefi_boot, args.uefi_firmware_path, args.kvm)
+                      is_debug, uefi_boot, args.uefi_firmware_path, args.kvm,
+                      args.dry)
 
     if args.debug:
+        assert qp
         gdb_args = ["gdb", "--tui", get_kernel_path(args.arch, build_dir),
                     "--eval-command", "target remote localhost:1234"]
 
