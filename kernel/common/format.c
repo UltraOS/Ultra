@@ -7,6 +7,8 @@
 #include <common/conversions.h>
 #include <common/error.h>
 
+#include <symbols.h>
+
 struct fmt_buf_state {
     char *buffer;
     size_t capacity;
@@ -33,6 +35,14 @@ static void write_one(struct fmt_buf_state *fb_state, char c)
         fb_state->buffer[fb_state->bytes_written] = c;
 
     fb_state->bytes_written++;
+}
+
+static void write_cstr(struct fmt_buf_state *fb_state, const char *string)
+{
+    while (*string) {
+        write_one(fb_state, *string);
+        string++;
+    }
 }
 
 static void write_many(
@@ -329,6 +339,29 @@ MAYBE_NERR(int) vsnprintf(
         }
 
         if (consume(&fmt, STR("p"))) {
+            if (consume(&fmt, STR("SM"))) {
+                char sym[MAX_SYMBOL_LENGTH];
+                reg_t *pc_ptr;
+                size_t offset;
+                int len;
+
+                pc_ptr = va_arg(vlist, reg_t*);
+
+                if (is_error(symbol_lookup_by_address(*pc_ptr, sym, &offset))) {
+                    len = snprintf(
+                        sym, sizeof(sym), "unknown/garbage <0x%016zX>",
+                        *pc_ptr
+                    );
+                    write_many(&fb_state, sym, len);
+                } else {
+                    write_cstr(&fb_state, sym);
+                    len = snprintf(sym, sizeof(sym), "+%zu", offset);
+                    write_many(&fb_state, sym, len);
+                }
+
+                continue;
+            }
+
             if (consume(&fmt, STR("S"))) {
                 size_t size;
                 struct string *string = va_arg(vlist, struct string*);
