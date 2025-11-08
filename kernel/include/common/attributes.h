@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/helpers.h>
+
 #ifdef __cplusplus
 #define NORETURN [[noreturn]]
 #else
@@ -27,7 +29,7 @@
 #define ERROR_EMITTER(msg) __attribute__((__error__(msg)))
 
 #define ALIAS_OF(func) __attribute__((alias(#func)))
-#define SECTION(sec) __attribute__((section(#sec)))
+#define SECTION(sec) __attribute__((section("." TO_STR(sec))))
 #define ALIGN(value) _Alignas(value)
 #define USED __attribute__((used))
 #define WEAK __attribute__((weak))

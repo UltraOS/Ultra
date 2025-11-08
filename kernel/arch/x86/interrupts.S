@@ -2,6 +2,7 @@
 #include <arch/private/unwind_hints.h>
 #include <arch/private/asm_helpers.h>
 #include <arch/private/idt.h>
+#include <arch/private/linker.h>
 
 ASM_PRELUDE
 
@@ -125,7 +126,7 @@ ASM_FUNCTION_END X86_IRQ_DISPATCH_ASM
 #define PUSH_IMM8 0x6A
 
 .macro MAKE_IDT_THUNK name:req, func:req, aux_value, needs_aux=0
-.pushsection ".text.idt_thunks"
+.pushsection SECTION_NAME(IDT_THUNKS_ASM_SECTION)
 ASM_LOCAL_FUNCTION \name, unwind_hint=0, align=IDT_THUNK_SIZE
     .if \needs_aux
         UNWIND_HINT_INTERRUPT_FRAME
