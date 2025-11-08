@@ -19,6 +19,7 @@
 #define ABORTABLE_INSTRUCTIONS_SECTION abortable_instructions
 #define EARLY_PARAMETERS_SECTION early_parameters
 #define PARAMETERS_SECTION parameters
+#define PER_CPU_SECTION per_cpu
 
 #define FREE_AFTER_INIT_SECTION free_after_init
 #define FREE_AFTER_INIT_TEXT_SECTION FREE_AFTER_INIT_SECTION.text
