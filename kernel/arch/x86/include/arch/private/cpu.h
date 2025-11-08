@@ -4,6 +4,8 @@
 #include <common/align.h>
 #include <common/bit.h>
 
+#include <per_cpu.h>
+
 enum x86_feature_dword {
     X86_FEATURE_DWORD_1_C = 0,
     X86_FEATURE_DWORD_1_D,
@@ -317,6 +319,7 @@ struct x86_cpu_info {
  * CPU info at early boot pre-SMP.
  */
 extern struct x86_cpu_info g_cpu_info;
+DECLARE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
 /*
  * Global CPU feature tests always reference the early BSP CPU info, since all

@@ -47,6 +47,7 @@ ultra_sources(
     unwind.c
     param.c
     log_ring.c
+    per_cpu.c
     abortable_instructions.c
 )
 ultra_include_directories(include)
@@ -92,6 +93,12 @@ ultra_compile_definitions(
 set(ULTRA_MODULE_LD_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/link_module.ld")
 
 add_subdirectory(arch/${ULTRA_ARCH})
+
+if (NOT ULTRA_MAX_CPUS)
+    set (ULTRA_MAX_CPUS 256)
+endif()
+ultra_compile_definitions(ULTRA_MAX_CPUS=${ULTRA_MAX_CPUS})
+
 add_subdirectory(common)
 add_subdirectory(memory)
 add_subdirectory(drivers)

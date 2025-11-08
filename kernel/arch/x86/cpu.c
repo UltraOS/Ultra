@@ -7,8 +7,10 @@
 
 #include <free_after_init.h>
 #include <panic.h>
+#include <per_cpu.h>
 
 struct x86_cpu_info g_cpu_info;
+DEFINE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
 static inline char *set_cpu_name_part(char *name, struct cpuid_res *res)
 {

@@ -20,6 +20,8 @@
 #include <common/types.h>
 #include <common/attributes.h>
 
+#include <per_cpu_decls.h>
+
 typedef u64 descriptor_t;
 BUILD_BUG_ON(sizeof(descriptor_t) != DESC_SIZE);
 
@@ -28,6 +30,8 @@ struct descriptor_ptr {
      u64 base;
 } PACKED;
 BUILD_BUG_ON(sizeof(struct descriptor_ptr) != 10);
+
+DECLARE_PER_CPU(descriptor_t [NUM_GDT_ENTRIES], g_this_cpu_gdt);
 
 #define DESC_PRESENT (1ull << 47)
 #define DESC_DPL(x) (((descriptor_t)(x)) << 45)
