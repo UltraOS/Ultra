@@ -1,12 +1,12 @@
 #include <arch/private/idt.h>
 #include <arch/private/descriptors.h>
+#include <arch/private/linker.h>
 
-#include <linker.h>
 #include <free_after_init.h>
 
 #include <common/types.h>
 
-extern ptr_t LINKER_SYMBOL(idt_thunks)[];
+extern const ptr_t SECTION_ARRAY_BEGIN(IDT_THUNKS_SECTION)[];
 BUILD_BUG_ON(IDT_THUNK_SIZE != sizeof(ptr_t));
 
 struct interrupt_descriptor {
@@ -30,7 +30,7 @@ void INIT_CODE idt_init(void)
     size_t i;
 
     for (i = 0; i < NUM_IDT_ENTRIES; ++i) {
-        ptr_t this_thunk = (ptr_t)&LINKER_SYMBOL(idt_thunks)[i];
+        ptr_t this_thunk = (ptr_t)&SECTION_ARRAY_BEGIN(IDT_THUNKS_SECTION)[i];
 
         g_idt[i] = (struct interrupt_descriptor) {
             .low = INTERRUPT_DESCRIPTOR_LOW(this_thunk, 0, 0),

@@ -11,6 +11,7 @@ PHYSICAL_OFFSET = 0;
 #define INT3_OPCODE 0xCCCCCCCC
 
 #include <linker_common.ld.h>
+#include <arch/private/linker.h>
 
 // NOTE: These flags are currently not enforced by anyone
 PHDRS
@@ -32,8 +33,8 @@ SECTIONS
         TEXT_BEGIN
 
         . = ALIGN(8);
-        LINKER_SYMBOL(idt_thunks) = .;
-        SPECIAL_SECTION(.text.idt_thunks)
+        SECTION_MARKER_BEGIN(IDT_THUNKS_SECTION) = .;
+        SPECIAL_SECTION(IDT_THUNKS_ASM_SECTION)
 
         . = ALIGN(16);
         TEXT
