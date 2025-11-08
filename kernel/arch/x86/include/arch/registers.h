@@ -43,3 +43,18 @@ struct registers {
     u64 rsp;
     u64 ss;
 };
+
+static inline reg_t registers_get_pc(struct registers *regs)
+{
+    return regs->rip;
+}
+
+static inline void registers_set_pc(struct registers *regs, u64 value)
+{
+    regs->rip = value;
+}
+
+static inline void registers_set_return_value(struct registers *regs, u64 value)
+{
+    regs->rax = value;
+}
