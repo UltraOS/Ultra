@@ -4,6 +4,10 @@
 #include <linker.h>
 #include <common/attributes.h>
 
+// x86_flags
+#define ABORTABLE_INSTRUCTION_RDMSR_UNSAFE (1 << 0)
+#define ABORTABLE_INSTRUCTION_WRMSR_UNSAFE (1 << 1)
+
 #ifdef __ASSEMBLER__
 
 #define ABORTABLE_INSTRUCTION(x) 1: x
