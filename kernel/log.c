@@ -57,23 +57,11 @@ struct dump_state {
 static bool do_dump_frame(void *user, ptr_t addr, bool addr_after_call)
 {
     struct dump_state *state = user;
-    char sym[MAX_SYMBOL_LENGTH];
     ptr_t lookup_addr;
-    size_t offset;
 
     lookup_addr = addr_after_call ? addr - 1 : addr;
+    print("    #%zu in %pSM\n", state->depth++, &lookup_addr);
 
-    if (is_error(symbol_lookup_by_address(lookup_addr, sym, &offset))) {
-        print(
-        "    #%zu in unknown/garbage <0x%016zX>\n", state->depth, addr
-        );
-        goto out;
-    }
-
-    print("    #%zu in %s+%zu\n", state->depth, sym, offset);
-
-out:
-    state->depth++;
     return true;
 }
 
