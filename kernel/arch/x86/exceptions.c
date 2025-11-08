@@ -6,6 +6,7 @@
 #include <arch/private/idt.h>
 #include <arch/registers.h>
 #include <arch/private/asm_registers.h>
+#include <arch/private/abortable_instructions.h>
 
 // Ensure both ASM and C code have the same idea about register layout
 BUILD_BUG_ON(R15_OFFSET != offsetof(struct registers, r15));
@@ -50,7 +51,6 @@ STUB_EXCEPTION(X86_EXCEPTION_CSO)
 STUB_EXCEPTION(X86_EXCEPTION_TS)
 STUB_EXCEPTION(X86_EXCEPTION_NP)
 STUB_EXCEPTION(X86_EXCEPTION_SS)
-STUB_EXCEPTION(X86_EXCEPTION_GP)
 STUB_EXCEPTION(X86_EXCEPTION_MF)
 STUB_EXCEPTION(X86_EXCEPTION_AC)
 STUB_EXCEPTION(X86_EXCEPTION_MC)
@@ -64,9 +64,19 @@ STUB_EXCEPTION(X86_EXCEPTION_RSVD)
 
 EXCEPTION_HANDLER(X86_EXCEPTION_PF)
 {
-    UNREFERENCED_PARAMETER(regs);
     phys_addr_t addr;
+
+    if (handle_abortable_instruction(regs))
+        return;
 
     asm volatile("mov %%cr2, %0" : "=r"(addr));
     panic("Page fault at 0x%016llX\n", addr);
+}
+
+EXCEPTION_HANDLER(X86_EXCEPTION_GP)
+{
+    if (handle_abortable_instruction(regs))
+        return;
+
+    panic("Unhandled #GP at 0x%016llX\n", regs->rip);
 }

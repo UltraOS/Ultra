@@ -10,6 +10,7 @@
 #include <symbols.h>
 #include <leb128.h>
 #include <free_after_init.h>
+#include <unsafe_access.h>
 
 #include <common/string.h>
 #include <common/attributes.h>
@@ -662,6 +663,7 @@ static error_t apply_reg_rules(
 {
     size_t i;
     u64 offset;
+    error_t ret;
 
     for (i = 0; i < ARCH_NUM_DWARF_REGISTERS; i++) {
         switch (reg_rules[i].rule) {
@@ -671,7 +673,15 @@ static error_t apply_reg_rules(
         case DW_CFA_offset:
             offset = state->frame[state->cfa_reg_idx] + state->cfa_offset;
             offset += reg_rules[i].offset * state->data_alignment_factor;
-            memcpy(&new_frame[i], (void*)((ptr_t)offset), sizeof(ptr_t));
+
+            ret = try_memcpy(
+                &new_frame[i], (void*)((ptr_t)offset), sizeof(ptr_t)
+            );
+            if (is_error(ret)) {
+                pr_warn("faulted while unwinding frame, stopping\n");
+                return ret;
+            }
+
             continue;
         case DW_CFA_def_cfa:
             new_frame[i] = state->frame[state->cfa_reg_idx] + state->cfa_offset;

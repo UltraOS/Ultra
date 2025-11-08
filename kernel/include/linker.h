@@ -16,6 +16,7 @@
 #define SECTION_ARRAY_ARGS(x) \
     SECTION_ARRAY_BEGIN(x), SECTION_ARRAY_SIZE(x)
 
+#define ABORTABLE_INSTRUCTIONS_SECTION abortable_instructions
 #define EARLY_PARAMETERS_SECTION early_parameters
 #define PARAMETERS_SECTION parameters
 

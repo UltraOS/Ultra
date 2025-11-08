@@ -23,6 +23,7 @@ ultra_sources(
     unwind.S
     arch_helpers.S
     interrupts.S
+    unsafe_access.S
     idt.c
     irq.c
     exceptions.c
