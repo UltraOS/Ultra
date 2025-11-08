@@ -1,12 +1,16 @@
 #include <common/helpers.h>
 #include <common/types.h>
 
+#include <log.h>
 #include <panic.h>
+#include <unsafe_access.h>
 
 #include <arch/private/idt.h>
 #include <arch/registers.h>
 #include <arch/private/asm_registers.h>
 #include <arch/private/abortable_instructions.h>
+
+#include <private/arch/abortable_instructions.h>
 
 // Ensure both ASM and C code have the same idea about register layout
 BUILD_BUG_ON(R15_OFFSET != offsetof(struct registers, r15));
@@ -71,6 +75,37 @@ EXCEPTION_HANDLER(X86_EXCEPTION_PF)
 
     asm volatile("mov %%cr2, %0" : "=r"(addr));
     panic("Page fault at 0x%016llX\n", addr);
+}
+
+bool arch_handle_abortable_instruction(
+    struct registers *regs, const struct abortable_instruction *ai
+)
+{
+    reg_t ret_rip;
+
+    // Only MSR helpers have an arch-specific handler
+    if (!(ai->arch_flags & (ABORTABLE_INSTRUCTION_RDMSR_UNSAFE |
+                            ABORTABLE_INSTRUCTION_WRMSR_UNSAFE)))
+        return false;
+
+    // MSR helpers don't use the stack, we know where the return RIP is
+    if (is_error(try_memcpy(&ret_rip, (char*)regs->rsp, sizeof(ret_rip))))
+        ret_rip = 0;
+
+    if (ai->arch_flags & ABORTABLE_INSTRUCTION_RDMSR_UNSAFE) {
+        pr_warn(
+            "Unchecked read from MSR 0x%08X failed at %pSM\n",
+            (u32)regs->rcx, &ret_rip
+        );
+    } else {
+        pr_warn(
+            "Unchecked write of 0x%08X%08X to MSR 0x%08X failed at %pSM\n",
+            (u32)regs->rdx, (u32)regs->rax, (u32)regs->rcx, &ret_rip
+        );
+    }
+
+    // Leave exception handling up to generic code
+    return false;
 }
 
 EXCEPTION_HANDLER(X86_EXCEPTION_GP)

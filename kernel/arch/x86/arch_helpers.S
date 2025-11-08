@@ -1,6 +1,7 @@
 #include <arch/private/descriptors.h>
 #include <arch/private/unwind_hints.h>
 #include <arch/private/asm_helpers.h>
+#include <arch/private/abortable_instructions.h>
 
 ASM_PRELUDE
 
@@ -27,3 +28,63 @@ ASM_GLOBAL_FUNCTION load_gdt
 
     ret
 ASM_FUNCTION_END load_gdt
+
+// error_t rdmsr(u32 msr, u64 *out_value);
+ASM_GLOBAL_FUNCTION rdmsr
+    mov ecx, edi
+
+    ABORTABLE_INSTRUCTION(rdmsr)
+    mov [rsi], eax
+    mov [rsi + 4], edx
+    xor eax, eax
+
+    ABORTABLE_INSTRUCTION_RESUME_LABEL \
+        flags=ABORTABLE_INSTRUCTION_ENOSYS_ON_ERROR
+    ret
+ASM_FUNCTION_END rdmsr
+
+// void rdmsr_unsafe(u32 msr, u64 *out_value);
+ASM_GLOBAL_FUNCTION rdmsr_unsafe
+    mov ecx, edi
+
+    ABORTABLE_INSTRUCTION(rdmsr)
+    mov [rsi], eax
+    mov [rsi + 4], edx
+
+    ABORTABLE_INSTRUCTION_RESUME_LABEL                \
+        flags=ABORTABLE_INSTRUCTION_HAS_ARCH_HANDLER, \
+        x86_flags=ABORTABLE_INSTRUCTION_RDMSR_UNSAFE
+
+    ret
+ASM_FUNCTION_END rdmsr_unsafe
+
+// error_t wrmsr(u32 msr, u64 value);
+ASM_GLOBAL_FUNCTION wrmsr
+    mov ecx, edi
+    mov eax, esi
+    mov rdx, rsi
+    shr rdx, 32
+
+    ABORTABLE_INSTRUCTION(wrmsr)
+    xor eax, eax
+
+    ABORTABLE_INSTRUCTION_RESUME_LABEL \
+        flags=ABORTABLE_INSTRUCTION_ENOSYS_ON_ERROR
+
+    ret
+ASM_FUNCTION_END wrmsr
+
+// void wrmsr_unsafe(u32 msr, u64 value);
+ASM_GLOBAL_FUNCTION wrmsr_unsafe
+    mov ecx, edi
+    mov eax, esi
+    mov rdx, rsi
+    shr rdx, 32
+
+    ABORTABLE_INSTRUCTION(wrmsr)
+    ABORTABLE_INSTRUCTION_RESUME_LABEL                \
+        flags=ABORTABLE_INSTRUCTION_HAS_ARCH_HANDLER, \
+        x86_flags=ABORTABLE_INSTRUCTION_WRMSR_UNSAFE
+
+    ret
+ASM_FUNCTION_END wrmsr_unsafe

@@ -1,10 +1,12 @@
 #include <arch/private/cpu.h>
+#include <arch/private/msr.h>
 
 #include <common/string.h>
 #include <common/ctype.h>
 #include <common/atomic.h>
 
 #include <free_after_init.h>
+#include <panic.h>
 
 struct x86_cpu_info g_cpu_info;
 
@@ -165,4 +167,30 @@ void cpuid_subleaf(u32 function, u32 subleaf, struct cpuid_res *id)
 void cpuid(u32 function, struct cpuid_res *id)
 {
     cpuid_subleaf(function, 0, id);
+}
+
+static void die_on_msr_access_failure(const char *op, u32 msr)
+{
+    panic("Unable to %s MSR 0x%08X\n", op, msr);
+}
+
+u64 rdmsr_or_die(u32 msr)
+{
+    error_t ret;
+    u64 value;
+
+    ret = rdmsr(msr, &value);
+    if (is_error(ret))
+        die_on_msr_access_failure("read from", msr);
+
+    return value;
+}
+
+void wrmsr_or_die(u32 msr, u64 value)
+{
+    error_t ret;
+
+    ret = wrmsr(msr, value);
+    if (is_error(ret))
+        die_on_msr_access_failure("write to", msr);
 }
