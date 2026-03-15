@@ -17,6 +17,7 @@
 
 #include <private/unwind.h>
 #include <private/param.h>
+#include <private/per_cpu.h>
 #include <private/arch/init.h>
 
 struct boot_context g_boot_ctx;
@@ -132,6 +133,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     boot_alloc_init();
     acpi_setup_tables();
     arch_prepare_for_smp();
+    per_cpu_setup();
 
     for (;;);
 }

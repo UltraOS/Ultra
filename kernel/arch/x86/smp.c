@@ -341,3 +341,34 @@ void INIT_CODE setup_smp_topology(void)
 
     uacpi_table_unref(&tbl);
 }
+
+static void this_cpu_enable_per_cpu(u32 my_id)
+{
+    struct descriptor_ptr gdt_ptr = {
+        .limit = sizeof(g_this_cpu_gdt) - 1,
+        .base = (ptr_t)per_cpu_ptr(&g_this_cpu_gdt, my_id),
+    };
+    load_gdt(&gdt_ptr);
+
+    wrmsr_or_die(MSR_GS_BASE, g_per_cpu_offset[my_id]);
+}
+
+void INIT_CODE arch_on_per_cpu_setup_done(void)
+{
+    size_t i;
+
+    // Do the boot CPU setup here, AP CPUs call it elsewhere
+    this_cpu_enable_per_cpu(0);
+
+    for (i = 0; i < g_num_present_cpus; ++i) {
+        per_cpu(g_this_cpu_id, i) = i;
+        per_cpu(g_this_cpu_apic_id, i) = s_early_cpu_to_apic_id[i];
+    }
+
+    /*
+     * Duplicate the early boot CPU feature detection data into its own per-cpu
+     * copy. From this point on g_cpu_info contains an AND mask of features of
+     * all present CPUs.
+     */
+    memcpy(this_cpu_ptr(&g_this_cpu_info), &g_cpu_info, sizeof(g_cpu_info));
+}

@@ -11,6 +11,7 @@
 #endif
 
 extern ptr_t g_per_cpu_offset[ULTRA_MAX_CPUS];
+extern virt_addr_t g_per_cpu_base;
 
 #define MAKE_PER_CPU(prefix, type, var) \
     prefix SECTION(PER_CPU_SECTION) ARCH_PER_CPU_ATTRIBUTES typeof(type) var
