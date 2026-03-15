@@ -15,9 +15,14 @@ ultra_compile_definitions(
 )
 
 ultra_sources(
+    apic.c
+    xapic.c
+    x2apic.c
+    ioapic.c
     entry.c
     io.c
     cpu.c
+    smp.c
     memory.c
     unwind.c
     unwind.S
