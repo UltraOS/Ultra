@@ -48,6 +48,7 @@ ultra_sources(
     param.c
     log_ring.c
     per_cpu.c
+    smp.c
     abortable_instructions.c
 )
 ultra_include_directories(include)

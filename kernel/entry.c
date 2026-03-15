@@ -131,6 +131,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     boot_alloc_init();
     acpi_setup_tables();
+    arch_prepare_for_smp();
 
     for (;;);
 }

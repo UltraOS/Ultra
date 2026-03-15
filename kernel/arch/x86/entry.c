@@ -5,6 +5,8 @@
 #include <arch/private/idt.h>
 #include <arch/private/cpu.h>
 #include <arch/private/msr.h>
+#include <arch/private/smp.h>
+#include <arch/private/apic.h>
 
 #include <private/arch/init.h>
 
@@ -39,6 +41,12 @@ void INIT_CODE arch_init_early(void)
         g_cpu_info.name, g_cpu_info.family, g_cpu_info.model,
         g_cpu_info.stepping
     );
+}
+
+void INIT_CODE arch_prepare_for_smp(void)
+{
+    apic_detect();
+    setup_smp_topology();
 }
 
 ULTRA_ENTRYPOINT(x86)
