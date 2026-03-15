@@ -10,9 +10,12 @@
 #include <param.h>
 #include <arch/private/cpu.h>
 
+static io_window s_e9_iow;
+
 static void e9_write(struct console *con, const char *str, size_t count)
 {
-    iowrite8_many(con->priv, 0, (const u8*)str, count);
+    UNREFERENCED_PARAMETER(con);
+    iowrite8_many(s_e9_iow, 0, (const u8*)str, count);
 }
 
 static struct console e9_console = {
@@ -23,19 +26,16 @@ static struct console e9_console = {
 static error_t e9_console_init(void)
 {
     error_t ret = EOK;
-    io_window *iow;
 
     if (!all_cpus_have(X86_FEATURE_HYPERVISOR))
         return ENODEV;
 
-    iow = io_window_map_pio(0xE9, 1);
-    if (error_ptr(iow))
-        return decode_error_ptr(iow);
+    ret = io_window_map_pio(&s_e9_iow, 0xE9, 1);
+    if (is_error(ret))
+        return ret;
 
-    if (ioread8(iow) != 0xE9)
+    if (ioread8(s_e9_iow) != 0xE9)
         goto unmap;
-
-    e9_console.priv = iow;
 
     ret = register_console(&e9_console);
     if (unlikely(ret))
@@ -44,8 +44,7 @@ static error_t e9_console_init(void)
     return ret;
 
 unmap:
-    e9_console.priv = NULL;
-    io_window_unmap(iow);
+    io_window_unmap(&s_e9_iow);
     return ret;
 }
 INITCALL(e9_console_init);

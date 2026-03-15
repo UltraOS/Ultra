@@ -16,87 +16,62 @@ enum io_type {
     IO_TYPE_MEM_IO = 2,
 };
 
-#ifdef ULTRA_HARDENED_IO
-
-typedef struct io_window_impl {
-    enum io_type type;
-    void *address;
-    size_t length;
-} io_window;
-
-#else
-
-typedef void io_window;
-
-#endif
-
-MAYBE_ERR(io_window*) io_window_map(phys_addr_t phys_base, size_t length)
+error_t io_window_map(io_window *out_iow, phys_addr_t phys_base, size_t length)
 {
-    io_window *iow;
     ptr_or_error_t mapping;
 
     mapping = arch_map_memory_io(phys_base, length);
     if (error_ptr(mapping))
-        return mapping;
+        return decode_error_ptr(mapping);
 
+    out_iow->mmio_address = mapping;
 #ifdef ULTRA_HARDENED_IO
-    iow = alloc(sizeof(*iow), ALLOC_GENERIC);
-
-    iow->type = IO_TYPE_MEM_IO;
-    iow->address = mapping;
-    iow->length = length;
-#else
-    iow = mapping;
+    out_iow->type = IO_TYPE_MEM_IO;
+    out_iow->length = length;
 #endif
-    return iow;
+
+    return EOK;
 }
 
-MAYBE_ERR(io_window*) io_window_map_pio(phys_addr_t phys_base, size_t length)
+error_t io_window_map_pio(
+    io_window *out_iow, phys_addr_t phys_base, size_t length
+)
 {
     pio_addr_or_error_t ret;
-    io_window *iow;
 
     if ((phys_base + ULTRA_ARCH_PORT_IO_WINDOW_OFFSET) >=
         ULTRA_ARCH_PORT_IO_WINDOW_END)
-        return encode_error_ptr(EINVAL);
+        return EINVAL;
 
     ret = arch_map_port_io(phys_base, length);
     if (error_pio_addr(ret))
-        return encode_error_ptr(decode_error_pio_addr(ret));
+        return decode_error_pio_addr(ret);
 
     ret += ULTRA_ARCH_PORT_IO_WINDOW_OFFSET;
 
+    out_iow->port_address = ret;
 #ifdef ULTRA_HARDENED_IO
-    iow = alloc(sizeof(*iow), ALLOC_GENERIC);
-    if (unlikely(iow == NULL))
-        return encode_error_ptr(ENOMEM);
-
-    iow->type = IO_TYPE_PORT_IO;
-    iow->address = (void*)((ptr_t)ret);
-    iow->length = length;
-#else
-    iow = (void*)((ptr_t)ret);
+    out_iow->type = IO_TYPE_PORT_IO;
+    out_iow->length = length;
 #endif
-    return iow;
+
+    return EOK;
 }
 
 void io_window_unmap(io_window *iow)
 {
 #ifdef ULTRA_HARDENED_IO
     iow->type = IO_TYPE_INVALID;
-    free(iow);
 #else
     UNREFERENCED_PARAMETER(iow);
 #endif
 }
 
-static enum io_type io_window_get_type(io_window *iow)
+static enum io_type io_window_get_type(io_window iow)
 {
 #ifndef ULTRA_HARDENED_IO
-    ptr_t raw_iow = (ptr_t)iow;
-
-    if (raw_iow < ULTRA_ARCH_PORT_IO_WINDOW_END) {
-        if (raw_iow < ULTRA_ARCH_PORT_IO_WINDOW_OFFSET)
+    if (iow.port_address < ULTRA_ARCH_PORT_IO_WINDOW_END) {
+        if (iow.port_address < ULTRA_ARCH_PORT_IO_WINDOW_OFFSET)
             return IO_TYPE_INVALID;
 
         return IO_TYPE_PORT_IO;
@@ -104,23 +79,14 @@ static enum io_type io_window_get_type(io_window *iow)
 
     return IO_TYPE_MEM_IO;
 #else
-    return iow->type;
+    return iow.type;
 #endif
 }
 
-static void *io_window_get_address(io_window *iow)
+static void io_window_check_bounds(io_window iow, size_t offset)
 {
 #ifdef ULTRA_HARDENED_IO
-    return iow->address;
-#else
-    return iow;
-#endif
-}
-
-static void io_window_check_bounds(io_window *iow, size_t offset)
-{
-#ifdef ULTRA_HARDENED_IO
-    BUG_ON(offset >= iow->length);
+    BUG_ON(offset >= iow.length);
 #else
     /*
      * This could technically check that iow + offset doesn't overflow or
@@ -133,9 +99,9 @@ static void io_window_check_bounds(io_window *iow, size_t offset)
 #endif
 }
 
-static pio_addr_t port_io_window_get_port(io_window *iow, size_t offset)
+static pio_addr_t port_io_window_get_port(io_window iow, size_t offset)
 {
-    ptr_t port = (ptr_t)io_window_get_address(iow);
+    ptr_t port = iow.port_address;
 
     BUG_ON(port < ULTRA_ARCH_PORT_IO_WINDOW_OFFSET);
     BUG_ON(port >= ULTRA_ARCH_PORT_IO_WINDOW_END);
@@ -148,19 +114,14 @@ static pio_addr_t port_io_window_get_port(io_window *iow, size_t offset)
     return (pio_addr_t)port;
 }
 
-static void *mem_io_window_get_ptr(io_window *iow, size_t offset)
+static void *mem_io_window_get_ptr(io_window iow, size_t offset)
 {
-    void *ptr;
-
     io_window_check_bounds(iow, offset);
 
-    ptr = io_window_get_address(iow);
-    ptr += offset;
-
-    return ptr;
+    return iow.mmio_address + offset;
 }
 
-static void do_write_many(io_window *iow, size_t offset, u8 width,
+static void do_write_many(io_window iow, size_t offset, u8 width,
                           const void *in, size_t count)
 {
     switch (io_window_get_type(iow)) {
@@ -177,7 +138,7 @@ static void do_write_many(io_window *iow, size_t offset, u8 width,
     }
 }
 
-static void do_read_many(io_window *iow, size_t offset, u8 width,
+static void do_read_many(io_window iow, size_t offset, u8 width,
                          void *out, size_t count)
 {
     switch (io_window_get_type(iow)) {
@@ -195,25 +156,25 @@ static void do_read_many(io_window *iow, size_t offset, u8 width,
 }
 
 #define MAKE_IO_FN(width)                                                   \
-    u##width ioread##width##_at(io_window *iow, size_t offset)              \
+    u##width ioread##width##_at(io_window iow, size_t offset)               \
     {                                                                       \
         u##width out;                                                       \
         do_read_many(iow, offset, sizeof(out), &out, 1);                    \
         return out;                                                         \
     }                                                                       \
                                                                             \
-    void ioread##width##_many(io_window *iow, size_t offset,                \
+    void ioread##width##_many(io_window iow, size_t offset,                 \
                               u##width *buf, size_t count)                  \
     {                                                                       \
         do_read_many(iow, offset, width / 8, buf, count);                   \
     }                                                                       \
                                                                             \
-    void iowrite##width##_at(io_window *iow, size_t offset, u##width value) \
+    void iowrite##width##_at(io_window iow, size_t offset, u##width value)  \
     {                                                                       \
         do_write_many(iow, offset, sizeof(value), &value, 1);               \
     }                                                                       \
                                                                             \
-    void iowrite##width##_many(io_window *iow, size_t offset,               \
+    void iowrite##width##_many(io_window iow, size_t offset,                \
                                const u##width *buf, size_t count)           \
     {                                                                       \
         do_write_many(iow, offset, width / 8, buf, count);                  \
