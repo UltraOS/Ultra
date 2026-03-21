@@ -12,6 +12,7 @@
 #define ULTRA_ATTRIBUTE_MODULE_INFO      4
 #define ULTRA_ATTRIBUTE_COMMAND_LINE     5
 #define ULTRA_ATTRIBUTE_FRAMEBUFFER_INFO 6
+#define ULTRA_ATTRIBUTE_APM_INFO         7
 
 struct ultra_attribute_header {
     uint32_t type;
@@ -34,6 +35,8 @@ struct ultra_platform_info_attribute {
     uint64_t higher_half_base;
     uint8_t page_table_depth;
     uint8_t reserved[7];
+    uint64_t dtb_address;
+    uint64_t smbios_address;
 };
 
 #define ULTRA_PARTITION_TYPE_INVALID 0
@@ -128,6 +131,26 @@ struct ultra_framebuffer {
 struct ultra_framebuffer_attribute {
     struct ultra_attribute_header header;
     struct ultra_framebuffer fb;
+};
+
+struct ultra_apm_info {
+    uint16_t version;
+    uint16_t flags;
+
+    uint16_t pm_code_segment;
+    uint16_t pm_code_segment_length;
+    uint32_t pm_offset;
+
+    uint16_t rm_code_segment;
+    uint16_t rm_code_segment_length;
+
+    uint16_t data_segment;
+    uint16_t data_segment_length;
+};
+
+struct ultra_apm_attribute {
+    struct ultra_attribute_header header;
+    struct ultra_apm_info info;
 };
 
 struct ultra_boot_context {
