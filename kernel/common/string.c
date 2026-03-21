@@ -5,6 +5,8 @@
 #undef memset
 #undef memcmp
 #undef strlen
+#undef strcmp
+#undef strstr
 
 /*
  * These functions don't have prototypes because they're invoked from the
@@ -74,6 +76,39 @@ size_t strlen(const char *str)
     for (str1 = str; *str1; str1++);
 
     return str1 - str;
+}
+
+char *strstr(const char *str, const char *sub_str)
+{
+    const char *cur, *needle_cur, *haystack_cur;
+
+    if (*sub_str == '\0')
+        return (char*)str;
+
+    for (cur = str; *cur != '\0'; ++cur) {
+        needle_cur = sub_str;
+        haystack_cur = cur;
+
+        while (*needle_cur != '\0' && *haystack_cur == *needle_cur) {
+            ++haystack_cur;
+            ++needle_cur;
+        }
+
+        if (*needle_cur == '\0')
+            return (char*)cur;
+    }
+
+    return nullptr;
+}
+
+int strcmp(const char *s1, const char *s2)
+{
+    while (*s1 != '\0' && *s1 == *s2) {
+        ++s1;
+        ++s2;
+    }
+
+    return (int)(unsigned char)*s1 - (int)(unsigned char)*s2;
 }
 
 #pragma GCC diagnostic pop
