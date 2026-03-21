@@ -72,3 +72,5 @@ struct registers;
  * specified in registers with the provided log_level
  */
 void dump_stack(enum log_level, struct registers*);
+
+void log_set_hardware_identity_string(const char *fmt, ...);

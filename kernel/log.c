@@ -7,6 +7,17 @@
 #include <symbols.h>
 #include <unwind.h>
 
+static char s_hw_id[256] = "Unknown Hardware";
+
+void log_set_hardware_identity_string(const char *fmt, ...)
+{
+    va_list va;
+
+    va_start(va, fmt);
+    vsnprintf(s_hw_id, sizeof(s_hw_id), fmt, va);
+    va_end(va);
+}
+
 static size_t extract_msg_level(const char *msg, enum log_level *out_level)
 {
     u8 level;
@@ -73,6 +84,7 @@ void dump_stack(enum log_level level, struct registers *regs)
         .depth = 0,
     };
 
+    print("Hardware: %s\n", s_hw_id);
     print("Call trace (most recent call first):\n");
     unwind_walk(regs, do_dump_frame, &state);
 }
