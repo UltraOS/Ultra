@@ -18,6 +18,7 @@
 #include <private/unwind.h>
 #include <private/param.h>
 #include <private/per_cpu.h>
+#include <private/smbios.h>
 #include <private/arch/init.h>
 
 struct boot_context g_boot_ctx;
@@ -131,6 +132,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
         pr_warn("unwind_init() error %d, stack traces won't be available\n", ret);
 
     boot_alloc_init();
+    smbios_setup();
     acpi_setup_tables();
     arch_prepare_for_smp();
     per_cpu_setup();
