@@ -18,6 +18,7 @@ PHDRS
     text   PT_LOAD FLAGS(PHDR_READ | PHDR_EXEC);
     rodata PT_LOAD FLAGS(PHDR_READ);
     data   PT_LOAD FLAGS(PHDR_READ | PHDR_WRITE);
+    init   PT_LOAD FLAGS(PHDR_READ | PHDR_WRITE | PHDR_EXEC);
 }
 
 SECTIONS
@@ -63,6 +64,13 @@ SECTIONS
     {
         DATA
     } :data
+
+    . = ALIGN(4K);
+
+    .free_after_init : VIRTUAL_BASE_RELATIVE(.free_after_init)
+    {
+        FREE_AFTER_INIT
+    } :init
 
     .bss : VIRTUAL_BASE_RELATIVE(.bss)
     {

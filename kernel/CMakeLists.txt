@@ -20,6 +20,9 @@ set(
     ${ULTRA_KERNEL_BASE}
 )
 
+# A list of all kernel object libraries (kernel itself + compiled-in modules)
+set_property(GLOBAL PROPERTY ULTRA_OBJECT_TARGETS "${ULTRA_KERNEL_OBJECTS}")
+
 # Number of times to re-link the kernel to stabilize symbols
 set(ULTRA_NUM_RELINKS 1)
 if (ULTRA_CONFIG_LTO)
@@ -89,3 +92,31 @@ set(ULTRA_MODULE_LD_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/link_module.ld")
 add_subdirectory(common)
 add_subdirectory(memory)
 add_subdirectory(arch/${ULTRA_ARCH})
+
+set(ULTRA_ALL_OBJECTS "")
+get_property(ULTRA_OBJECT_TARGETS_FINAL GLOBAL PROPERTY ULTRA_OBJECT_TARGETS)
+
+foreach(obj IN LISTS ULTRA_OBJECT_TARGETS_FINAL)
+    list(APPEND ULTRA_ALL_OBJECTS "$<TARGET_OBJECTS:${obj}>")
+endforeach()
+
+set(
+    ULTRA_COMBINED_OBJ
+    "${CMAKE_CURRENT_BINARY_DIR}/combined_${ULTRA_KERNEL_OBJECTS}.o"
+)
+set(
+    FAI_CHECK_SCRIPT
+    "${CMAKE_SOURCE_DIR}/scripts/check_free_after_init_references.py"
+)
+
+add_custom_command(
+    TARGET ${ULTRA_KERNEL_BASE} PRE_LINK
+
+    COMMAND ${CMAKE_LINKER} -r ${ULTRA_ALL_OBJECTS} -o ${ULTRA_COMBINED_OBJ}
+    COMMAND Python3::Interpreter ${FAI_CHECK_SCRIPT} ${ULTRA_COMBINED_OBJ}
+
+    COMMENT
+        "Verifying there are no illegal references to free-after-init data..."
+    VERBATIM
+    COMMAND_EXPAND_LISTS
+)
