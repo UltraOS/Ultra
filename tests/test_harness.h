@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 struct test_case {
     void (*run)(void);
@@ -15,8 +16,20 @@ extern "C" {
 void add_test_case(struct test_case *test, const char *file);
 
 void do_assert_eq(uint64_t lhs, uint64_t rhs, const char *file, size_t line);
+void do_assert_ne(uint64_t lhs, uint64_t rhs, const char *file, size_t line);
+
+void do_assert_str_eq(const char *lhs, const char *rhs,
+                      const char *file, size_t line);
+
 #define ASSERT(val) do_assert_eq(!!(val), 1, __FILE__, __LINE__)
-#define ASSERT_EQ(lhs, rhs) do_assert_eq(lhs, rhs, __FILE__, __LINE__)
+#define ASSERT_EQ(lhs, rhs) \
+    do_assert_eq((uint64_t)lhs, (uint64_t)rhs, __FILE__, __LINE__)
+#define ASSERT_NE(lhs, rhs) \
+    do_assert_ne((uint64_t)lhs, (uint64_t)rhs, __FILE__, __LINE__)
+#define ASSERT_STR_EQ(lhs, rhs) do_assert_str_eq(lhs, rhs, __FILE__, __LINE__)
+
+#define ASSERT_TRUE(val)  ASSERT(val)
+#define ASSERT_FALSE(val) do_assert_eq(!!(val), 0, __FILE__, __LINE__)
 
 void malloc_phys_range(uint64_t start, uint64_t size);
 

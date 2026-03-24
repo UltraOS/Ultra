@@ -54,3 +54,26 @@ void do_assert_eq(uint64_t lhs, uint64_t rhs, const char *file, size_t line)
         lhs, rhs, file, line
     );
 }
+
+void do_assert_ne(uint64_t lhs, uint64_t rhs, const char *file, size_t line)
+{
+    if (lhs != rhs)
+        return;
+
+    panic(
+        "Assertion failed: %" PRIX64 " == %" PRIX64 " at %s:%zu\n",
+        lhs, rhs, file, line
+    );
+}
+
+void do_assert_str_eq(const char *lhs, const char *rhs,
+                      const char *file, size_t line)
+{
+    if (strcmp(lhs, rhs) == 0)
+        return;
+
+    panic(
+        "Assertion failed: %s != %s at %s:%zu\n",
+        lhs, rhs, file, line
+    );
+}
