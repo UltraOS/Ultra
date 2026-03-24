@@ -13,3 +13,12 @@
 
 #define EARLY_PARAMETERS_SECTION early_parameters
 #define PARAMETERS_SECTION parameters
+
+#define FREE_AFTER_INIT_SECTION free_after_init
+#define FREE_AFTER_INIT_TEXT_SECTION FREE_AFTER_INIT_SECTION.text
+#define FREE_AFTER_INIT_RODATA_SECTION FREE_AFTER_INIT_SECTION.rodata
+#define FREE_AFTER_INIT_DATA_SECTION FREE_AFTER_INIT_SECTION.data
+
+#define INIT_DATA_REFERENCE_TEXT_SECTION text.init_data_reference
+#define INIT_DATA_REFERENCE_DATA_SECTION data.init_data_reference
+#define INIT_DATA_REFERENCE_RODATA_SECTION rodata.init_data_reference

@@ -1,0 +1,9 @@
+#pragma once
+
+#define INIT_CODE
+#define INIT_DATA
+#define INIT_RODATA
+
+#define CODE_REFERENCES_INIT_DATA
+#define DATA_REFERENCES_INIT_DATA
+#define RODATA_REFERENCES_INIT_DATA

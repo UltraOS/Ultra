@@ -25,6 +25,8 @@ GENERIC_DEPS = {
         "qemu-system-arm",
         "cmake",
         "mtools",
+        "python3",
+        "python3-pyelftools",
     ],
     "pacman": [
         "nasm",
@@ -33,6 +35,8 @@ GENERIC_DEPS = {
         "qemu-system-arm",
         "cmake",
         "mtools",
+        "python",
+        "python-pyelftools"
     ],
     "brew": [
         "nasm",
@@ -40,6 +44,7 @@ GENERIC_DEPS = {
         "qemu",
         "cmake",
         "mtools",
+        "python3",
     ],
 }
 

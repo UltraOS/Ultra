@@ -2,6 +2,8 @@
 
 #include <linker.h>
 
+#include <arch/constants.h>
+
 #define PHDR_READ  (1 << 2)
 #define PHDR_WRITE (1 << 1)
 #define PHDR_EXEC  (1 << 0)
@@ -20,13 +22,15 @@
 
 #define TEXT  \
     *(.text)  \
-    *(.text.*)
+    *(.text.*) \
+    *(.INIT_DATA_REFERENCE_TEXT_SECTION)
 
 #define INITCALLS                  \
     MARKED_SECTION(initcall_normal)
 
 #define RODATA(align)                        \
     *(.rodata .rodata.*)                     \
+    *(.INIT_DATA_REFERENCE_RODATA_SECTION)   \
     . = ALIGN(align);                        \
     MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
     MARKED_SECTION(PARAMETERS_SECTION)       \
@@ -44,7 +48,16 @@
 
 #define DATA \
     *(.data) \
-    *(.data.*)
+    *(.data.*) \
+    *(.INIT_DATA_REFERENCE_DATA_SECTION)
+
+#define FREE_AFTER_INIT \
+    SECTION_MARKER_BEGIN(FREE_AFTER_INIT_SECTION) = .; \
+    *(.FREE_AFTER_INIT_TEXT_SECTION) \
+    *(.FREE_AFTER_INIT_DATA_SECTION) \
+    *(.FREE_AFTER_INIT_RODATA_SECTION) \
+    SECTION_MARKER_END(FREE_AFTER_INIT_SECTION) = .; \
+    . = ALIGN(PAGE_SIZE);
 
 #define BSS        \
     *(COMMON)      \

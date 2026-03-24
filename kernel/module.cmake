@@ -41,6 +41,11 @@ function(add_ultra_module)
     )
 
     if (MODULE_TYPE STREQUAL "COMPILED_IN")
+        set_property(
+            GLOBAL APPEND PROPERTY
+            ULTRA_OBJECT_TARGETS
+            ${MODULE_OBJECT_TARGET}
+        )
         ultra_link_libraries(${MODULE_OBJECT_TARGET})
     elseif (MODULE_TYPE STREQUAL "RUNTIME")
         set(MODULE_OUTPUT "${CMAKE_BINARY_DIR}/${MODULE_NAME}.ko")

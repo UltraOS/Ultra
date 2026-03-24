@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+find_package(Python3 REQUIRED)
+
 if (NOT ULTRA_ARCH)
     set(ULTRA_ARCH x86)
 elseif (NOT ULTRA_ARCH STREQUAL "x86" AND
