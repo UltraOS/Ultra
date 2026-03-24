@@ -77,3 +77,8 @@ void do_assert_str_eq(const char *lhs, const char *rhs,
         lhs, rhs, file, line
     );
 }
+
+void log_set_hardware_identity_string(const char *fmt, ...)
+{
+    UNREFERENCED_PARAMETER(fmt);
+}

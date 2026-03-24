@@ -93,7 +93,12 @@ KERNEL_FILE(
 KERNEL_FILE(
     SOURCE_FILE "log_ring.c" INCLUDE_FILE "log_ring.h"
 )
+KERNEL_FILE(
+    SOURCE_FILE "drivers/smbios.c" INCLUDE_FILE "smbios.h"
+)
 KERNEL_FILE(INCLUDE_FILE "private/log_ring.h")
+KERNEL_FILE(INCLUDE_FILE "private/smbios.h")
+KERNEL_FILE(INCLUDE_FILE "smbios_structures.h")
 KERNEL_FILE(SOURCE_FILE "param.c"  INCLUDE_FILE "param.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "helpers.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "types.h")
@@ -105,6 +110,7 @@ KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "atomic.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "error.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "ctype.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "bit.h")
+KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "byte_order.h")
 KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "string_container.c"
     INCLUDE_PATH "common" INCLUDE_FILE "string_container.h"
