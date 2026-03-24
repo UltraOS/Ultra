@@ -14,6 +14,10 @@
 #endif
 
 #define ARE_SAME_TYPE(x, y) __builtin_types_compatible_p(typeof(x), typeof(y))
+#define IS_CONSTEXPR(expr) __builtin_constant_p((expr))
+#define CHOOSE_EXPR(cond, if_true, if_false) \
+    __builtin_choose_expr((cond), (if_true), (if_false))
+#define IS_POWER_OF_TWO(x) (__builtin_popcountll(x) == 1)
 
 #define DO_CONTAINER_OF(ptr, ptr_name, type, member) ({                    \
     char *ptr_name = (char*)(ptr);                                         \
@@ -29,9 +33,24 @@
 
 #define UNREFERENCED_PARAMETER(x) (void)(x)
 
-#define BUILD_BUG_ON_WITH_MSG(expr, msg) STATIC_ASSERT(!(expr), msg)
+#define EMBED_STATIC_ASSERT(expr, msg) \
+    sizeof(struct {STATIC_ASSERT((expr), msg);})
+
+#define BUILD_BUG_ON_EMBED_WITH_MSG(expr) EMBED_STATIC_ASSERT(!(expr), msg)
+#define BUILD_BUG_ON_EMBED(expr) \
+    BUILD_BUG_ON_EMBED_WITH_MSG(expr, "BUILD BUG: " #expr " evaluated to true")
+
+#define BUILD_BUG_ON_WITH_MSG(expr, msg) STATIC_ASSERT(!(expr), msg);
 #define BUILD_BUG_ON(expr) \
     BUILD_BUG_ON_WITH_MSG(expr, "BUILD BUG: " #expr " evaluated to true")
+
+#define EXPECT_SIZEOF(type, size)                                 \
+    BUILD_BUG_ON_WITH_MSG(                                        \
+        sizeof(type) != (size), "BUILD BUG: Unexpected type size" \
+    )
+
+#define STATIC_ASSERT_IF_CONSTEXPR(expr, msg) \
+    CHOOSE_EXPR(IS_CONSTEXPR(expr), EMBED_STATIC_ASSERT((expr), msg), 0)
 
 #define CEILING_DIVIDE(x, y) (!!(x) + (((x) - !!(x)) / (y)))
 
@@ -43,4 +62,27 @@
 
 #define sizeof_after(var, member) (sizeof(var) - offset_of_after(var, member))
 
-#define PTR_ADD(ptr, count) ((void*)(((char*)(ptr)) + count))
+#define PTR_ADD(ptr, count) ((typeof(ptr))(((char*)(ptr)) + count))
+
+/*
+ * Add an offset to a pointer that puts it outside the object bounds without
+ * invoking UB.
+ *
+ * Compilers are allowed to assume and optimize based on the assumption that
+ * pointer arithmetic never wraps around since doing pointer arithmetic outside
+ * of object bounds is UB according to the C standard.
+ *
+ * Some extremely rare cases still require such arithmetic to work correctly
+ * though. For example, pre-cpu variables, especially dynamically allocated
+ * objects that may end up all over the address space and thus require wrapping
+ * arithmetic to reach from the original per_cpu_offset.
+ */
+#define PTR_ADD_HIDE_UB(ptr, count) ({                   \
+    unsigned long laundered_ptr;                         \
+                                                         \
+    asm volatile("" : "=r" (laundered_ptr) : "0" (ptr)); \
+    (typeof(ptr))(laundered_ptr + count);                \
+})
+
+#define IS_SIGNED_TYPE(x) (((typeof(x))-1) < ((typeof(x))1))
+#define IS_UNSIGNED_TYPE(x) (!IS_SIGNED_TYPE(x))
