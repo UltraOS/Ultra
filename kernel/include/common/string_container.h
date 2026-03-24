@@ -19,12 +19,8 @@ struct string {
 #define STR_CONSTEXPR(str) MAKE_STR(str, sizeof((str)) - 1)
 #define STR_RUNTIME(str) MAKE_STR(str, (str) ? strlen((str)) : 0)
 
-#define STR(str)                     \
-    __builtin_choose_expr(           \
-        __builtin_constant_p((str)), \
-        STR_CONSTEXPR((str)),        \
-        STR_RUNTIME(str)             \
-    )
+#define STR(str) \
+    CHOOSE_EXPR(IS_CONSTEXPR((str)), STR_CONSTEXPR((str)), STR_RUNTIME(str))
 
 bool str_equals(struct string lhs, struct string rhs);
 bool str_equals_with_cb(
