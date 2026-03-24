@@ -11,8 +11,8 @@
     })
 
 #define DO_COMPARE(x, y, op)                                            \
-    __builtin_choose_expr(                                              \
-        __builtin_constant_p(x) && __builtin_constant_p(y),             \
+    CHOOSE_EXPR(                                                        \
+        IS_CONSTEXPR(x) && IS_CONSTEXPR(y),                             \
         COMPARE(x, y, op),                                              \
         RUNTIME_COMPARE(                                                \
             x, y, CONCAT(ux, __COUNTER__), CONCAT(uy, __COUNTER__), op) \
