@@ -448,7 +448,7 @@ static bool should_invalidate_next_record(
      * tail, or there simply isn't a previous data generation so there's nothing
      * to invalidate.
      */
-    return bytes_left < DATA_RING_SIZE(data_ring);
+    return bytes_left <= DATA_RING_SIZE(data_ring);
 }
 
 static bool data_invalidate(
