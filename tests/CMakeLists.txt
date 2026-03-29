@@ -104,6 +104,7 @@ KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "align.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "atomic.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "error.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "ctype.h")
+KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "bit.h")
 KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "string_container.c"
     INCLUDE_PATH "common" INCLUDE_FILE "string_container.h"
