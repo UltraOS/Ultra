@@ -2,6 +2,7 @@
 #include <arch/private/descriptors.h>
 
 #include <linker.h>
+#include <free_after_init.h>
 
 #include <common/types.h>
 
@@ -24,7 +25,7 @@ static void idt_load(void)
     asm volatile("lidt %0" :: "m"(idt_ptr));
 }
 
-void idt_init(void)
+void INIT_CODE idt_init(void)
 {
     size_t i;
 

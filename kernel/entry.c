@@ -8,6 +8,7 @@
 #include <boot/ultra_protocol.h>
 
 #include <initcall.h>
+#include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
 #include <boot/alloc.h>
@@ -25,7 +26,7 @@ ptr_t g_direct_map_base;
     ctx_field = container_of(hdr, typeof(*ctx_field), header); \
 } while (0)
 
-static void boot_context_init(struct ultra_boot_context *ctx)
+static INIT_CODE void boot_context_init(struct ultra_boot_context *ctx)
 {
     struct ultra_attribute_header *hdr = ctx->attributes;
     size_t i;
@@ -76,7 +77,7 @@ static void boot_context_init(struct ultra_boot_context *ctx)
     );
 }
 
-static const char *platform_type_to_string(u32 type)
+static INIT_CODE const char *platform_type_to_string(u32 type)
 {
     switch (type) {
     case ULTRA_PLATFORM_BIOS:
@@ -88,7 +89,7 @@ static const char *platform_type_to_string(u32 type)
     }
 }
 
-void entry(struct ultra_boot_context *ctx)
+void INIT_CODE entry(struct ultra_boot_context *ctx)
 {
     struct ultra_platform_info_attribute *pi;
     error_t ret;

@@ -12,6 +12,7 @@
 #include <log.h>
 #include <bug.h>
 #include <io.h>
+#include <free_after_init.h>
 
 struct memory_range {
     phys_addr_t physical_address;
@@ -32,13 +33,15 @@ static inline phys_addr_t mr_end(struct memory_range *mr)
 }
 
 #define BOOT_ALLOC_INITIAL_CAPACITY (PAGE_SIZE / sizeof(struct memory_range))
-static struct memory_range g_initial_buffer[BOOT_ALLOC_INITIAL_CAPACITY];
+static INIT_DATA struct memory_range g_initial_buffer[
+    BOOT_ALLOC_INITIAL_CAPACITY
+];
 
-static struct memory_range *g_buffer = g_initial_buffer;
-static size_t g_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
-static size_t g_entry_count = 0;
+static INIT_DATA struct memory_range *g_buffer = g_initial_buffer;
+static INIT_DATA size_t g_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
+static INIT_DATA size_t g_entry_count = 0;
 
-static void range_insert(
+static INIT_CODE void range_insert(
     struct memory_range *mr, size_t idx, size_t count
 )
 {
@@ -55,7 +58,7 @@ range_place:
     g_buffer[idx] = *mr;
 }
 
-static void range_emplace_at(size_t idx, struct memory_range *mr)
+static INIT_CODE void range_emplace_at(size_t idx, struct memory_range *mr)
 {
     BUG_ON(idx > g_entry_count);
     BUG_ON(g_entry_count >= g_capacity);
@@ -68,7 +71,9 @@ enum allow_one_above {
     ALLOW_ONE_ABOVE_YES,
 };
 
-ssize_t find_range(phys_addr_t value, enum allow_one_above allow_above)
+ssize_t INIT_CODE find_range(
+    phys_addr_t value, enum allow_one_above allow_above
+)
 {
     ssize_t left = 0;
     ssize_t right = g_entry_count - 1;
@@ -101,13 +106,17 @@ ssize_t find_range(phys_addr_t value, enum allow_one_above allow_above)
     return allow_above == ALLOW_ONE_ABOVE_YES ? left : -1;
 }
 
-static bool can_merge_ranges(struct memory_range *lhs, struct memory_range *rhs)
+static INIT_CODE bool can_merge_ranges(
+    struct memory_range *lhs, struct memory_range *rhs
+)
 {
     return MR_TYPE(lhs) == MR_TYPE(rhs) &&
            mr_end(lhs) == rhs->physical_address;
 }
 
-static void merge_ranges(struct memory_range *dst, struct memory_range *src)
+static INIT_CODE void merge_ranges(
+    struct memory_range *dst, struct memory_range *src
+)
 {
     // Only a backward merge requires an address change
     if (dst->physical_address > src->physical_address)
@@ -116,12 +125,12 @@ static void merge_ranges(struct memory_range *dst, struct memory_range *src)
     dst->size_and_type += MR_SIZE(src);
 }
 
-static struct memory_range *range_before(size_t mr_idx)
+static INIT_CODE struct memory_range *range_before(size_t mr_idx)
 {
     return mr_idx ? &g_buffer[mr_idx - 1] : NULL;
 }
 
-static struct memory_range *range_after(size_t mr_idx)
+static INIT_CODE struct memory_range *range_after(size_t mr_idx)
 {
     if (mr_idx == g_entry_count - 1)
         return NULL;
@@ -129,7 +138,9 @@ static struct memory_range *range_after(size_t mr_idx)
     return &g_buffer[mr_idx + 1];
 }
 
-static void allocate_out_of(size_t mr_idx, struct memory_range *new_mr)
+static INIT_CODE void allocate_out_of(
+    size_t mr_idx, struct memory_range *new_mr
+)
 {
     struct memory_range *current_mr = &g_buffer[mr_idx];
     struct memory_range mr_lhs_piece, mr_rhs_piece;
@@ -267,7 +278,9 @@ out_case4:
     g_entry_count -= mergeable_before + mergeable_after;
 }
 
-static phys_addr_t allocate_top_down(size_t page_count, phys_addr_t upper_limit)
+static INIT_CODE phys_addr_t allocate_top_down(
+    size_t page_count, phys_addr_t upper_limit
+)
 {
     phys_addr_t range_end, bytes_to_allocate = page_count * PAGE_SIZE;
     phys_addr_t allocated_end = 0;
@@ -310,7 +323,7 @@ static phys_addr_t allocate_top_down(size_t page_count, phys_addr_t upper_limit)
     return allocated_mr.physical_address;
 }
 
-static phys_addr_t allocate_within(
+static INIT_CODE phys_addr_t allocate_within(
     size_t page_count, phys_addr_t lower_limit, phys_addr_t upper_limit
 )
 {
@@ -387,12 +400,12 @@ out_invalid_allocation:
     );
 }
 
-static phys_addr_t boot_alloc_nogrow(size_t num_pages)
+static INIT_CODE phys_addr_t boot_alloc_nogrow(size_t num_pages)
 {
     return allocate_top_down(num_pages, -1ull);
 }
 
-static bool maybe_grow_buffer(void)
+static INIT_CODE bool maybe_grow_buffer(void)
 {
     void *new_buffer;
     phys_addr_t addr;
@@ -436,7 +449,7 @@ static bool maybe_grow_buffer(void)
     return true;
 }
 
-static error_t range_append(struct memory_range *mr)
+static INIT_CODE error_t range_append(struct memory_range *mr)
 {
     if (unlikely(!maybe_grow_buffer()))
         return ENOMEM;
@@ -445,7 +458,7 @@ static error_t range_append(struct memory_range *mr)
     return EOK;
 }
 
-phys_addr_or_error_t boot_alloc(size_t num_pages)
+phys_addr_or_error_t INIT_CODE boot_alloc(size_t num_pages)
 {
     if (unlikely(!maybe_grow_buffer()))
         return encode_error_phys_addr(ENOMEM);
@@ -453,7 +466,9 @@ phys_addr_or_error_t boot_alloc(size_t num_pages)
     return boot_alloc_nogrow(num_pages);
 }
 
-phys_addr_or_error_t boot_alloc_at(phys_addr_t address, size_t num_pages)
+phys_addr_or_error_t INIT_CODE boot_alloc_at(
+    phys_addr_t address, size_t num_pages
+)
 {
     if (unlikely(!maybe_grow_buffer()))
         return encode_error_phys_addr(ENOMEM);
@@ -463,7 +478,7 @@ phys_addr_or_error_t boot_alloc_at(phys_addr_t address, size_t num_pages)
     );
 }
 
-void boot_free(phys_addr_t address, size_t num_pages)
+void INIT_CODE boot_free(phys_addr_t address, size_t num_pages)
 {
     ssize_t mr_idx;
 
@@ -486,7 +501,7 @@ void boot_free(phys_addr_t address, size_t num_pages)
     allocate_out_of(mr_idx, &freed_range);
 }
 
-void boot_alloc_init(void)
+void INIT_CODE boot_alloc_init(void)
 {
     struct ultra_memory_map_attribute *mm;
     struct ultra_memory_map_entry *entry;
