@@ -9,6 +9,7 @@
 #include <unwind.h>
 #include <symbols.h>
 #include <leb128.h>
+#include <free_after_init.h>
 
 #include <common/string.h>
 #include <common/attributes.h>
@@ -206,7 +207,7 @@ static ptr_t get_reliable_pc(struct unwind_state *state)
     return pc;
 }
 
-error_t unwind_init(void)
+error_t INIT_CODE unwind_init(void)
 {
     error_t ret;
     struct eh_data data = {

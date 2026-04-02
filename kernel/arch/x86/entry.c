@@ -4,6 +4,8 @@
 #include <arch/private/descriptors.h>
 #include <arch/private/idt.h>
 
+#include <free_after_init.h>
+
 static descriptor_t g_gdt[NUM_GDT_ENTRIES] = {
     [DESC_IDX(KERNEL_CS)] = SEGMENT_KERNEL_CODE64,
     [DESC_IDX(KERNEL_SS)] = SEGMENT_KERNEL_DATA64,
@@ -12,7 +14,7 @@ static descriptor_t g_gdt[NUM_GDT_ENTRIES] = {
     [DESC_IDX(USER_CS)] = SEGMENT_USER_CODE64,
 };
 
-void arch_init_early(void)
+void INIT_CODE arch_init_early(void)
 {
     struct descriptor_ptr gdt_ptr = {
         .limit = sizeof(g_gdt) - 1,
@@ -23,7 +25,7 @@ void arch_init_early(void)
     idt_init();
 }
 
-void x86_entry(struct ultra_boot_context *ctx, uint32_t magic)
+void INIT_CODE x86_entry(struct ultra_boot_context *ctx, uint32_t magic)
 {
     if (magic != ULTRA_MAGIC)
         for (;;);
