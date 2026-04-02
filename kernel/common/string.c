@@ -6,6 +6,13 @@
 #undef memcmp
 #undef strlen
 
+/*
+ * These functions don't have prototypes because they're invoked from the
+ * respective __builtin_* intrinsic.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void *memcpy(void *dest, const void *src, size_t count)
 {
     char *cd = dest;
@@ -68,3 +75,5 @@ size_t strlen(const char *str)
 
     return str1 - str;
 }
+
+#pragma GCC diagnostic pop

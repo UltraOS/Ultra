@@ -5,6 +5,14 @@
 #include <common/types.h>
 #include <common/string_container.h>
 
+#include <free_after_init.h>
+
+#define ULTRA_ENTRYPOINT(prefix)                                         \
+    void prefix##_entry(struct ultra_boot_context *ctx, uint32_t magic); \
+    void INIT_CODE prefix##_entry(                                       \
+        struct ultra_boot_context *ctx, uint32_t magic                   \
+    )
+
 struct boot_context {
     struct ultra_platform_info_attribute *platform_info;
     struct ultra_kernel_info_attribute *kernel_info;

@@ -40,8 +40,17 @@
 
 #ifndef __ASSEMBLER__
 
-#define EXCEPTION_HANDLER(x) void CONCAT(handle_, x)(struct registers *regs)
-#define IRQ_HANDLER void X86_IRQ_DISPATCH(struct registers *regs)
+#define MAKE_EXCEPTION_HANDLER(x) \
+    void CONCAT(handle_, x)(struct registers *regs)
+
+// Define a prototype first to avoid -Wmissing-protypes warnings
+#define EXCEPTION_HANDLER(x)   \
+    MAKE_EXCEPTION_HANDLER(x); \
+    MAKE_EXCEPTION_HANDLER(x)
+
+#define IRQ_HANDLER \
+    void X86_IRQ_DISPATCH(struct registers *regs); \
+    void X86_IRQ_DISPATCH(struct registers *regs)
 
 void idt_init(void);
 

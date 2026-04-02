@@ -317,10 +317,6 @@ static ptr_or_error_t find_fde(ptr_t pc)
     return (void*)((ptr_t)fde_addr);
 }
 
-ERROR_EMITTER(
-    "must be invoked from arch-specific arch_unwind_current_begin "
-    "assembly stub"
-)
 error_t unwind_current_begin(struct unwind_state *state, ptr_t starting_pc)
 {
     error_t ret;
@@ -452,7 +448,7 @@ static error_t parse_cie(struct unwind_state *state, struct eh_data *cie)
     return EOK;
 }
 
-error_t parse_fde(struct unwind_state *state, struct eh_data *fde)
+static error_t parse_fde(struct unwind_state *state, struct eh_data *fde)
 {
     error_t ret;
     struct eh_data cie;
