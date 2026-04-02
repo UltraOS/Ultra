@@ -2,6 +2,7 @@
 
 #include <common/error.h>
 #include <common/types.h>
+#include <common/attributes.h>
 
 #include <arch/registers.h>
 #include <arch/private/unwind.h>
@@ -43,3 +44,9 @@ bool unwind_is_done(const struct unwind_state*);
 error_t unwind_next_frame(struct unwind_state*);
 
 ptr_t unwind_get_return_address(struct unwind_state*);
+
+ERROR_EMITTER(
+    "must be invoked from arch-specific arch_unwind_current_begin "
+    "assembly stub"
+)
+error_t unwind_current_begin(struct unwind_state *state, ptr_t starting_pc);

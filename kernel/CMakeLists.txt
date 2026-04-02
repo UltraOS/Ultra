@@ -59,6 +59,7 @@ ultra_compile_options(
     -Wextra
     -Werror
     -Wstrict-prototypes
+    -Wmissing-prototypes
     -Wimplicit-fallthrough
     -fomit-frame-pointer
 )

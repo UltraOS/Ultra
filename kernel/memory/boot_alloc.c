@@ -71,7 +71,7 @@ enum allow_one_above {
     ALLOW_ONE_ABOVE_YES,
 };
 
-ssize_t INIT_CODE find_range(
+static ssize_t INIT_CODE find_range(
     phys_addr_t value, enum allow_one_above allow_above
 )
 {

@@ -65,21 +65,21 @@ static bool fit_same_data_position_generation(
            DATA_RING_GENERATION(data_ring, end - 1);
 }
 
-struct log_descriptor *log_descriptor_from_id(
+static struct log_descriptor *log_descriptor_from_id(
     struct log_descriptor_ring *ring, u64 id
 )
 {
     return &ring->descriptors[DESC_ID_TO_IDX(id, ring)];
 }
 
-struct log_info_record *log_info_record_from_id(
+static struct log_info_record *log_info_record_from_id(
     struct log_descriptor_ring *ring, u64 id
 )
 {
     return &ring->info_records[DESC_ID_TO_IDX(id, ring)];
 }
 
-struct log_data_record *log_data_record_from_position(
+static struct log_data_record *log_data_record_from_position(
     struct log_data_ring *ring, u64 position
 )
 {
@@ -200,7 +200,7 @@ static bool log_descriptor_modify_state(
     );
 }
 
-u64 tail_sequence_number(struct log_ring *ring)
+static u64 tail_sequence_number(struct log_ring *ring)
 {
     struct log_descriptor_ring *desc_ring = &ring->descriptor_ring;
     struct log_descriptor desc;

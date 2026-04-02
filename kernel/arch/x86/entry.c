@@ -4,6 +4,8 @@
 #include <arch/private/descriptors.h>
 #include <arch/private/idt.h>
 
+#include <private/arch/init.h>
+
 #include <free_after_init.h>
 
 static descriptor_t g_gdt[NUM_GDT_ENTRIES] = {
@@ -25,7 +27,7 @@ void INIT_CODE arch_init_early(void)
     idt_init();
 }
 
-void INIT_CODE x86_entry(struct ultra_boot_context *ctx, uint32_t magic)
+ULTRA_ENTRYPOINT(x86)
 {
     if (magic != ULTRA_MAGIC)
         for (;;);
