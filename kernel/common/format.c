@@ -230,22 +230,13 @@ static bool is_uppercase_specifier(char specifier)
     return specifier == 'X';
 }
 
-MAYBE_NERR(int) vsnprintf(
-    char *buffer, size_t capacity, const char *fmt_str,
-    va_list vlist
+static MAYBE_NERR(int) do_vsnprintf(
+    struct fmt_buf_state *fb_state, struct string fmt, va_list vlist
 )
 {
-    struct fmt_buf_state fb_state = { 0 };
-    struct string fmt;
     u64 value;
     ssize_t next_offset;
     char flag;
-
-    fmt = STR(fmt_str);
-
-    fb_state.buffer = buffer;
-    fb_state.capacity = capacity;
-    fb_state.bytes_written = 0;
 
     while (!str_empty(fmt)) {
         struct fmt_spec fm = {
@@ -257,14 +248,14 @@ MAYBE_NERR(int) vsnprintf(
             next_offset = fmt.size;
 
         if (next_offset)
-            write_many(&fb_state, fmt.text, next_offset);
+            write_many(fb_state, fmt.text, next_offset);
 
         str_offset_by(&fmt, next_offset);
         if (str_empty(fmt))
             break;
 
         if (consume(&fmt, STR("%%"))) {
-            write_one(&fb_state, '%');
+            write_one(fb_state, '%');
             continue;
         }
 
@@ -320,7 +311,7 @@ MAYBE_NERR(int) vsnprintf(
 
         if (consume(&fmt, STR("c"))) {
             char c = va_arg(vlist, int);
-            write_one(&fb_state, c);
+            write_one(fb_state, c);
             continue;
         }
 
@@ -332,9 +323,9 @@ MAYBE_NERR(int) vsnprintf(
                 string = "<null>";
 
             for (i = 0; (!fm.has_precision || i < fm.precision) && string[i]; i++)
-                write_one(&fb_state, string[i]);
+                write_one(fb_state, string[i]);
             while (i++ < fm.min_width)
-                write_one(&fb_state, ' ');
+                write_one(fb_state, ' ');
             continue;
         }
 
@@ -352,11 +343,11 @@ MAYBE_NERR(int) vsnprintf(
                         sym, sizeof(sym), "unknown/garbage <0x%016zX>",
                         *pc_ptr
                     );
-                    write_many(&fb_state, sym, len);
+                    write_many(fb_state, sym, len);
                 } else {
-                    write_cstr(&fb_state, sym);
+                    write_cstr(fb_state, sym);
                     len = snprintf(sym, sizeof(sym), "+%zu", offset);
-                    write_many(&fb_state, sym, len);
+                    write_many(fb_state, sym, len);
                 }
 
                 continue;
@@ -375,9 +366,9 @@ MAYBE_NERR(int) vsnprintf(
                 if (fm.has_precision)
                     size = MIN(fm.precision, string->size);
 
-                write_many(&fb_state, string->text, size);
+                write_many(fb_state, string->text, size);
                 while (size < fm.precision)
-                    write_one(&fb_state, ' ');
+                    write_one(fb_state, ' ');
                 continue;
             }
 
@@ -453,15 +444,37 @@ MAYBE_NERR(int) vsnprintf(
             fm.uppercase = is_uppercase_specifier(flag);
         }
 
-        write_integer(&fb_state, &fm, value);
+        write_integer(fb_state, &fm, value);
     }
 
-    if (fb_state.capacity) {
+    if (fb_state->capacity) {
         size_t last_char;
 
-        last_char = MIN(fb_state.bytes_written, fb_state.capacity - 1);
-        fb_state.buffer[last_char] = '\0';
+        last_char = MIN(fb_state->bytes_written, fb_state->capacity - 1);
+        fb_state->buffer[last_char] = '\0';
     }
+
+    return 0;
+}
+
+MAYBE_NERR(int) vsnprintf(
+    char *buffer, size_t capacity, const char *fmt_str,
+    va_list vlist
+)
+{
+    struct fmt_buf_state fb_state = { 0 };
+    struct string fmt;
+    int ret;
+
+    fmt = STR(fmt_str);
+
+    fb_state.buffer = buffer;
+    fb_state.capacity = capacity;
+    fb_state.bytes_written = 0;
+
+    ret = do_vsnprintf(&fb_state, fmt, vlist);
+    if (is_nerror(ret))
+        return ret;
 
     return fb_state.bytes_written;
 }
