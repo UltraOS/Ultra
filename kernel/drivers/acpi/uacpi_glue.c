@@ -1,3 +1,5 @@
+#include <common/format.h>
+
 #include <boot/boot.h>
 #include <io.h>
 
@@ -39,10 +41,19 @@ static u8 uacpi_log_level_to_syslog(uacpi_log_level lvl)
     }
 }
 
-void uacpi_kernel_log(uacpi_log_level lvl, const char *msg)
+void uacpi_kernel_log(uacpi_log_level lvl, const uacpi_char *fmt, ...)
 {
+    va_list vlist;
+    struct nested_printf npf;
+
+    va_start(vlist, fmt);
+    npf.fmt = fmt;
+    npf.vlist = &vlist;
+
     print(
-        "%c%cacpi: %s", LOG_LEVEL_PREFIX_CHAR, uacpi_log_level_to_syslog(lvl),
-        msg
+        "%c%cacpi: %pV", LOG_LEVEL_PREFIX_CHAR, uacpi_log_level_to_syslog(lvl),
+        &npf
     );
+
+    va_end(vlist);
 }
