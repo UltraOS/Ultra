@@ -6,6 +6,11 @@
 #include <common/types.h>
 #include <common/error.h>
 
+struct nested_printf {
+    const char *fmt;
+    va_list *vlist;
+};
+
 MAYBE_NERR(int) vsnprintf(
     char *restrict buffer, size_t capacity, const char *fmt, va_list vlist
 );

@@ -372,6 +372,23 @@ static MAYBE_NERR(int) do_vsnprintf(
                 continue;
             }
 
+            if (consume(&fmt, STR("V"))) {
+                struct nested_printf *npf;
+                va_list nested_vlist;
+                int ret;
+
+                npf = va_arg(vlist, struct nested_printf*);
+
+                va_copy(nested_vlist, *npf->vlist);
+                ret = do_vsnprintf(fb_state, STR(npf->fmt), nested_vlist);
+                va_end(nested_vlist);
+
+                if (is_nerror(ret))
+                    return ret;
+
+                continue;
+            }
+
             value = (ptr_t)va_arg(vlist, void*);
             fm.base = 16;
             fm.min_width = ULTRA_ARCH_WIDTH * 2;
