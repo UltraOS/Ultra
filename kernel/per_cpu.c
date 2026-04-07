@@ -69,10 +69,4 @@ void INIT_CODE per_cpu_setup(void)
         this_cpu_offset += per_cpu_size;
         this_cpu_ptr += per_cpu_size;
     }
-
-    arch_on_per_cpu_setup_done();
-}
-
-WEAK void arch_on_per_cpu_setup_done(void)
-{
 }

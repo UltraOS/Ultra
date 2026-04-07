@@ -1,0 +1,65 @@
+#pragma once
+
+#include <linker.h>
+
+#define INIT_LEVEL_CB_SECTION(level, type) \
+    CONCAT(CONCAT(FREE_AFTER_INIT_SECTION, _##level), _##type)
+
+#define INIT_LEVELS \
+    /* Base init level at boot */ \
+    INIT_LEVEL(NONE) \
+    ARCH_INIT_LEVELS_AFTER_NONE \
+    /* Nothing is available, kernel init is just starting */ \
+    INIT_LEVEL(PRE_BOOT) \
+    ARCH_INIT_LEVELS_AFTER_PRE_BOOT \
+    /* g_boot_ctx is accessible, early direct map is available */ \
+    INIT_LEVEL(BOOT_INFO_AVAILABLE) \
+    ARCH_INIT_LEVELS_AFTER_BOOT_INFO_AVAILABLE \
+    /* Boot allocator is available */ \
+    INIT_LEVEL(BOOT_ALLOC_AVAILABLE) \
+    ARCH_INIT_LEVELS_AFTER_BOOT_ALLOC_AVAILABLE \
+    /*
+     * Early ACPI, FDT & SMBIOS are available
+     * Architecture-specific code is expected to properly set both
+     * g_num_present_cpus and g_num_online_cpus at or before this
+     * init level.
+     */ \
+    INIT_LEVEL(PLATFORM_INFO_AVAILABLE) \
+    ARCH_INIT_LEVELS_AFTER_PLATFORM_INFO_AVAILABLE \
+    /* Static per-cpu blocks have been setup */ \
+    INIT_LEVEL(PER_CPU_AVAILABLE) \
+    ARCH_INIT_LEVELS_AFTER_PER_CPU_AVAILABLE \
+    INIT_LEVEL(GENERIC_MODULES_INITIALIZED) \
+    ARCH_INIT_LEVELS_AFTER_GENERIC_MODULES_INITIALIZED
+
+#if HAS_INCLUDE(<arch/private/init_level.h>)
+    #include <arch/private/init_level.h>
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_NONE
+#define ARCH_INIT_LEVELS_AFTER_NONE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_PRE_BOOT
+#define ARCH_INIT_LEVELS_AFTER_PRE_BOOT
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_BOOT_INFO_AVAILABLE
+#define ARCH_INIT_LEVELS_AFTER_BOOT_INFO_AVAILABLE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_BOOT_ALLOC_AVAILABLE
+#define ARCH_INIT_LEVELS_AFTER_BOOT_ALLOC_AVAILABLE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_PLATFORM_INFO_AVAILABLE
+#define ARCH_INIT_LEVELS_AFTER_PLATFORM_INFO_AVAILABLE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_PER_CPU_AVAILABLE
+#define ARCH_INIT_LEVELS_AFTER_PER_CPU_AVAILABLE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_GENERIC_MODULES_INITIALIZED
+#define ARCH_INIT_LEVELS_AFTER_GENERIC_MODULES_INITIALIZED
+#endif

@@ -47,7 +47,6 @@ unmap:
     io_window_unmap(&s_e9_iow);
     return ret;
 }
-INITCALL(e9_console_init);
 
 #define EARLYCON_MODE_NONE STR_CONSTEXPR("none")
 #define EARLYCON_MODE_E9 STR_CONSTEXPR("e9")
