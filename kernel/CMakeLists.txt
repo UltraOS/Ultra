@@ -74,6 +74,7 @@ ultra_sources(
     per_cpu.c
     smp.c
     abortable_instructions.c
+    init_level.c
 )
 ultra_include_directories(
     include

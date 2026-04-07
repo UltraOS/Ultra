@@ -40,4 +40,11 @@ config LTO
 
 endmenu
 
+menu "Debug options"
+
+config VERBOSE_INIT_LEVELS
+    bool "Trace all kernel initialization level transitions"
+
+endmenu
+
 rsource "arch/Kconfig"

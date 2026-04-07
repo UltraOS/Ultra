@@ -3,6 +3,7 @@
 #include <linker.h>
 
 #include <arch/constants.h>
+#include <private/init_level.h>
 
 #define PHDR_READ  (1 << 2)
 #define PHDR_WRITE (1 << 1)
@@ -60,15 +61,17 @@
         TEXT_END                         \
     } :text
 
-#define INITCALLS                  \
-    MARKED_SECTION(initcall_normal)
+#define INIT_LEVEL(x)                                               \
+    NATURALLY_ALIGNED_MARKED_SECTION(INIT_LEVEL_CB_SECTION(x, pre)) \
+    NATURALLY_ALIGNED_MARKED_SECTION(INIT_LEVEL_CB_SECTION(x, post))
+
+#define INIT_LEVEL_CB_SECTIONS INIT_LEVELS
 
 #define RODATA                                                 \
     *(.rodata .rodata.*)                                       \
     *(.INIT_DATA_REFERENCE_RODATA_SECTION)                     \
     NATURALLY_ALIGNED_MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
-    NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)       \
-    INITCALLS
+    NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)
 
 #define RODATA_FREE_AFTER_INIT_BEGIN \
     FREE_AFTER_INIT_BEGIN(FREE_AFTER_INIT_RODATA_SECTION)
@@ -78,6 +81,7 @@
 
 #define RODATA_FREE_AFTER_INIT \
     *(.FREE_AFTER_INIT_RODATA_SECTION) \
+    INIT_LEVEL_CB_SECTIONS
 
 #define RODATA_OUTPUT                                                     \
     .rodata : VIRTUAL_BASE_RELATIVE(.rodata)                              \
@@ -124,7 +128,7 @@
 
 #define DATA_FREE_AFTER_INIT \
     MARKED_SECTION(PER_CPU_SECTION) \
-    *(.FREE_AFTER_INIT_DATA_SECTION) \
+    *(.FREE_AFTER_INIT_DATA_SECTION)
 
 #define DATA_OUTPUT                      \
     .data : VIRTUAL_BASE_RELATIVE(.data) \

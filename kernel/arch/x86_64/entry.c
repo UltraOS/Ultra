@@ -8,8 +8,7 @@
 #include <arch/private/smp.h>
 #include <arch/private/apic.h>
 
-#include <private/arch/init.h>
-
+#include <init_level.h>
 #include <per_cpu.h>
 #include <free_after_init.h>
 
@@ -21,7 +20,7 @@ DEFINE_PER_CPU(descriptor_t [NUM_GDT_ENTRIES], g_this_cpu_gdt) = {
     [DESC_IDX(USER_CS)] = SEGMENT_USER_CODE64,
 };
 
-void INIT_CODE arch_init_early(void)
+static error_t INIT_CODE x86_early_init(void)
 {
     struct descriptor_ptr gdt_ptr = {
         .limit = sizeof(g_this_cpu_gdt) - 1,
@@ -41,13 +40,21 @@ void INIT_CODE arch_init_early(void)
         g_cpu_info.name, g_cpu_info.family, g_cpu_info.model,
         g_cpu_info.stepping
     );
-}
 
-void INIT_CODE arch_prepare_for_smp(void)
+    return EOK;
+}
+INIT_CALL_PRE(PRE_BOOT, x86_early_init);
+
+bool g_can_skip_pio_delay = false;
+
+static error_t INIT_CODE x86_platform_init(void)
 {
     apic_detect();
     setup_smp_topology();
+
+    return EOK;
 }
+INIT_CALL_POST(PLATFORM_INFO_AVAILABLE, x86_platform_init);
 
 ULTRA_ENTRYPOINT(x86)
 {

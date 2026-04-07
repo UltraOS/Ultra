@@ -8,19 +8,18 @@
 #include <boot/ultra_protocol.h>
 
 #include <acpi.h>
-#include <initcall.h>
 #include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
 #include <boot/alloc.h>
 #include <param.h>
 #include <config.h>
+#include <init_level.h>
 
 #include <private/unwind.h>
 #include <private/param.h>
 #include <private/per_cpu.h>
 #include <private/smbios.h>
-#include <private/arch/init.h>
 
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
@@ -103,11 +102,12 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
         ULTRA_ARCH, ULTRA_GIT_SHA, __DATE__, __TIME__
     );
 
-    arch_init_early();
+    init_level_raise(INIT_LEVEL_PRE_BOOT);
     boot_context_init(ctx);
 
     pi = g_boot_ctx.platform_info;
     g_direct_map_base = pi->higher_half_base;
+    init_level_raise(INIT_LEVEL_BOOT_INFO_AVAILABLE);
 
     cmdline_parse(
         g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(EARLY_PARAMETERS_SECTION), NULL
@@ -133,10 +133,14 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
         pr_warn("unwind_init() error %d, stack traces won't be available\n", ret);
 
     boot_alloc_init();
+    init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
+
     smbios_setup();
     acpi_setup_tables();
-    arch_prepare_for_smp();
+    init_level_raise(INIT_LEVEL_PLATFORM_INFO_AVAILABLE);
+
     per_cpu_setup();
+    init_level_raise(INIT_LEVEL_PER_CPU_AVAILABLE);
 
     for (;;);
 }

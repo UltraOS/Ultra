@@ -16,6 +16,7 @@
 #include <bug.h>
 #include <per_cpu.h>
 #include <free_after_init.h>
+#include <init_level.h>
 
 #include <common/error.h>
 #include <common/string.h>
@@ -354,7 +355,7 @@ static void this_cpu_enable_per_cpu(u32 my_id)
     wrmsr_or_die(MSR_GS_BASE, g_per_cpu_offset[my_id]);
 }
 
-void INIT_CODE arch_on_per_cpu_setup_done(void)
+static error_t INIT_CODE x86_per_cpu_setup(void)
 {
     size_t i;
 
@@ -372,4 +373,7 @@ void INIT_CODE arch_on_per_cpu_setup_done(void)
      * all present CPUs.
      */
     memcpy(this_cpu_ptr(&g_this_cpu_info), &g_cpu_info, sizeof(g_cpu_info));
+
+    return EOK;
 }
+INIT_CALL_PRE(PER_CPU_AVAILABLE, x86_per_cpu_setup);
