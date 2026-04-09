@@ -32,6 +32,15 @@
     . = ALIGN(PAGE_SIZE); \
     SECTION_MARKER_END(FREE_AFTER_INIT_TEXT_SECTION) = .;
 
+#define TEXT_OUTPUT                      \
+    .text : VIRTUAL_BASE_RELATIVE(.text) \
+    {                                    \
+        TEXT_BEGIN                       \
+        TEXT                             \
+        TEXT_FREE_AFTER_INIT             \
+        TEXT_END                         \
+    } :text
+
 #define INITCALLS                  \
     MARKED_SECTION(initcall_normal)
 
@@ -50,10 +59,31 @@
     . = ALIGN(PAGE_SIZE); \
     SECTION_MARKER_END(FREE_AFTER_INIT_RODATA_SECTION) = .;
 
+#define RODATA_OUTPUT                                   \
+    .rodata : VIRTUAL_BASE_RELATIVE(.rodata)            \
+    {                                                   \
+        RODATA                                          \
+        . = ALIGN(ULTRA_ARCH_WIDTH);                    \
+        MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)  \
+        RODATA_FREE_AFTER_INIT                          \
+    } :rodata =0xDEADBEEF
+
 #define EH_FRAME_HDR                       \
     LINKER_SYMBOL(eh_frame_hdr_begin) = .; \
     *(.eh_frame_hdr)                       \
     LINKER_SYMBOL(eh_frame_hdr_end) = .;
+
+#define EH_FRAME_HDR_OUTPUT                              \
+    .eh_frame_hdr : VIRTUAL_BASE_RELATIVE(.eh_frame_hdr) \
+    {                                                    \
+        EH_FRAME_HDR                                     \
+    } :rodata =0xDEADBEEF
+
+#define EH_FRAME_OUTPUT                          \
+    .eh_frame : VIRTUAL_BASE_RELATIVE(.eh_frame) \
+    {                                            \
+        EH_FRAME                                 \
+    } :rodata =0xDEADBEEF
 
 #define EH_FRAME                       \
     LINKER_SYMBOL(eh_frame_begin) = .; \
@@ -64,6 +94,19 @@
     *(.data) \
     *(.data.*) \
     *(.INIT_DATA_REFERENCE_DATA_SECTION)
+
+#define DATA_OUTPUT                      \
+    .data : VIRTUAL_BASE_RELATIVE(.data) \
+    {                                    \
+        DATA                             \
+        DATA_FREE_AFTER_INIT             \
+    } :data
+
+#define BSS_OUTPUT                     \
+    .bss : VIRTUAL_BASE_RELATIVE(.bss) \
+    {                                  \
+        BSS                            \
+    } :data
 
 #define DATA_FREE_AFTER_INIT \
     . = ALIGN(PAGE_SIZE); \
