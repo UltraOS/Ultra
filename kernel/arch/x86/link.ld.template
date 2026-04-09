@@ -44,36 +44,15 @@ SECTIONS
 
     . = ALIGN(4K);
 
-    .rodata : VIRTUAL_BASE_RELATIVE(.rodata)
-    {
-        RODATA
-        . = ALIGN(ULTRA_ARCH_WIDTH);
-        MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)
-        RODATA_FREE_AFTER_INIT
-    } :rodata =0xDEADBEEF
+    RODATA_OUTPUT
 
-    .eh_frame_hdr : VIRTUAL_BASE_RELATIVE(.eh_frame_hdr)
-    {
-        EH_FRAME_HDR
-    } :rodata =0xDEADBEEF
-
-    .eh_frame : VIRTUAL_BASE_RELATIVE(.eh_frame)
-    {
-        EH_FRAME
-    } :rodata =0xDEADBEEF
+    EH_FRAME_HDR_OUTPUT
+    EH_FRAME_OUTPUT
 
     . = ALIGN(4K);
 
-    .data : VIRTUAL_BASE_RELATIVE(.data)
-    {
-        DATA
-        DATA_FREE_AFTER_INIT
-    } :data
-
-    .bss : VIRTUAL_BASE_RELATIVE(.bss)
-    {
-        BSS
-    } :data
+    DATA_OUTPUT
+    BSS_OUTPUT
 
     SECTION_DEBUG
     SECTION_TABS
