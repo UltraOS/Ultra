@@ -19,7 +19,6 @@ PHDRS
     text   PT_LOAD FLAGS(PHDR_READ | PHDR_EXEC);
     rodata PT_LOAD FLAGS(PHDR_READ);
     data   PT_LOAD FLAGS(PHDR_READ | PHDR_WRITE);
-    init   PT_LOAD FLAGS(PHDR_READ | PHDR_WRITE | PHDR_EXEC);
 }
 
 SECTIONS
@@ -38,6 +37,7 @@ SECTIONS
 
         . = ALIGN(16);
         TEXT
+        TEXT_FREE_AFTER_INIT
 
         TEXT_END
     } :text =INT3_OPCODE
@@ -49,6 +49,7 @@ SECTIONS
         RODATA
         . = ALIGN(ULTRA_ARCH_WIDTH);
         MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)
+        RODATA_FREE_AFTER_INIT
     } :rodata =0xDEADBEEF
 
     .eh_frame_hdr : VIRTUAL_BASE_RELATIVE(.eh_frame_hdr)
@@ -66,14 +67,8 @@ SECTIONS
     .data : VIRTUAL_BASE_RELATIVE(.data)
     {
         DATA
+        DATA_FREE_AFTER_INIT
     } :data
-
-    . = ALIGN(4K);
-
-    .free_after_init : VIRTUAL_BASE_RELATIVE(.free_after_init)
-    {
-        FREE_AFTER_INIT
-    } :init
 
     .bss : VIRTUAL_BASE_RELATIVE(.bss)
     {
