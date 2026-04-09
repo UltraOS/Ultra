@@ -28,10 +28,10 @@
 #define INITCALLS                  \
     MARKED_SECTION(initcall_normal)
 
-#define RODATA(align)                        \
+#define RODATA                               \
     *(.rodata .rodata.*)                     \
     *(.INIT_DATA_REFERENCE_RODATA_SECTION)   \
-    . = ALIGN(align);                        \
+    . = ALIGN(ULTRA_ARCH_WIDTH);             \
     MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
     MARKED_SECTION(PARAMETERS_SECTION)       \
     INITCALLS
