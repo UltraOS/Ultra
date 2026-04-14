@@ -111,6 +111,16 @@
     *(.data.*) \
     *(.INIT_DATA_REFERENCE_DATA_SECTION)
 
+#define DATA_FREE_AFTER_INIT_BEGIN \
+    FREE_AFTER_INIT_BEGIN(FREE_AFTER_INIT_DATA_SECTION)
+
+#define DATA_FREE_AFTER_INIT_END \
+    FREE_AFTER_INIT_END(FREE_AFTER_INIT_DATA_SECTION)
+
+#define DATA_FREE_AFTER_INIT \
+    MARKED_SECTION(PER_CPU_SECTION) \
+    *(.FREE_AFTER_INIT_DATA_SECTION) \
+
 #define DATA_OUTPUT                      \
     .data : VIRTUAL_BASE_RELATIVE(.data) \
     {                                    \
@@ -125,16 +135,6 @@
     {                                  \
         BSS                            \
     } :data
-
-#define DATA_FREE_AFTER_INIT_BEGIN \
-    FREE_AFTER_INIT_BEGIN(FREE_AFTER_INIT_DATA_SECTION)
-
-#define DATA_FREE_AFTER_INIT_END \
-    FREE_AFTER_INIT_END(FREE_AFTER_INIT_DATA_SECTION)
-
-#define DATA_FREE_AFTER_INIT \
-    MARKED_SECTION(PER_CPU_SECTION) \
-    *(.FREE_AFTER_INIT_DATA_SECTION) \
 
 #define BSS        \
     *(COMMON)      \
