@@ -40,16 +40,16 @@
     FREE_AFTER_INIT_END(FREE_AFTER_INIT_TEXT_SECTION)
 
 #define TEXT_FREE_AFTER_INIT \
-    TEXT_FREE_AFTER_INIT_BEGIN \
     *(.FREE_AFTER_INIT_TEXT_SECTION) \
-    TEXT_FREE_AFTER_INIT_END
 
 #define TEXT_OUTPUT                      \
     .text : VIRTUAL_BASE_RELATIVE(.text) \
     {                                    \
         TEXT_BEGIN                       \
         TEXT                             \
+        TEXT_FREE_AFTER_INIT_BEGIN       \
         TEXT_FREE_AFTER_INIT             \
+        TEXT_FREE_AFTER_INIT_END         \
         TEXT_END                         \
     } :text
 
@@ -71,9 +71,7 @@
     FREE_AFTER_INIT_END(FREE_AFTER_INIT_RODATA_SECTION)
 
 #define RODATA_FREE_AFTER_INIT \
-    RODATA_FREE_AFTER_INIT_BEGIN \
     *(.FREE_AFTER_INIT_RODATA_SECTION) \
-    RODATA_FREE_AFTER_INIT_END
 
 #define RODATA_OUTPUT                                   \
     .rodata : VIRTUAL_BASE_RELATIVE(.rodata)            \
@@ -81,7 +79,9 @@
         RODATA                                          \
         . = ALIGN(ULTRA_ARCH_WIDTH);                    \
         MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)  \
+        RODATA_FREE_AFTER_INIT_BEGIN                    \
         RODATA_FREE_AFTER_INIT                          \
+        RODATA_FREE_AFTER_INIT_END                      \
     } :rodata =0xDEADBEEF
 
 #define EH_FRAME_HDR                       \
@@ -115,7 +115,9 @@
     .data : VIRTUAL_BASE_RELATIVE(.data) \
     {                                    \
         DATA                             \
+        DATA_FREE_AFTER_INIT_BEGIN       \
         DATA_FREE_AFTER_INIT             \
+        DATA_FREE_AFTER_INIT_END         \
     } :data
 
 #define BSS_OUTPUT                     \
@@ -131,10 +133,8 @@
     FREE_AFTER_INIT_END(FREE_AFTER_INIT_DATA_SECTION)
 
 #define DATA_FREE_AFTER_INIT \
-    DATA_FREE_AFTER_INIT_BEGIN \
     MARKED_SECTION(PER_CPU_SECTION) \
     *(.FREE_AFTER_INIT_DATA_SECTION) \
-    DATA_FREE_AFTER_INIT_END
 
 #define BSS        \
     *(COMMON)      \

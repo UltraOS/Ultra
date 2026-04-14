@@ -37,7 +37,10 @@ SECTIONS
 
         . = ALIGN(16);
         TEXT
+
+        TEXT_FREE_AFTER_INIT_BEGIN
         TEXT_FREE_AFTER_INIT
+        TEXT_FREE_AFTER_INIT_END
 
         TEXT_END
     } :text =INT3_OPCODE
