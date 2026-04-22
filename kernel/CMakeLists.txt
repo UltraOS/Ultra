@@ -88,11 +88,6 @@ ultra_compile_definitions(
     ULTRA_ARCH_EXECUTION_MODE_STRING="${ULTRA_ARCH_EXECUTION_MODE}"
 )
 
-# We have to do this since ${CMAKE_CURRENT_FUNCTION_LIST_DIR}
-# was introduced in CMake 3.17, which is relatively recent.
-# (e.g. Ubuntu 20.04 ships with 3.16.3 by default)
-set(ULTRA_MODULE_LD_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/link_module.ld")
-
 add_subdirectory(arch/${ULTRA_ARCH})
 
 if (NOT ULTRA_MAX_CPUS)

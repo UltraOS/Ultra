@@ -60,7 +60,7 @@ function(add_ultra_module)
             ${MODULE_OBJECT_TARGET} ${MODULE_SOURCES}
             COMMAND
             ${CMAKE_LINKER}
-            -r -T${ULTRA_MODULE_LD_SCRIPT}
+            -r
             $<TARGET_OBJECTS:${MODULE_OBJECT_TARGET}> -o ${MODULE_OUTPUT}
             COMMAND_EXPAND_LISTS
         )
