@@ -6,7 +6,7 @@ include(ld_template.cmake)
 # The base kernel executable that contains an empty stub symbol table
 set(
     ULTRA_KERNEL_BASE
-    "kernel-${ULTRA_ARCH_EXECUTION_MODE}-base"
+    "kernel-${ULTRA_ARCH}-base"
 )
 add_executable(${ULTRA_KERNEL_BASE})
 
@@ -77,15 +77,12 @@ ultra_link_options(
 )
 
 string(TOUPPER ${ULTRA_ARCH} ULTRA_ARCH_POSTFIX)
-string(TOUPPER ${ULTRA_ARCH_EXECUTION_MODE} ULTRA_ARCH_EXECUTION_MODE_POSTFIX)
 
 ultra_compile_definitions(
     ULTRA_ARCH_${ULTRA_ARCH_POSTFIX}
-    ULTRA_ARCH_EXECUTION_MODE_${ULTRA_ARCH_EXECUTION_MODE_POSTFIX}
 
     ULTRA_GIT_SHA="${ULTRA_GIT_SHA}"
     ULTRA_ARCH_STRING="${ULTRA_ARCH}"
-    ULTRA_ARCH_EXECUTION_MODE_STRING="${ULTRA_ARCH_EXECUTION_MODE}"
 )
 
 add_subdirectory(arch/${ULTRA_ARCH})

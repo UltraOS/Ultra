@@ -39,10 +39,10 @@ function(setup_symbol_table_link_steps NUM_RELINKS)
 
     foreach (I RANGE ${NUM_STEPS})
         if (I EQUAL ${NUM_STEPS})
-            set(THIS_TARGET "kernel-${ULTRA_ARCH_EXECUTION_MODE}")
+            set(THIS_TARGET "kernel-${ULTRA_ARCH}")
             set(THIS_SYMBOL_FILE "kernel_symbols_final.c")
         else ()
-            set(THIS_TARGET "kernel-${ULTRA_ARCH_EXECUTION_MODE}-prelim${I}")
+            set(THIS_TARGET "kernel-${ULTRA_ARCH}-prelim${I}")
             set(THIS_SYMBOL_FILE "kernel_symbols_prelim${I}.c")
         endif ()
 

@@ -1,14 +1,12 @@
-ENTRY(arm_entry)
+ENTRY(x86_entry)
 
-#ifdef ULTRA_ARCH_EXECUTION_MODE_AARCH32
-#define VIRTUAL_BASE    0xC0000000
-#define PHYSICAL_OFFSET 0
-#else
 #define VIRTUAL_BASE    0xFFFFFFFF80000000
 #define PHYSICAL_OFFSET 0
-#endif
+
+#define INT3_OPCODE 0xCCCCCCCC
 
 #include <linker_common.ld.h>
+#include <arch/private/linker.h>
 
 // NOTE: These flags are currently not enforced by anyone
 PHDRS
@@ -24,14 +22,30 @@ SECTIONS
 
     NORELOCS_GUARD
 
-    TEXT_OUTPUT
+    .text : VIRTUAL_BASE_RELATIVE(.text)
+    {
+        TEXT_BEGIN
+
+        . = ALIGN(8);
+        SECTION_MARKER_BEGIN(IDT_THUNKS_SECTION) = .;
+        SPECIAL_SECTION(IDT_THUNKS_ASM_SECTION)
+
+        . = ALIGN(16);
+        TEXT
+
+        TEXT_FREE_AFTER_INIT_BEGIN
+        TEXT_FREE_AFTER_INIT
+        TEXT_FREE_AFTER_INIT_END
+
+        TEXT_END
+    } :text =INT3_OPCODE
 
     . = ALIGN(4K);
 
     RODATA_OUTPUT
 
-    EH_FRAME_OUTPUT
     EH_FRAME_HDR_OUTPUT
+    EH_FRAME_OUTPUT
 
     . = ALIGN(4K);
 
@@ -40,23 +54,6 @@ SECTIONS
 
     SECTION_DEBUG
     SECTION_TABS
-
-    . = ALIGN(8);
-
-    /*
-     * We don't use these for now but keep them anyway,
-     * otherwise linker complains.
-     */
-	.ARM.exidx : {
-		*(.ARM.exidx*)
-	}
-    .ARM.extab : {
-        *(.ARM.extab*)
-    }
-
-    ARM.attributes 0x000000000 : {
-        *(.ARM.attributes)
-    }
 
     DISCARDS
 }

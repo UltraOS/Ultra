@@ -22,7 +22,6 @@ COMPILERS = {
 }
 
 ARCHITECTURES = {
-    "i686",
     "x86_64"
 }
 
