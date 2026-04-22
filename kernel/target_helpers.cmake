@@ -62,6 +62,14 @@ function(ultra_sources)
     )
 endfunction()
 
+function(ultra_sources_if CONFIG)
+    if (NOT ${CONFIG})
+        return()
+    endif ()
+
+    ultra_sources(${ARGN})
+endfunction()
+
 function(ultra_include_directories)
     ultra_kernel_targets_apply(
         target_include_directories

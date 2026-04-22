@@ -12,6 +12,7 @@
 #include <uacpi/tables.h>
 #include <uacpi/acpi.h>
 
+#include <config.h>
 #include <bug.h>
 #include <per_cpu.h>
 #include <free_after_init.h>

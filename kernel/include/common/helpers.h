@@ -7,6 +7,8 @@
 #define DO_TO_STR(x) #x
 #define TO_STR(x) DO_TO_STR(x)
 
+#define TAKE_SECOND_ARG(unused, x, ...) x
+
 #ifdef __cplusplus
 #define STATIC_ASSERT static_assert
 #else

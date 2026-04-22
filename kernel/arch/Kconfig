@@ -1,0 +1,42 @@
+# Arch endianess settings
+config ARCH_LITTLE_ENDIAN
+    bool
+
+config ARCH_BIG_ENDIAN
+    bool
+
+config ARCH_UNKNOWN_ENDIAN
+    bool
+    default y if !ARCH_LITTLE_ENDIAN && !ARCH_BIG_ENDIAN
+
+# Arch bitness settings
+config ARCH_64BIT
+    bool
+
+config ARCH_32BIT
+    bool
+
+config ARCH_UNKNOWN_BIT_WIDTH
+    bool
+    default y if !ARCH_64BIT && !ARCH_32BIT
+
+config ARCH_WIDTH
+    int
+    default 8 if ARCH_64BIT
+    default 4 if ARCH_32BIT
+
+config ARCH_FORCE_64BIT_PHYS_ADDR_WIDTH
+    def_bool n
+
+config ARCH_PHYS_ADDR_WIDTH
+    int
+    default 8 if (ARCH_64BIT || ARCH_FORCE_64BIT_PHYS_ADDR_WIDTH)
+    default 4 if ARCH_32BIT
+
+if ARCH_X86_64
+rsource "x86_64/Kconfig"
+endif
+
+if ARCH_AARCH64
+rsource "aarch64/Kconfig"
+endif

@@ -1,0 +1,9 @@
+mainmenu "Ultra Kernel Configuration"
+
+# Enable tristate support unconditionally
+config MODULES
+    bool
+    option modules
+    default y
+
+source "kernel/Kconfig"

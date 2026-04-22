@@ -7,3 +7,6 @@
 [submodule "kernel/drivers/acpi/uacpi"]
 	path = kernel/drivers/acpi/uacpi
 	url = https://github.com/uACPI/uACPI
+[submodule "scripts/kconfiglib"]
+	path = scripts/kconfiglib
+	url = https://github.com/UltraOS/Kconfiglib

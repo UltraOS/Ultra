@@ -1,12 +1,7 @@
-# Big endian mode is not supported
-ultra_compile_definitions(ULTRA_ARCH_LITTLE_ENDIAN)
-
-ultra_compile_definitions(ULTRA_ARCH_WIDTH=8)
-ultra_compile_definitions(ULTRA_PHYS_ADDR_WIDTH=8)
 ultra_compile_options(-mgeneral-regs-only)
 
 # GCC doesn't support red-zone on aarch64
-if (ULTRA_TOOLCHAIN STREQUAL "clang")
+if (CONFIG_TOOLCHAIN_CLANG)
     ultra_compile_options(-mno-red-zone)
 endif()
 

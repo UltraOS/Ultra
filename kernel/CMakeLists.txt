@@ -20,12 +20,36 @@ set(
     ${ULTRA_KERNEL_BASE}
 )
 
+if (CONFIG_ARCH_UNKNOWN_BIT_WIDTH)
+        message(
+        FATAL_ERROR
+        "Please fix your achitecture's Kconfig to specify bitness"
+    )
+endif ()
+
+if (CONFIG_ARCH_LITTLE_ENDIAN)
+    ultra_compile_definitions(ULTRA_ARCH_LITTLE_ENDIAN)
+elseif (CONFIG_ARCH_BIG_ENDIAN)
+    ultra_compile_definitions(ULTRA_ARCH_BIG_ENDIAN)
+else ()
+    message(
+        FATAL_ERROR
+        "Please fix your achitecture's Kconfig to specify endianness"
+    )
+endif ()
+
+ultra_compile_definitions(
+    ULTRA_ARCH_WIDTH=${CONFIG_ARCH_WIDTH}
+    ULTRA_ARCH_PHYS_ADDR_WIDTH=${CONFIG_ARCH_PHYS_ADDR_WIDTH}
+    ULTRA_ARCH="${CONFIG_ARCH_STRING}"
+)
+
 # A list of all kernel object libraries (kernel itself + compiled-in modules)
 set_property(GLOBAL PROPERTY ULTRA_OBJECT_TARGETS "${ULTRA_KERNEL_OBJECTS}")
 
 # Number of times to re-link the kernel to stabilize symbols
 set(ULTRA_NUM_RELINKS 1)
-if (ULTRA_CONFIG_LTO)
+if (CONFIG_LTO)
     set(ULTRA_NUM_RELINKS 2)
 endif ()
 
@@ -51,7 +75,11 @@ ultra_sources(
     smp.c
     abortable_instructions.c
 )
-ultra_include_directories(include)
+ultra_include_directories(
+    include
+    # For auto-generated headers like config.h
+    ${CMAKE_BINARY_DIR}
+)
 
 ultra_compile_options(
     -std=gnu23
@@ -66,9 +94,12 @@ ultra_compile_options(
     -Wimplicit-fallthrough
     -fomit-frame-pointer
 )
-if (ULTRA_CONFIG_LTO)
+
+if (CONFIG_LTO)
     ultra_compile_options(-flto=full)
 endif ()
+
+ultra_compile_options(-O${CONFIG_OPTIMIZATION_LEVEL})
 
 ultra_link_options(
     -nostdlib
@@ -76,22 +107,9 @@ ultra_link_options(
     --orphan-handling=error
 )
 
-string(TOUPPER ${ULTRA_ARCH} ULTRA_ARCH_POSTFIX)
-
-ultra_compile_definitions(
-    ULTRA_ARCH_${ULTRA_ARCH_POSTFIX}
-
-    ULTRA_GIT_SHA="${ULTRA_GIT_SHA}"
-    ULTRA_ARCH_STRING="${ULTRA_ARCH}"
-)
+ultra_compile_definitions(ULTRA_GIT_SHA="${ULTRA_GIT_SHA}")
 
 add_subdirectory(arch/${ULTRA_ARCH})
-
-if (NOT ULTRA_MAX_CPUS)
-    set (ULTRA_MAX_CPUS 256)
-endif()
-ultra_compile_definitions(ULTRA_MAX_CPUS=${ULTRA_MAX_CPUS})
-
 add_subdirectory(common)
 add_subdirectory(memory)
 add_subdirectory(drivers)

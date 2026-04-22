@@ -7,15 +7,26 @@ import shutil
 import urllib.request
 import signal
 import sys
-from typing import Optional, List, Callable
+from contextlib import contextmanager
+from typing import Optional, List, Callable, Iterator
 
-import scripts.build_utils.wsl_wrap as ww
-import scripts.build_utils.package_manager as pm
-import scripts.build_utils.toolchain_builder as tb
-import scripts.build_utils.toolchain_args as ta
-import scripts.image_utils.ultra as ultr
-import scripts.image_utils.uefi as uefi
-import scripts.image_utils.path_guesser as pg
+try:
+    import scripts.kconfiglib.kconfiglib as kc
+    # Make sure the rest of "import kconfiglib" always references this and not
+    # the kconfiglib from pip or other copies of the library
+    sys.modules["kconfiglib"] = kc
+
+    import scripts.build_utils.wsl_wrap as ww
+    import scripts.build_utils.package_manager as pm
+    import scripts.build_utils.toolchain_builder as tb
+    import scripts.build_utils.toolchain_args as ta
+    import scripts.image_utils.ultra as ultr
+    import scripts.image_utils.uefi as uefi
+    import scripts.image_utils.path_guesser as pg
+except ImportError:
+    print("Unable to import one of submodule libraries!")
+    print("Please run 'git submodule update --init' to initialize submodules")
+    sys.exit(1)
 
 GENERIC_DEPS = {
     "apt": [
@@ -27,6 +38,7 @@ GENERIC_DEPS = {
         "mtools",
         "python3",
         "python3-pyelftools",
+        "python3-tk",
     ],
     "pacman": [
         "nasm",
@@ -36,7 +48,8 @@ GENERIC_DEPS = {
         "cmake",
         "mtools",
         "python",
-        "python-pyelftools"
+        "python-pyelftools",
+        "tk",
     ],
     "brew": [
         "nasm",
@@ -45,8 +58,29 @@ GENERIC_DEPS = {
         "cmake",
         "mtools",
         "python3",
+        "python-tk",
     ],
 }
+
+ARCH_TO_CONFIG_KEY = {
+    "x86_64": "ARCH_X86_64",
+    "aarch64": "ARCH_AARCH64",
+}
+
+TOOLCHAIN_TO_CONFIG_KEY = {
+    "clang": "TOOLCHAIN_CLANG",
+    "gcc": "TOOLCHAIN_GCC",
+}
+
+
+@contextmanager
+def enter_work_dir(path: str) -> Iterator[None]:
+    old_dir = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(old_dir)
 
 
 def get_toolchain_dir() -> str:
@@ -59,8 +93,8 @@ def get_specific_toolchain_dir(type: str, arch: str) -> str:
     )
 
 
-def get_build_dir(arch: str, toolchain: str) -> str:
-    return pg.project_root_relative(f"build-{toolchain}-{arch}")
+def get_build_dir(suffix: str, toolchain: str) -> str:
+    return pg.project_root_relative(f"build-{toolchain}-{suffix}")
 
 
 def get_tests_dir() -> str:
@@ -84,11 +118,11 @@ def test_runner_binary(this_os: str) -> str:
     )
 
 
-def build_toolchain(args: argparse.Namespace, arch: str) -> None:
+def build_toolchain(args: argparse.Namespace) -> None:
     if not tb.is_supported_system():
         sys.exit(1)
 
-    tc_root = get_specific_toolchain_dir(args.toolchain, arch)
+    tc_root = get_specific_toolchain_dir(args.toolchain, args.arch)
     tp = ta.params_from_args(args, "elf", tc_root, get_toolchain_dir())
 
     if not args.skip_generic_dependencies:
@@ -101,7 +135,8 @@ def cmake_build(
     args: argparse.Namespace, build_dir: str, extra_args: List[str] = [],
     reconfigure_cb: Optional[Callable[[], None]] = None
 ) -> None:
-    rerun_cmake = args.reconfigure or not os.path.isdir(build_dir)
+    cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
+    rerun_cmake = args.reconfigure or not os.path.isfile(cmake_cache)
 
     if rerun_cmake:
         if reconfigure_cb is not None:
@@ -117,17 +152,17 @@ def cmake_build(
 
 
 def build_ultra(
-    args: argparse.Namespace, arch: str, build_dir: str
+    args: argparse.Namespace, build_dir: str
 ) -> None:
-    cmake_args = [f"-DULTRA_ARCH={arch}",
-                  f"-DULTRA_TOOLCHAIN={args.toolchain}"]
-
     def rebuild_toolchain() -> None:
         # Only rerun toolchain builder if reconfigure is not artificial
         if not args.reconfigure:
-            build_toolchain(args, arch)
+            build_toolchain(args)
 
-    cmake_build(args, build_dir, cmake_args, reconfigure_cb=rebuild_toolchain)
+    cmake_build(
+        args, build_dir, [f"-DCONFIG_FILE={args.config}"],
+        rebuild_toolchain
+    )
 
 
 def make_hyper_config(arch: str) -> str:
@@ -336,15 +371,43 @@ def run_unit_tests(args: argparse.Namespace, this_os: str) -> int:
     return subprocess.run([binary]).returncode
 
 
+def root_kconfig() -> kc.Kconfig:
+    with enter_work_dir(pg.project_root()):
+        kconfig = kc.Kconfig(pg.project_root_relative("Kconfig"))
+
+    return kconfig
+
+
+def config_sanitize(path: str) -> None:
+    kconfig = root_kconfig()
+    kconfig.load_config(path)
+    kconfig.write_config(path)
+
+
+def config_get_arch(path: str) -> str:
+    kconfig = root_kconfig()
+    kconfig.load_config(path)
+    return kconfig.syms["ARCH_STRING"].str_value
+
+
+def make_default_config(out_path: str, toolchain: str, arch: str) -> None:
+    kconfig = root_kconfig()
+    kconfig.syms[TOOLCHAIN_TO_CONFIG_KEY[toolchain]].set_value("y")
+    kconfig.syms[ARCH_TO_CONFIG_KEY[arch]].set_value("y")
+    kconfig.write_config(out_path)
+
+
 def main() -> None:
     ww.relaunch_in_wsl_if_windows()
     pg.set_project_root(os.path.dirname(os.path.abspath(__file__)))
 
     parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
     ta.add_base_args(parser)
-    parser.add_argument("--arch", default="x86_64",
-                        choices=["x86_64", "aarch64"],
-                        help="CPU architecture to build the kernel for")
+    parser.add_argument("--arch", default="auto",
+                        choices=["auto", "x86_64", "aarch64"],
+                        help="CPU architecture to build the kernel for "
+                             "(auto implies x86_64 or the config setting if "
+                             "--config is specified)")
     parser.add_argument("--skip-generic-dependencies", action="store_true",
                         help="don't attempt to fetch the generic dependencies")
     parser.add_argument("--make-image",
@@ -381,6 +444,12 @@ def main() -> None:
                         help="Reconfigure cmake before building")
     parser.add_argument("--unit-tests", action="store_true",
                         help="Run the userspace test suite")
+    parser.add_argument("--config",
+                        help="Configuration file to use for this build")
+    parser.add_argument("--menuconfig", action="store_true",
+                        help="Run menuconfig to edit the current config file")
+    parser.add_argument("--guiconfig", action="store_true",
+                        help="Run guiconfig to edit the current config file")
     args = parser.parse_args()
 
     this_os = platform.system()
@@ -391,10 +460,48 @@ def main() -> None:
     if args.unit_tests:
         sys.exit(run_unit_tests(args, this_os.lower()))
 
-    build_dir = get_build_dir(args.arch, args.toolchain)
+    if args.config and args.arch != "auto":
+        sys.exit(
+            "Provided both --arch and a custom --config!\n"
+            "Config already provides an arch, please choose one"
+        )
+
+    if args.arch == "auto" and not args.config:
+        args.arch = "x86_64"
+
+    if args.config:
+        if not os.path.isfile(args.config):
+            raise RuntimeError(f"Invalid --config path: {args.config}")
+
+        config_sanitize(args.config)
+        args.arch = config_get_arch(args.config)
+
+        build_dir = pg.project_root_relative("build-user-config")
+        os.makedirs(build_dir, exist_ok=True)
+    else:
+        build_dir = pg.project_root_relative(
+            f"build-{args.toolchain}-{args.arch}"
+        )
+        os.makedirs(build_dir, exist_ok=True)
+
+        args.config = os.path.join(build_dir, ".config")
+        if not os.path.isfile(args.config):
+            make_default_config(args.config, args.toolchain, args.arch)
+
+    if args.menuconfig or args.guiconfig:
+        os.environ["KCONFIG_CONFIG"] = args.config
+
+        import scripts.kconfiglib.menuconfig as mc
+        import scripts.kconfiglib.guiconfig as gc
+
+        module = mc if args.menuconfig else gc
+
+        with enter_work_dir(pg.project_root()):
+            module.menuconfig(root_kconfig())
+        sys.exit(0)
 
     if not args.no_build:
-        build_ultra(args, args.arch, build_dir)
+        build_ultra(args, build_dir)
 
     is_debug = args.debug or args.ide_debug
     should_run = args.run or args.kvm or is_debug
@@ -430,9 +537,11 @@ def main() -> None:
 
         image_path = os.path.join(build_dir, image_name)
 
-        make_hyper_image("MBR", fs_type, args.arch, build_dir, hyper_installer,
-                         hyper_iso_br, hyper_uefi_binary_paths, image_path,
-                         args.make_image)
+        make_hyper_image(
+            "MBR", fs_type, args.arch, build_dir,
+            hyper_installer, hyper_iso_br, hyper_uefi_binary_paths,
+            image_path, args.make_image
+        )
 
     if should_run:
         if args.arch == "aarch64":

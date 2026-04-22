@@ -2,6 +2,16 @@
 disallow_incomplete_defs = true
 no_implicit_optional = true
 
+exclude = [
+    "^scripts/kconfiglib/"
+]
+
+# We still keep this here just in case you import it in your main code!
+[[tool.mypy.overrides]]
+module = "scripts.kconfiglib.*"
+ignore_errors = true
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = "elftools.*"
 ignore_missing_imports = true

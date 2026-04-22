@@ -8,6 +8,7 @@
 #include <bug.h>
 #include <io.h>
 #include <free_after_init.h>
+#include <config.h>
 
 #include <common/string.h>
 #include <common/error.h>

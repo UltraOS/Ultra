@@ -1,11 +1,5 @@
 include(CheckCompilerFlag)
 
-ultra_compile_definitions(
-    ULTRA_ARCH_WIDTH=8
-    ULTRA_ARCH_LITTLE_ENDIAN
-    ULTRA_ARCH_PHYS_ADDR_WIDTH=8
-)
-
 ultra_sources(
     apic.c
     xapic.c
