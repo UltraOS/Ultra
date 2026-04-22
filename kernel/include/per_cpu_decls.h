@@ -10,7 +10,7 @@
     #define ARCH_PER_CPU_ATTRIBUTES
 #endif
 
-extern ptr_t g_per_cpu_offset[ULTRA_MAX_CPUS];
+extern ptr_t g_per_cpu_offset[];
 extern virt_addr_t g_per_cpu_base;
 
 #define MAKE_PER_CPU(prefix, type, var) \

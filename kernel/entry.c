@@ -14,6 +14,7 @@
 #include <bug.h>
 #include <boot/alloc.h>
 #include <param.h>
+#include <config.h>
 
 #include <private/unwind.h>
 #include <private/param.h>
@@ -99,7 +100,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     print(
         "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
-        ULTRA_ARCH_EXECUTION_MODE_STRING, ULTRA_GIT_SHA, __DATE__, __TIME__
+        ULTRA_ARCH, ULTRA_GIT_SHA, __DATE__, __TIME__
     );
 
     arch_init_early();

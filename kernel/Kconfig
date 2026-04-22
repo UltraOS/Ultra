@@ -1,0 +1,43 @@
+choice
+    prompt "Target CPU architecture"
+    default ARCH_X86_64
+
+    config ARCH_X86_64
+        bool "x86_64"
+        select ARCH_X86_64_BASE
+
+    config ARCH_AARCH64
+        bool "aarch64"
+        select ARCH_AARCH64_BASE
+endchoice
+
+menu "Kernel build options"
+
+choice
+    prompt "Toolchain to use"
+    default TOOLCHAIN_CLANG
+
+    config TOOLCHAIN_CLANG
+        bool "clang"
+
+    config TOOLCHAIN_GCC
+        bool "GCC"
+endchoice
+
+config TOOLCHAIN_STRING
+    string
+    default "clang" if TOOLCHAIN_CLANG
+    default "gcc" if TOOLCHAIN_GCC
+
+config OPTIMIZATION_LEVEL
+    int "Optimization level to build the kernel with"
+    default 0
+    range 0 3
+
+config LTO
+    bool "Enable Link-Time Optimization"
+    default n
+
+endmenu
+
+rsource "arch/Kconfig"

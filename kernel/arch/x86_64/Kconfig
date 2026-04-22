@@ -1,0 +1,16 @@
+config ARCH_STRING
+    def_string "x86_64"
+
+config MAX_CPUS
+    int "Maximum number of usable CPUs"
+    range 2 256
+    default 256
+    help
+        Changing this number is only useful for reducing the kernel image size.
+        The kernel is always configured to support SMP, so the minimum number
+        of supported CPUs must be at least 2.
+
+config ARCH_X86_64_BASE
+    bool
+    select ARCH_LITTLE_ENDIAN
+    select ARCH_64BIT
