@@ -1,16 +1,8 @@
 include(CheckCompilerFlag)
 
-if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "i686")
-    ultra_compile_definitions(ULTRA_ARCH_WIDTH=4)
-else ()
-    ultra_compile_definitions(ULTRA_ARCH_WIDTH=8)
-endif()
-
 ultra_compile_definitions(
+    ULTRA_ARCH_WIDTH=8
     ULTRA_ARCH_LITTLE_ENDIAN
-
-    # Hardcode 8 for now, even for i686
-    # (unconditionally enable PAE if it's present)
     ULTRA_ARCH_PHYS_ADDR_WIDTH=8
 )
 
@@ -53,18 +45,9 @@ else ()
     message(FATAL_ERROR "This compiler doesn't support setting stack alignment")
 endif()
 
-if (ULTRA_ARCH_EXECUTION_MODE STREQUAL "x86_64")
-    ultra_compile_options(
-        -mcmodel=kernel
-        -mno-red-zone
-    )
-elseif (NOT ULTRA_TOOLCHAIN_HAS_64BIT_MATH_BUILTINS)
-    ultra_sources(
-        builtins.c
-    )
-endif ()
-
 ultra_compile_options(
+    -mcmodel=kernel
+    -mno-red-zone
     -mno-80387
     -mno-sse
     -mno-mmx
@@ -75,9 +58,7 @@ ultra_compile_options(
 )
 
 set(ULTRA_LD_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/link.ld.template")
-set(ULTRA_LD_SCRIPT
-    "${CMAKE_CURRENT_SOURCE_DIR}/link-${ULTRA_ARCH_EXECUTION_MODE}.ld"
-)
+set(ULTRA_LD_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/link-x86_64.ld")
 add_ultra_ld_template(
     NAME
     kernel-link-script

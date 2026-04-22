@@ -53,14 +53,14 @@ def get_toolchain_dir() -> str:
     return pg.project_root_relative("toolchain")
 
 
-def get_specific_toolchain_dir(type: str, execution_mode: str) -> str:
+def get_specific_toolchain_dir(type: str, arch: str) -> str:
     return pg.project_root_relative(
-        get_toolchain_dir(), f"tools-{type}-{execution_mode}"
+        get_toolchain_dir(), f"tools-{type}-{arch}"
     )
 
 
-def get_build_dir(execution_mode: str, toolchain: str) -> str:
-    return pg.project_root_relative(f"build-{toolchain}-{execution_mode}")
+def get_build_dir(arch: str, toolchain: str) -> str:
+    return pg.project_root_relative(f"build-{toolchain}-{arch}")
 
 
 def get_tests_dir() -> str:
@@ -84,11 +84,11 @@ def test_runner_binary(this_os: str) -> str:
     )
 
 
-def build_toolchain(args: argparse.Namespace, execution_mode: str) -> None:
+def build_toolchain(args: argparse.Namespace, arch: str) -> None:
     if not tb.is_supported_system():
         sys.exit(1)
 
-    tc_root = get_specific_toolchain_dir(args.toolchain, execution_mode)
+    tc_root = get_specific_toolchain_dir(args.toolchain, arch)
     tp = ta.params_from_args(args, "elf", tc_root, get_toolchain_dir())
 
     if not args.skip_generic_dependencies:
@@ -117,25 +117,23 @@ def cmake_build(
 
 
 def build_ultra(
-    args: argparse.Namespace, arch: str, execution_mode: str,
-    build_dir: str
+    args: argparse.Namespace, arch: str, build_dir: str
 ) -> None:
     cmake_args = [f"-DULTRA_ARCH={arch}",
-                  f"-DULTRA_ARCH_EXECUTION_MODE={execution_mode}",
                   f"-DULTRA_TOOLCHAIN={args.toolchain}"]
 
     def rebuild_toolchain() -> None:
         # Only rerun toolchain builder if reconfigure is not artificial
         if not args.reconfigure:
-            build_toolchain(args, execution_mode)
+            build_toolchain(args, arch)
 
     cmake_build(args, build_dir, cmake_args, reconfigure_cb=rebuild_toolchain)
 
 
-def make_hyper_config(execution_mode: str) -> str:
+def make_hyper_config(arch: str) -> str:
     return \
 f"""
-default-entry = ultra-{execution_mode}
+default-entry = ultra-{arch}
 
 [ultra-x86_64]
 protocol = ultra
@@ -150,18 +148,6 @@ page-table:
     constraint = maximum
 
 cmdline = "earlycon=e9"
-
-# We don't really need video for now
-video-mode = unset
-
-[ultra-i686]
-protocol = ultra
-higher-half-exclusive = true
-binary = "/kernel-i686"
-
-page-table:
-    levels = 3
-    constraint = exactly
 
 # We don't really need video for now
 video-mode = unset
@@ -187,11 +173,11 @@ def get_kernel_path(execution_node: str, build_dir: str) -> str:
 
 
 def make_hyper_image(
-    br_type: str, fs_type: str, execution_mode: str, build_dir: str,
+    br_type: str, fs_type: str, arch: str, build_dir: str,
     hyper_installer: Optional[str], hyper_iso_br: Optional[str],
     hyper_uefi_binaries: List[str], image_path: str, force_regenerate: bool
 ) -> Optional[ultr.DiskImage]:
-    kernel_path = get_kernel_path(execution_mode, build_dir)
+    kernel_path = get_kernel_path(arch, build_dir)
     image_root_path = os.path.join(build_dir, "image-root")
 
     try:
@@ -208,7 +194,7 @@ def make_hyper_image(
 
     return ultr.DiskImage(
         image_root_path, br_type, fs_type,
-        hyper_config=make_hyper_config(execution_mode),
+        hyper_config=make_hyper_config(arch),
         hyper_uefi_binary_paths=hyper_uefi_binaries,
         hyper_iso_br_path=hyper_iso_br,
         hyper_installer_path=hyper_installer,
@@ -282,28 +268,24 @@ def hyper_get_iso_br() -> str:
 
 
 def run_qemu(
-    arch: str, execution_mode: str, image_path: str, image_type: str,
-    debug: bool, uefi_boot: bool, uefi_firmware: str, kvm: bool, dry: bool
+    arch: str, image_path: str, image_type: str, debug: bool, uefi_boot: bool,
+    uefi_firmware: str, kvm: bool, dry: bool
 ) -> Optional[subprocess.Popen]:
     extra_args = []
     force_uefi = False
 
-    if arch == "arm":
+    if arch == "aarch64":
         extra_args.extend([
             "-M", "virt", "-cpu", "max",
             "-serial", "stdio"
         ])
-        qemu_postfix = execution_mode
         force_uefi = True
-    else:
-        if execution_mode == "x86_64" or uefi_boot:
-            qemu_postfix = "x86_64"
-        else:
-            qemu_postfix = "i386"
-
+    elif arch == "x86_64":
         extra_args.extend([
             "-M", "q35", "-debugcon", "stdio"
         ])
+    else:
+        raise RuntimeError(f"Unknown/unsupported architecture '{arch}'")
 
     disk_arg = "-cdrom" if image_type == "iso" else "-hda"
 
@@ -314,14 +296,14 @@ def run_qemu(
         extra_args.append("--enable-kvm")
 
     args = [
-        f"qemu-system-{qemu_postfix}",
+        f"qemu-system-{arch}",
         disk_arg, image_path, "-m", "1G",
         *extra_args
     ]
 
     if uefi_boot:
         if uefi_firmware is None:
-            uefi_firmware = uefi.get_path_to_qemu_uefi_firmware(qemu_postfix)
+            uefi_firmware = uefi.get_path_to_qemu_uefi_firmware(arch)
 
         if uefi_firmware is not None:
             drive_opts = f"file={uefi_firmware}"
@@ -329,7 +311,7 @@ def run_qemu(
             args.extend(["-drive", drive_opts])
         elif force_uefi:
             raise RuntimeError(
-                f"Unable to boot {arch}/{execution_mode} without UEFI firmware"
+                f"Unable to boot {arch} without UEFI firmware"
             )
 
     if dry:
@@ -361,9 +343,8 @@ def main() -> None:
     parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
     ta.add_base_args(parser)
     parser.add_argument("--arch", default="x86_64",
-                        choices=["x86_64", "i686", "aarch64", "aarch32"],
-                        help="architecture (execution mode) to "
-                             "build the kernel for")
+                        choices=["x86_64", "aarch64"],
+                        help="CPU architecture to build the kernel for")
     parser.add_argument("--skip-generic-dependencies", action="store_true",
                         help="don't attempt to fetch the generic dependencies")
     parser.add_argument("--make-image",
@@ -410,19 +391,10 @@ def main() -> None:
     if args.unit_tests:
         sys.exit(run_unit_tests(args, this_os.lower()))
 
-    execution_mode = args.arch
-    arch = "x86"
-
-    if execution_mode == "i686" or execution_mode == "x86_64":
-        arch = "x86"
-    elif execution_mode == "aarch32" or execution_mode == "aarch64":
-        arch = "arm"
-        args.uefi = True
-
-    build_dir = get_build_dir(execution_mode, args.toolchain)
+    build_dir = get_build_dir(args.arch, args.toolchain)
 
     if not args.no_build:
-        build_ultra(args, arch, execution_mode, build_dir)
+        build_ultra(args, args.arch, build_dir)
 
     is_debug = args.debug or args.ide_debug
     should_run = args.run or args.kvm or is_debug
@@ -463,11 +435,12 @@ def main() -> None:
                          args.make_image)
 
     if should_run:
+        if args.arch == "aarch64":
+            args.uefi = True
         uefi_boot = hyper_uefi_binary_paths and args.uefi
 
-        qp = run_qemu(arch, execution_mode, image_path, args.image_type,
-                      is_debug, uefi_boot, args.uefi_firmware_path, args.kvm,
-                      args.dry)
+        qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
+                      uefi_boot, args.uefi_firmware_path, args.kvm, args.dry)
 
     if args.debug:
         assert qp

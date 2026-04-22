@@ -1,0 +1,57 @@
+ENTRY(arm_entry)
+
+#define VIRTUAL_BASE    0xFFFFFFFF80000000
+#define PHYSICAL_OFFSET 0
+
+#include <linker_common.ld.h>
+
+// NOTE: These flags are currently not enforced by anyone
+PHDRS
+{
+    text   PT_LOAD FLAGS(PHDR_READ | PHDR_EXEC);
+    rodata PT_LOAD FLAGS(PHDR_READ);
+    data   PT_LOAD FLAGS(PHDR_READ | PHDR_WRITE);
+}
+
+SECTIONS
+{
+    . = VIRTUAL_BASE + PHYSICAL_OFFSET;
+
+    NORELOCS_GUARD
+
+    TEXT_OUTPUT
+
+    . = ALIGN(4K);
+
+    RODATA_OUTPUT
+
+    EH_FRAME_OUTPUT
+    EH_FRAME_HDR_OUTPUT
+
+    . = ALIGN(4K);
+
+    DATA_OUTPUT
+    BSS_OUTPUT
+
+    SECTION_DEBUG
+    SECTION_TABS
+
+    . = ALIGN(8);
+
+    /*
+     * We don't use these for now but keep them anyway,
+     * otherwise linker complains.
+     */
+	.ARM.exidx : {
+		*(.ARM.exidx*)
+	}
+    .ARM.extab : {
+        *(.ARM.extab*)
+    }
+
+    ARM.attributes 0x000000000 : {
+        *(.ARM.attributes)
+    }
+
+    DISCARDS
+}
