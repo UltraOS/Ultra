@@ -386,9 +386,6 @@ error_t smbios_for_each(smbios_callback cb, void *user)
             );
             break;
         }
-        if (hdr->type == SMBIOS_STRUCTURE_TYPE_END_OF_TABLE &&
-            s_ctx.num_items < 0)
-            break;
 
         bytes_left -= hdr->size;
         ptr += hdr->size;
@@ -409,6 +406,10 @@ error_t smbios_for_each(smbios_callback cb, void *user)
                 break;
             }
         }
+
+        if (hdr->type == SMBIOS_STRUCTURE_TYPE_END_OF_TABLE &&
+            s_ctx.num_items < 0)
+            break;
 
         ret = cb(hdr, user);
         if (is_error(ret))
