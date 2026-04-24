@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 import argparse
 from typing import List, Dict, Any, Optional, Tuple
@@ -111,7 +112,7 @@ def find_calling_symbol(
             high = mid - 1
 
     if best_idx != -1:
-        sym = symbols[best_idx]
+        sym = symbols[best_idx].copy()
 
         if offset >= (sym['start'] + sym['size']):
             # Make sure it's clear that this is just a best guess if we're
@@ -186,7 +187,8 @@ def find_illegal_free_after_init_references(elf: ELFFile) -> int:
                 if offset_within:
                     addend_str = f"+{hex(offset_within)}"
 
-                t_str = f"{target_func['name']}(){addend_str}"
+                base_str = format_sym(target_func['name'], target_func['type'])
+                t_str = f"{base_str}{addend_str}"
 
             if reference_name.startswith('.text'):
                 hint_macro = "CODE_REFERENCES_INIT_DATA"
