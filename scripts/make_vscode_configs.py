@@ -11,6 +11,7 @@ if PROJECT_ROOT not in sys.path:
 
 try:
     import scripts.image_utils.path_guesser as pg
+    import scripts.kconfiglib.kconfiglib as kc
 except ImportError:
     print("Unable to import one of submodule libraries!")
     print("Please run 'git submodule update --init' to initialize submodules")
@@ -27,6 +28,7 @@ except ImportError:
 # launch.json. Instead, generate them automatically.
 
 VSCODE_FILE_VERSION = "2.0.0"
+VSCODE_BUILD_DIR = "build-vscode"
 
 COMPILERS = {
     "clang",
@@ -144,6 +146,27 @@ def main():
             "cmakeDebugType": "configure",
         }]
     )
+
+    settings_json = os.path.join(vscode_dir, "settings.json")
+    settings = {
+        "cmake.buildDirectory": f"${{workspaceFolder}}/{VSCODE_BUILD_DIR}",
+        "clangd.arguments": [
+            f"--compile-commands-dir=${{workspaceFolder}}/{VSCODE_BUILD_DIR}"
+        ],
+        "files.trimTrailingWhitespace": True,
+        "files.insertFinalNewline": True,
+        "editor.tabSize": 4,
+        "editor.insertSpaces": True,
+        "editor.detectIndentation": False,
+    }
+    with open(settings_json, "w") as f:
+        json.dump(settings, f, indent=4)
+
+    os.chdir(pg.project_root())
+    kconfig = kc.Kconfig()
+    vscode_build_dir = pg.project_root_relative(VSCODE_BUILD_DIR)
+    os.makedirs(vscode_build_dir, exist_ok=True)
+    kconfig.write_config(os.path.join(vscode_build_dir, ".config"))
 
 
 if __name__ == "__main__":
