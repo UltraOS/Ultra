@@ -407,14 +407,27 @@ error_t smbios_for_each(smbios_callback cb, void *user)
             }
         }
 
-        if (hdr->type == SMBIOS_STRUCTURE_TYPE_END_OF_TABLE &&
-            s_ctx.num_items < 0)
-            break;
+        if (hdr->type == SMBIOS_STRUCTURE_TYPE_END_OF_TABLE) {
+            if (s_ctx.num_items < 0)
+                break;
+
+            /*
+             * This is an END_OF_TABLE entry but we're not going to stop our
+             * iteration here, since we do know the expected number of items.
+             * It is probably the last item, but there exists firmware with
+             * bogus END_OF_TABLE markers in the middle of the stream. Let
+             * the top of this iteration loop take care of stopping, and
+             * simply move on to the next item. Don't show it to the iteration
+             * callback though, because it's not useful.
+             */
+            goto next_item;
+        }
 
         ret = cb(hdr, user);
         if (is_error(ret))
             return ret;
 
+    next_item:
         item_idx++;
     }
 
