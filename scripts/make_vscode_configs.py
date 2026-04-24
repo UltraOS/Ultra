@@ -2,7 +2,7 @@
 import os
 import sys
 import json
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 # Make sure it's possible to run the script both directly and as a module
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -97,9 +97,10 @@ def make_launch_command(compiler: str, arch: str) -> dict:
 
 
 def make_vscode_template(
-    arr_key: str, out_file: str, gen_fns: List[Callable]
+    arr_key: str, out_file: str, gen_fns: List[Callable],
+    predefined_objects: Optional[List[dict]] = None
 ) -> None:
-    objects_list: List[str] = []
+    objects_list: List[dict] = predefined_objects or []
 
     objects = {
         "version": VSCODE_FILE_VERSION,
@@ -132,7 +133,17 @@ def main():
                          [make_rebuild_task, make_debug_task])
 
     launch_json = os.path.join(vscode_dir, "launch.json")
-    make_vscode_template("configurations", launch_json, [make_launch_command])
+    make_vscode_template(
+        "configurations", launch_json, [make_launch_command],
+
+        # Throw a CMakeLists debugging option in there as well
+        [{
+            "name": "Debug CMake",
+            "type": "cmake",
+            "request": "launch",
+            "cmakeDebugType": "configure",
+        }]
+    )
 
 
 if __name__ == "__main__":
