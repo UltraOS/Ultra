@@ -51,19 +51,18 @@
                                              \
     switch (sizeof(var)) {                   \
     case 1:                                  \
-        ret = this_cpu_##op##_8(var, x);     \
+        this_cpu_##op##_8(var, x);           \
         break;                               \
     case 2:                                  \
-        ret = this_cpu_##op##_16(var, x);    \
+        this_cpu_##op##_16(var, x);          \
         break;                               \
     case 4:                                  \
-        ret = this_cpu_##op##_32(var, x);    \
+        this_cpu_##op##_32(var, x);          \
         break;                               \
     case 8:                                  \
-        ret = this_cpu_##op##_64(var, x);    \
+        this_cpu_##op##_64(var, x);          \
         break;                               \
     }                                        \
-    ret;                                     \
 })
 
 #define this_cpu_read(var) DISPATCH_CPU_READ_OP(var, read)
