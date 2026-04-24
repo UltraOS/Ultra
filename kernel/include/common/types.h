@@ -12,12 +12,14 @@ typedef int8_t i8;
 typedef int16_t i16;
 typedef int i32;
 typedef signed long long i64;
+typedef signed __int128 i128;
 
 // unsigned types
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef unsigned int u32;
 typedef unsigned long long u64;
+typedef unsigned __int128 u128;
 
 typedef size_t ptr_t;
 typedef size_t reg_t;
