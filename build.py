@@ -36,7 +36,6 @@ GENERIC_DEPS = {
         "qemu-system-arm",
         "cmake",
         "mtools",
-        "python3",
         "python3-pyelftools",
         "python3-tk",
     ],
@@ -47,7 +46,6 @@ GENERIC_DEPS = {
         "qemu-system-arm",
         "cmake",
         "mtools",
-        "python",
         "python-pyelftools",
         "tk",
     ],
@@ -57,7 +55,6 @@ GENERIC_DEPS = {
         "qemu",
         "cmake",
         "mtools",
-        "python3",
         "python-tk",
     ],
 }
