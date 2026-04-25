@@ -17,7 +17,7 @@ function(ultra_symbol_file)
     add_custom_command(
         OUTPUT ${ARG_OUTPUT_PATH}
         COMMAND
-        python3 ${ULTRA_SCRIPTS_DIR}/generate_symbol_tables.py
+        Python3::Interpreter ${ULTRA_SCRIPTS_DIR}/generate_symbol_tables.py
         ${ARG_OUTPUT_PATH} ${BINARY_FLAGS}
         ${DEPENDENCY_FLAGS}
         COMMAND_EXPAND_LISTS
