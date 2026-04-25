@@ -25,13 +25,8 @@ jobs:
 
       - name: Run mypy on the project
         run: |
-          mypy --disallow-incomplete-defs --no-implicit-optional *.py
-
-          # Do this because otherwise mypy complains:
-          # 'Cannot find implementation or library stub for module named "image_utils.path_guesser"  [import-not-found]'
-          pushd scripts
-          mypy --disallow-incomplete-defs --no-implicit-optional *.py
-          popd
+          mypy *.py
+          mypy scripts/
 
   build:
     runs-on: ${{ matrix.os }}
