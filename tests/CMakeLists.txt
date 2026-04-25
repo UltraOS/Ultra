@@ -149,7 +149,15 @@ set_property(
     run_tests
 )
 add_dependencies(run_tests external_files)
-target_compile_definitions(run_tests PUBLIC ULTRA_TEST)
+target_compile_definitions(
+    run_tests
+    PUBLIC
+    ULTRA_TEST
+    ULTRA_ARCH="Usermode"
+    ULTRA_ARCH_LITTLE_ENDIAN
+    ULTRA_ARCH_PHYS_ADDR_WIDTH=8
+    ULTRA_ARCH_WIDTH=8
+)
 
 set_property(TARGET run_tests PROPERTY C_STANDARD 23)
 set_property(TARGET run_tests PROPERTY CXX_STANDARD 20)
