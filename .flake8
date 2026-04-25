@@ -1,0 +1,3 @@
+[flake8]
+# E402 module level import not at top of file
+extend-ignore = E402

@@ -1,8 +1,20 @@
 #!/usr/bin/python3
 import os
+import sys
 import json
 from typing import List, Callable
-import image_utils.path_guesser as pg
+
+# Make sure it's possible to run the script both directly and as a module
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+try:
+    import scripts.image_utils.path_guesser as pg
+except ImportError:
+    print("Unable to import one of submodule libraries!")
+    print("Please run 'git submodule update --init' to initialize submodules")
+    sys.exit(1)
 
 # Automatically generate .vscode launch.json & tasks.json for kernel debugging
 # and building. This includes all architectures and toolchains.
