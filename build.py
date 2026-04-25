@@ -30,7 +30,6 @@ except ImportError:
 
 GENERIC_DEPS = {
     "apt": [
-        "nasm",
         "xorriso",
         "qemu-system-x86",
         "qemu-system-arm",
@@ -40,7 +39,6 @@ GENERIC_DEPS = {
         "python3-tk",
     ],
     "pacman": [
-        "nasm",
         "xorriso",
         "qemu-system-x86",
         "qemu-system-arm",
@@ -50,7 +48,6 @@ GENERIC_DEPS = {
         "tk",
     ],
     "brew": [
-        "nasm",
         "xorriso",
         "qemu",
         "cmake",
