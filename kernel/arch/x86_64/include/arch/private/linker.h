@@ -3,6 +3,7 @@
 #include <linker.h>
 
 #define IDT_THUNKS_SECTION idt_thunks
+#define HYPERVISORS_SECTION CONCAT(FREE_AFTER_INIT_SECTION, _hypervisors)
 
 /*
  * The real section must exist within .text because ld.lld produces a bogus
