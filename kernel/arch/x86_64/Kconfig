@@ -14,3 +14,5 @@ config ARCH_X86_64_BASE
     bool
     select ARCH_LITTLE_ENDIAN
     select ARCH_64BIT
+
+rsource "hypervisor/Kconfig"

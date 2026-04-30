@@ -72,3 +72,5 @@ ultra_link_options(
 if (ULTRA_TOOLCHAIN STREQUAL "gcc")
     ultra_link_libraries(${ULTRA_LIBGCC_PATH})
 endif()
+
+add_subdirectory(hypervisor)

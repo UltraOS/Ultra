@@ -7,6 +7,7 @@
 #include <arch/private/msr.h>
 #include <arch/private/smp.h>
 #include <arch/private/apic.h>
+#include <arch/private/hypervisor.h>
 
 #include <init_level.h>
 #include <per_cpu.h>
@@ -51,6 +52,8 @@ static error_t INIT_CODE x86_platform_init(void)
 {
     apic_detect();
     setup_smp_topology();
+
+    x86_detect_hypervisor();
 
     return EOK;
 }

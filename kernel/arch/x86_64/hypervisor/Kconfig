@@ -1,0 +1,2 @@
+config PARAVIRT
+    bool "Enable paravirtualization support"
