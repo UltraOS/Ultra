@@ -94,3 +94,8 @@
 #else
     #define HAS_BUILTIN(x) 0
 #endif
+
+#ifndef __has_include
+    #error This compiler does not support __has_include
+#endif
+#define HAS_INCLUDE(x) __has_include(x)
