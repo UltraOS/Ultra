@@ -12,30 +12,15 @@
 struct x86_cpu_info g_cpu_info;
 DEFINE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
-static inline char *set_cpu_name_part(char *name, struct cpuid_res *res)
-{
-    memcpy(name, &res->a, sizeof(res->a));
-    name += sizeof(res->a);
-    memcpy(name, &res->b, sizeof(res->b));
-    name += sizeof(res->b);
-    memcpy(name, &res->c, sizeof(res->c));
-    name += sizeof(res->c);
-    memcpy(name, &res->d, sizeof(res->d));
-    name += sizeof(res->d);
-
-    return name;
-}
 
 void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
 {
     struct cpuid_res res;
 
-    cpuid(0, &res);
-
-    info->max_cpuid = res.a;
-    memcpy(&info->vendor[0], &res.b, sizeof(res.b));
-    memcpy(&info->vendor[sizeof(res.b)], &res.d, sizeof(res.d));
-    memcpy(&info->vendor[sizeof(res.b) + sizeof(res.d)], &res.c, sizeof(res.c));
+    cpuid_inline(
+        0, &info->max_cpuid, &info->vendor[0], &info->vendor[8],
+        &info->vendor[4]
+    );
 
     if (info->max_cpuid >= 1) {
         cpuid(1, &res);
@@ -102,17 +87,16 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
         char *name = info->name;
         u8 i, j;
 
-        cpuid(0x8000'0002, &res);
-        name = set_cpu_name_part(name, &res);
-
-        cpuid(0x8000'0003, &res);
-        name = set_cpu_name_part(name, &res);
-
-        cpuid(0x8000'0004, &res);
-        set_cpu_name_part(name, &res);
-
-        info->name[sizeof(info->name) - 1] = '\0';
-        name = info->name;
+        cpuid_inline(
+            0x8000'0002, &name[0], &name[4], &name[8], &name[12]
+        );
+        cpuid_inline(
+            0x8000'0003, &name[16], &name[20], &name[24], &name[28]
+        );
+        cpuid_inline(
+            0x8000'0004, &name[32], &name[36], &name[40], &name[44]
+        );
+        name[sizeof(info->name) - 1] = '\0';
 
         while (isspace(*name))
             name++;
