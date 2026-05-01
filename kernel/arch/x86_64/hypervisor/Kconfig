@@ -1,2 +1,11 @@
-config PARAVIRT
+menuconfig PARAVIRT
     bool "Enable paravirtualization support"
+
+if PARAVIRT
+
+config KVM_GUEST
+    bool "Support for running as a KVM guest"
+    select PVCLOCK
+    default y
+
+endif
