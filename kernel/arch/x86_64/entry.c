@@ -38,7 +38,7 @@ static error_t INIT_CODE x86_early_init(void)
 
     pr_info(
         "Running on %s (%d:%d:%d)\n",
-        g_cpu_info.name, g_cpu_info.family, g_cpu_info.model,
+        g_cpu_info.name_string, g_cpu_info.family, g_cpu_info.model,
         g_cpu_info.stepping
     );
 

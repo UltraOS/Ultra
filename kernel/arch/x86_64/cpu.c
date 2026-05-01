@@ -12,15 +12,47 @@
 struct x86_cpu_info g_cpu_info;
 DEFINE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
+struct cpu_ident {
+    char vendor_string[13];
+    enum x86_cpu_vendor vendor;
+};
+
+static const struct cpu_ident INIT_RODATA s_supported_cpus[] = {
+    { "GenuineIntel", X86_VENDOR_INTEL },
+    { "AuthenticAMD", X86_VENDOR_AMD   },
+};
+
+static void INIT_CODE cpu_vendor_detect(struct x86_cpu_info *info)
+{
+    size_t i;
+    bool match;
+    const struct cpu_ident *this_id = s_supported_cpus;
+
+    info->vendor = X86_VENDOR_UNKNOWN;
+
+    for (i = 0; i < ARRAY_SIZE(s_supported_cpus); i++, this_id++) {
+        match = memcmp(
+            this_id->vendor_string, info->vendor_string,
+            sizeof(info->vendor_string)
+        ) == 0;
+
+        if (!match)
+            continue;
+
+        info->vendor = this_id->vendor;
+        break;
+    }
+}
 
 void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
 {
     struct cpuid_res res;
 
     cpuid_inline(
-        0, &info->max_cpuid, &info->vendor[0], &info->vendor[8],
-        &info->vendor[4]
+        0, &info->max_cpuid, &info->vendor_string[0], &info->vendor_string[8],
+        &info->vendor_string[4]
     );
+    cpu_vendor_detect(info);
 
     if (info->max_cpuid >= 1) {
         cpuid(1, &res);
@@ -84,7 +116,7 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
     }
 
     if (info->max_extended_cpuid >= 0x8000'0004) {
-        char *name = info->name;
+        char *name = info->name_string;
         u8 i, j;
 
         cpuid_inline(
@@ -96,18 +128,18 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
         cpuid_inline(
             0x8000'0004, &name[32], &name[36], &name[40], &name[44]
         );
-        name[sizeof(info->name) - 1] = '\0';
+        name[sizeof(info->name_string) - 1] = '\0';
 
         while (isspace(*name))
             name++;
 
         for (i = 0, j = 0; *name; i++, name++) {
-            info->name[i] = *name;
+            info->name_string[i] = *name;
 
             if (!isspace(*name))
                 j = i;
         }
-        info->name[j + 1] = '\0';
+        info->name_string[j + 1] = '\0';
     }
 
     if (info->max_extended_cpuid >= 0x8000'0007) {

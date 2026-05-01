@@ -295,18 +295,26 @@ enum x86_feature {
     X86_FEATURE_BRS = X86_FEATURE_DWORD_BIT(8000_0008_B, 31),
 };
 
+enum x86_cpu_vendor : u8 {
+    X86_VENDOR_UNKNOWN,
+    X86_VENDOR_INTEL,
+    X86_VENDOR_AMD,
+};
+
 struct x86_cpu_info {
     u32 max_cpuid;
     u32 max_extended_cpuid;
+
     u8 family;
     u8 model;
     u8 stepping;
+    enum x86_cpu_vendor vendor;
 
     u8 phys_bits;
     u8 virt_bits;
 
-    char vendor[13];
-    char name[48];
+    char vendor_string[13];
+    char name_string[48];
 
     union {
         u32 feature_dwords[X86_FEATURE_DWORD_COUNT];
