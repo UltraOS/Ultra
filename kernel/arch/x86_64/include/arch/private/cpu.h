@@ -337,7 +337,12 @@ struct cpuid_res {
     u32 d;
 };
 void cpuid(u32 function, struct cpuid_res *id);
+void cpuid_inline(u32 function, void *a, void *b, void *c, void *d);
+
 void cpuid_subleaf(u32 function, u32 subleaf, struct cpuid_res *id);
+void cpuid_inline_subleaf(
+    u32 function, u32 subleaf, void *a, void *b, void *c, void *d
+);
 
 void cpu_info_setup(struct x86_cpu_info *info);
 
