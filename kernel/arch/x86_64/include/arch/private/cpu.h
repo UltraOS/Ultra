@@ -340,3 +340,25 @@ void cpuid(u32 function, struct cpuid_res *id);
 void cpuid_subleaf(u32 function, u32 subleaf, struct cpuid_res *id);
 
 void cpu_info_setup(struct x86_cpu_info *info);
+
+static ALWAYS_INLINE u64 rdtsc_unordered(void)
+{
+    u64 low, high;
+
+    asm volatile("rdtsc" : "=a" (low), "=d" (high));
+
+    return (high << 32) | low;
+}
+
+static ALWAYS_INLINE u64 rdtsc(void)
+{
+    u64 low, high;
+
+    if (this_cpu_has(X86_FEATURE_RDTSCP)) {
+        asm volatile("rdtscp" : "=a" (low), "=d" (high) :: "ecx");
+    } else {
+        asm volatile("lfence; rdtsc" : "=a" (low), "=d" (high));
+    }
+
+    return (high << 32) | low;
+}
