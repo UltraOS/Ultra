@@ -159,11 +159,27 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
     }
 }
 
+void cpuid_inline_subleaf(
+    u32 function, u32 subleaf, void *a, void *b, void *c, void *d
+)
+{
+    u32 *a_dw = a, *b_dw = b, *c_dw = c, *d_dw = d;
+
+    asm volatile("cpuid"
+            : "=a"(*a_dw), "=b"(*b_dw), "=c"(*c_dw), "=d"(*d_dw)
+            : "a"(function), "c"(subleaf));
+}
+
+void cpuid_inline(u32 function, void *a, void *b, void *c, void *d)
+{
+    cpuid_inline_subleaf(function, 0, a, b, c, d);
+}
+
 void cpuid_subleaf(u32 function, u32 subleaf, struct cpuid_res *id)
 {
-    asm volatile("cpuid"
-            : "=a"(id->a), "=b"(id->b), "=c"(id->c), "=d"(id->d)
-            : "a"(function), "c"(subleaf));
+    cpuid_inline_subleaf(
+        function, subleaf, &id->a, &id->b, &id->c, &id->d
+    );
 }
 
 void cpuid(u32 function, struct cpuid_res *id)
