@@ -3,3 +3,4 @@ ultra_sources(
 )
 
 add_subdirectory(acpi)
+add_subdirectory(time)

@@ -48,3 +48,4 @@ config VERBOSE_INIT_LEVELS
 endmenu
 
 rsource "arch/Kconfig"
+rsource "drivers/Kconfig"
