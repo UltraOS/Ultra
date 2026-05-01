@@ -327,6 +327,9 @@ DECLARE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
  */
 #define all_cpus_have(feature) bit_test(g_cpu_info.feature_bit_array, (feature))
 
+#define this_cpu_has(feature) \
+    bit_test(this_cpu_ptr(&g_this_cpu_info)->feature_bit_array, (feature))
+
 struct cpuid_res {
     u32 a;
     u32 b;
