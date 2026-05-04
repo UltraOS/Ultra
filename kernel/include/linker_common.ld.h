@@ -17,6 +17,13 @@
     SPECIAL_SECTION(name)           \
     SECTION_MARKER_END(name) = .;
 
+#define ALIGNED_MARKED_SECTION(name, align) \
+    . = ALIGN(align);                       \
+    MARKED_SECTION(name)                    \
+
+#define NATURALLY_ALIGNED_MARKED_SECTION(name) \
+    ALIGNED_MARKED_SECTION(name, ULTRA_ARCH_WIDTH)
+
 #define FREE_AFTER_INIT_BEGIN(section) \
     . = ALIGN(PAGE_SIZE); \
     SECTION_MARKER_BEGIN(section) = .;
