@@ -1,15 +1,10 @@
 #pragma once
 
 #include <arch/private/asm_registers.h>
+#include <unwind_hints.h>
 
-#define UNWIND_HINT_START_OF_FUNCTION .cfi_startproc
-#define UNWIND_HINT_END_OF_FUNCTION .cfi_endproc
-#define UNWIND_HINT_ADJUST_CFA(x) .cfi_adjust_cfa_offset x
 #define UNWIND_HINT_AFTER_PUSH UNWIND_HINT_ADJUST_CFA(ULTRA_ARCH_WIDTH)
 #define UNWIND_HINT_AFTER_POP UNWIND_HINT_ADJUST_CFA(-ULTRA_ARCH_WIDTH)
-#define UNWIND_HINT_REG_OFFSET(reg, offset) .cfi_rel_offset reg, offset
-#define UNWIND_HINT_REG_RESTORED(reg) .cfi_restore reg
-#define UNWIND_HINT_UNDEFINED(reg) .cfi_undefined reg
 
 .macro UNWIND_HINT_INTERRUPT_FRAME extra_offset=0
     UNWIND_HINT_START_OF_FUNCTION
