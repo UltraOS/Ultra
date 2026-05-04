@@ -696,6 +696,12 @@ static error_t apply_reg_rules(
     return EOK;
 }
 
+error_t WEAK arch_try_recover_previous_frame(struct unwind_state *state)
+{
+    UNREFERENCED_PARAMETER(state);
+    return ENOSYS;
+}
+
 error_t unwind_next_frame(struct unwind_state *state)
 {
     error_t ret;
@@ -705,6 +711,19 @@ error_t unwind_next_frame(struct unwind_state *state)
 
     if (unlikely(state->end))
         return EINVAL;
+
+    /*
+     * The frame we have unwound to is not part of kernel code. The most likely
+     * reason is it's an attempt to call a NULL or otherwise corrupted function
+     * pointer. In that case the stack is completely intact and thus we can
+     * fully recover the frame that performed the call to get the rest of the
+     * traceback.
+     */
+    if (!address_is_kernel_code(get_reliable_pc(state))) {
+        ret = arch_try_recover_previous_frame(state);
+        if (is_error(ret))
+            goto out_error;
+    }
 
     ret = prepare_unwind_state(state);
     if (is_error(ret))
