@@ -6,6 +6,7 @@ ultra_sources(
     x2apic.c
     ioapic.c
     entry.c
+    entry.S
     io.c
     cpu.c
     smp.c

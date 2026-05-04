@@ -7,6 +7,7 @@ endif()
 
 ultra_sources(
     entry.c
+    entry.S
     io.c
     unwind.c
     unwind.S
