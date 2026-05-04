@@ -404,7 +404,7 @@ def main() -> None:
                              "--config is specified)")
     parser.add_argument("--skip-generic-dependencies", action="store_true",
                         help="don't attempt to fetch the generic dependencies")
-    parser.add_argument("--make-image",
+    parser.add_argument("--make-image", action="store_true",
                         help="Produce a bootable image after building")
     parser.add_argument("--image-type", choices=["iso", "raw"], default="iso",
                         help="Image type to produce (with --make-image)")
