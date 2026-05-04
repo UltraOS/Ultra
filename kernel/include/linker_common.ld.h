@@ -63,12 +63,11 @@
 #define INITCALLS                  \
     MARKED_SECTION(initcall_normal)
 
-#define RODATA                               \
-    *(.rodata .rodata.*)                     \
-    *(.INIT_DATA_REFERENCE_RODATA_SECTION)   \
-    . = ALIGN(ULTRA_ARCH_WIDTH);             \
-    MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
-    MARKED_SECTION(PARAMETERS_SECTION)       \
+#define RODATA                                                 \
+    *(.rodata .rodata.*)                                       \
+    *(.INIT_DATA_REFERENCE_RODATA_SECTION)                     \
+    NATURALLY_ALIGNED_MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
+    NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)       \
     INITCALLS
 
 #define RODATA_FREE_AFTER_INIT_BEGIN \
@@ -80,15 +79,14 @@
 #define RODATA_FREE_AFTER_INIT \
     *(.FREE_AFTER_INIT_RODATA_SECTION) \
 
-#define RODATA_OUTPUT                                   \
-    .rodata : VIRTUAL_BASE_RELATIVE(.rodata)            \
-    {                                                   \
-        RODATA                                          \
-        . = ALIGN(ULTRA_ARCH_WIDTH);                    \
-        MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)  \
-        RODATA_FREE_AFTER_INIT_BEGIN                    \
-        RODATA_FREE_AFTER_INIT                          \
-        RODATA_FREE_AFTER_INIT_END                      \
+#define RODATA_OUTPUT                                                     \
+    .rodata : VIRTUAL_BASE_RELATIVE(.rodata)                              \
+    {                                                                     \
+        RODATA                                                            \
+        NATURALLY_ALIGNED_MARKED_SECTION(ABORTABLE_INSTRUCTIONS_SECTION)  \
+        RODATA_FREE_AFTER_INIT_BEGIN                                      \
+        RODATA_FREE_AFTER_INIT                                            \
+        RODATA_FREE_AFTER_INIT_END                                        \
     } :rodata =0xDEADBEEF
 
 #define EH_FRAME_HDR                       \
