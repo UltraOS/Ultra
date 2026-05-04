@@ -12,6 +12,7 @@
 #include <free_after_init.h>
 #include <unsafe_access.h>
 
+#include <common/bit.h>
 #include <common/string.h>
 #include <common/attributes.h>
 
@@ -527,6 +528,7 @@ enum dw_cfa_opcode {
     DW_CFA_advance_loc1 = 0x02,
     DW_CFA_advance_loc2 = 0x03,
     DW_CFA_advance_loc4 = 0x04,
+    DW_CFA_undefined = 0x07,
     DW_CFA_same_value = 0x08,
     DW_CFA_def_cfa = 0x0C,
     DW_CFA_def_cfa_register = 0x0D,
@@ -620,6 +622,15 @@ static error_t dwarf_exec(
             continue;
         }
 
+        case DW_CFA_undefined:
+            ret = decode_value(data, DW_EH_PE_uleb128, &value);
+            if (is_error(ret))
+                return ret;
+
+            if (likely(value < ARCH_NUM_DWARF_REGISTERS))
+                rules[value].rule = DW_CFA_undefined;
+            continue;
+
         case DW_CFA_def_cfa:
         case DW_CFA_def_cfa_register:
             ret = decode_value(data, DW_EH_PE_uleb128, &value);
@@ -669,6 +680,11 @@ static error_t apply_reg_rules(
         switch (reg_rules[i].rule) {
         case DW_CFA_same_value:
             new_frame[i] = state->frame[i];
+            continue;
+        case DW_CFA_undefined:
+            if (i == ARCH_DWARF_PC_REG)
+                state->end = true;
+            new_frame[i] = UNSIGNED_MAX(reg_t);
             continue;
         case DW_CFA_offset:
             offset = state->frame[state->cfa_reg_idx] + state->cfa_offset;
@@ -723,6 +739,7 @@ error_t unwind_next_frame(struct unwind_state *state)
         ret = arch_try_recover_previous_frame(state);
         if (is_error(ret))
             goto out_error;
+        return ret;
     }
 
     ret = prepare_unwind_state(state);
@@ -751,7 +768,6 @@ error_t unwind_next_frame(struct unwind_state *state)
         goto out_error;
 
     memcpy(state->frame, new_frame, sizeof(state->frame));
-    state->end = unwind_get_return_address(state) == 0;
     return EOK;
 
 out_error:

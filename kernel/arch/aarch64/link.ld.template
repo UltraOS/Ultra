@@ -1,4 +1,4 @@
-ENTRY(arm_entry)
+ENTRY(arm_entry_asm)
 
 #define VIRTUAL_BASE    0xFFFFFFFF80000000
 #define PHYSICAL_OFFSET 0
