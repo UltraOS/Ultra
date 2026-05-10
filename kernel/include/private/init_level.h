@@ -18,6 +18,9 @@
     /* Boot allocator is available */ \
     INIT_LEVEL(BOOT_ALLOC_AVAILABLE) \
     ARCH_INIT_LEVELS_AFTER_BOOT_ALLOC_AVAILABLE \
+    /* Kernel address space & direct memory map have been set up */ \
+    INIT_LEVEL(KERNEL_ADDRESS_SPACE_AVAILABLE) \
+    ARCH_INIT_LEVELS_AFTER_ADDRESS_SPACE_AVAILABLE \
     /*
      * Early ACPI, FDT & SMBIOS are available
      * Architecture-specific code is expected to properly set both
@@ -50,6 +53,10 @@
 
 #ifndef ARCH_INIT_LEVELS_AFTER_BOOT_ALLOC_AVAILABLE
 #define ARCH_INIT_LEVELS_AFTER_BOOT_ALLOC_AVAILABLE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_ADDRESS_SPACE_AVAILABLE
+#define ARCH_INIT_LEVELS_AFTER_ADDRESS_SPACE_AVAILABLE
 #endif
 
 #ifndef ARCH_INIT_LEVELS_AFTER_PLATFORM_INFO_AVAILABLE
