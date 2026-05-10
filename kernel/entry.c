@@ -20,6 +20,7 @@
 #include <private/param.h>
 #include <private/per_cpu.h>
 #include <private/smbios.h>
+#include <private/memory.h>
 
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
@@ -134,6 +135,9 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     boot_alloc_init();
     init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
+
+    kernel_address_space_setup();
+    init_level_raise(INIT_LEVEL_KERNEL_ADDRESS_SPACE_AVAILABLE);
 
     smbios_setup();
     acpi_setup_tables();
