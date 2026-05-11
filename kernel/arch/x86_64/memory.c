@@ -3,17 +3,21 @@
 #include <arch/private/msr.h>
 
 #include <common/bit.h>
-#include <memory/page_table.h>
 #include <boot/boot.h>
+
+#include <memory/page_table.h>
+#include <memory/address_space.h>
 
 #include <free_after_init.h>
 #include <init_level.h>
+
+bool g_have_gb_pages = false;
 
 bool g_la57 = false;
 u64 g_pt5_shift = PT4_SHIFT;
 u64 g_pt4_num_entries = 1;
 
-ptr_t g_supported_pt_bits = UNSIGNED_MAX(ptr_t);
+static ptr_t s_supported_pt_bits = UNSIGNED_MAX(ptr_t);
 
 static error_t INIT_CODE x86_early_paging_init(void)
 {
@@ -39,7 +43,7 @@ static error_t INIT_CODE x86_early_paging_init(void)
     if (all_cpus_have(X86_FEATURE_PGE)) {
         cr4_features |= X86_CR4_PGE;
     } else {
-        g_supported_pt_bits &= ~X86_PT_GLOBAL;
+        s_supported_pt_bits &= ~X86_PT_GLOBAL;
     }
     cr4_feature_enable(cr4_features);
 
@@ -48,35 +52,39 @@ static error_t INIT_CODE x86_early_paging_init(void)
     if (all_cpus_have(X86_FEATURE_NX))
         efer_feature_enable(IA32_EFER_NX);
     else
-        g_supported_pt_bits &= ~X86_PT_NX;
+        s_supported_pt_bits &= ~X86_PT_NX;
 
     return EOK;
 }
 INIT_CALL_POST(BOOT_INFO_AVAILABLE, x86_early_paging_init);
 
-struct pt_prot pt_prot_from_vm_prot(enum vm_prot vm_prot)
+pt_prot pt_prot_from_vm_prot(enum vm_prot vm_prot)
 {
-    struct pt_prot pt_prot = { 0 };
+    pt_prot prot = { 0 };
 
     if (vm_prot == VM_PROT_NONE)
-        return pt_prot;
+        return prot;
 
-    if (vm_prot & VM_PROT_READ)
-        pt_prot.value |= X86_PT_PRESENT;
+    if (vm_prot & (VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXEC))
+        prot.value |= X86_PT_PRESENT;
 
     if (vm_prot & VM_PROT_WRITE)
-        pt_prot.value |= X86_PT_WRITE;
+        prot.value |= X86_PT_WRITE;
 
     if (!(vm_prot & VM_PROT_EXEC))
-        pt_prot.value |= X86_PT_NX;
+        prot.value |= X86_PT_NX;
 
-    if (!(vm_prot & VM_PROT_KERNEL))
-        pt_prot.value |= X86_PT_USER;
-    else
-        pt_prot.value |= X86_PT_GLOBAL;
+    if (vm_prot & VM_PROT_KERNEL) {
+        prot.value |= X86_PT_GLOBAL | X86_PT_ACCESSED;
 
-    pt_prot.value &= g_supported_pt_bits;
-    return pt_prot;
+        if (vm_prot & VM_PROT_WRITE)
+            prot.value |= X86_PT_DIRTY;
+    } else {
+        prot.value |= X86_PT_USER;
+    }
+
+    prot.value &= s_supported_pt_bits;
+    return prot;
 }
 
 struct pt4 *pt4_from_pt5(struct pt5 *pt5, virt_addr_t addr)

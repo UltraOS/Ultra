@@ -1,7 +1,7 @@
 #pragma once
 
-#include <arch/page_table.h>
+#include <memory/page_table.h>
 
 struct address_space {
-    struct pt5 *pt;
+    pt_root *pt;
 };
