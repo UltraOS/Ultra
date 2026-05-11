@@ -187,3 +187,16 @@
     EXPECT_EMPTY_RELOC(.plt, *(.plt) *(.plt.*) *(.iplt))  \
     EXPECT_EMPTY_RELOC(.rel, *(.rel.*) *(.rel_*))         \
     EXPECT_EMPTY_RELOC(.rela, *(.rela.*) *(.rela_*) )
+
+#define DATA_MARKER(name) \
+    . = ALIGN(PAGE_SIZE); \
+    LINKER_SYMBOL(name) = .;
+
+#define EXECUTABLE_DATA_BEGIN DATA_MARKER(executable_data_begin)
+#define EXECUTABLE_DATA_END DATA_MARKER(executable_data_end)
+
+#define READONLY_DATA_BEGIN DATA_MARKER(readonly_data_begin)
+#define READONLY_DATA_END DATA_MARKER(readonly_data_end)
+
+#define READWRITE_DATA_BEGIN DATA_MARKER(readwrite_data_begin)
+#define READWRITE_DATA_END DATA_MARKER(readwrite_data_end)
