@@ -1,5 +1,6 @@
 #include <arch/private/cpu.h>
 #include <arch/private/msr.h>
+#include <arch/private/cr.h>
 
 #include <common/string.h>
 #include <common/ctype.h>
@@ -8,6 +9,9 @@
 #include <free_after_init.h>
 #include <panic.h>
 #include <per_cpu.h>
+
+static u64 s_efer;
+static reg_t s_cr4;
 
 struct x86_cpu_info g_cpu_info;
 DEFINE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
@@ -172,6 +176,13 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
                 MO_ACQ_REL
             );
         }
+    } else {
+        /*
+         * We're configuring the initial BSP CPU info.
+         * Prefill our global control register state as well.
+         */
+        s_efer = rdmsr_or_die(MSR_IA32_EFER);
+        asm volatile ("mov %%cr4, %0" : "=r"(s_cr4));
     }
 }
 
@@ -227,4 +238,69 @@ void wrmsr_or_die(u32 msr, u64 value)
     ret = wrmsr(msr, value);
     if (is_error(ret))
         die_on_msr_access_failure("write to", msr);
+}
+
+static ALWAYS_INLINE void INIT_CODE cr0_write(reg_t val)
+{
+    asm volatile("mov %0, %%cr0" :: "r" (val) : "memory");
+}
+
+void INIT_CODE cr0_setup(void)
+{
+    /*
+     * Don't keep whatever was in there, just write a known good state that
+     * we expect. Basically completely standard for x86_64 + enabled
+     * write-protection for kernel mode.
+     */
+    cr0_write(
+        X86_CR0_PE | X86_CR0_MP | X86_CR0_ET |
+        X86_CR0_NE | X86_CR0_WP | X86_CR0_AM |
+        X86_CR0_PG
+    );
+}
+
+static void INIT_CODE panic_on_locked_modification_attempt(
+    const char *what, u64 current, u64 desired
+)
+{
+    panic(
+        "Attempted to modify locked %s (from 0x%016llX to 0x%016llX)!",
+        what, current, desired
+    );
+}
+
+void INIT_CODE efer_feature_enable(u64 mask)
+{
+    // EFER must be fully preconfigured before SMP
+    if (unlikely(g_num_online_cpus > 1))
+        panic_on_locked_modification_attempt("EFER", s_efer, s_efer | mask);
+
+    if ((s_efer & mask) == mask)
+        return;
+
+    s_efer |= mask;
+    wrmsr_or_die(MSR_IA32_EFER, s_efer);
+}
+
+static ALWAYS_INLINE void INIT_CODE cr4_write(reg_t val)
+{
+    asm volatile("mov %0, %%cr4" :: "r" (val) : "memory");
+}
+
+void INIT_CODE cr4_feature_enable(reg_t mask)
+{
+    // CR4 must be fully preconfigured before SMP
+    if (unlikely(g_num_online_cpus > 1))
+        panic_on_locked_modification_attempt("CR4", s_cr4, s_cr4 | mask);
+
+    if ((s_cr4 & mask) == mask)
+        return;
+
+    s_cr4 |= mask;
+    cr4_write(s_cr4);
+}
+
+void cr3_write(reg_t value)
+{
+    asm volatile("mov %0, %%cr3" :: "r" (value) : "memory");
 }
