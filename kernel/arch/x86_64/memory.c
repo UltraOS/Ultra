@@ -58,6 +58,13 @@ static error_t INIT_CODE x86_early_paging_init(void)
 }
 INIT_CALL_POST(BOOT_INFO_AVAILABLE, x86_early_paging_init);
 
+static error_t INIT_CODE x86_load_kernel_pt(void)
+{
+    cr3_write(virt_to_phys(g_kernel_address_space.pt));
+    return EOK;
+}
+INIT_CALL_POST(KERNEL_ADDRESS_SPACE_AVAILABLE, x86_load_kernel_pt);
+
 pt_prot pt_prot_from_vm_prot(enum vm_prot vm_prot)
 {
     pt_prot prot = { 0 };
