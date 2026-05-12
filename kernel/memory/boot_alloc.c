@@ -466,6 +466,18 @@ phys_addr_or_error_t INIT_CODE boot_alloc(size_t num_pages)
     return boot_alloc_nogrow(num_pages);
 }
 
+phys_addr_or_error_t INIT_CODE boot_alloc_zeroed(size_t num_pages)
+{
+    phys_addr_or_error_t ret;
+
+    ret = boot_alloc(num_pages);
+    if (error_phys_addr(ret))
+        return ret;
+
+    memzero(phys_to_virt(ret), num_pages << PAGE_SHIFT);
+    return ret;
+}
+
 phys_addr_or_error_t INIT_CODE boot_alloc_at(
     phys_addr_t address, size_t num_pages
 )
