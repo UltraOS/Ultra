@@ -31,7 +31,7 @@ static inline MAYBE_NERR(int) vscnprintf(
 
     would_have_been_written = vsnprintf(buffer, capacity, fmt, vlist);
 
-    if (is_error(would_have_been_written < 0))
+    if (is_nerror(would_have_been_written))
         return would_have_been_written;
     if ((size_t)would_have_been_written < capacity)
         return would_have_been_written;
@@ -46,6 +46,7 @@ static inline MAYBE_NERR(int) snprintf(
 {
     va_list list;
     int written;
+
     va_start(list, fmt);
     written = vsnprintf(buffer, capacity, fmt, list);
     va_end(list);
@@ -60,6 +61,7 @@ static inline MAYBE_NERR(int) scnprintf(
 {
     va_list list;
     int written;
+
     va_start(list, fmt);
     written = vscnprintf(buffer, capacity, fmt, list);
     va_end(list);
