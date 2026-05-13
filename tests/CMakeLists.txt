@@ -118,10 +118,6 @@ KERNEL_FILE(
     INCLUDE_PATH "common" INCLUDE_FILE "conversions.h"
 )
 KERNEL_FILE(
-    SOURCE_PATH "common" SOURCE FILE "format.c"
-    INCLUDE_PATH "common" INCLUDE_FILE "format.h"
-)
-KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "bit.c"
     INCLUDE_PATH "common" INCLUDE_FILE "bit.h"
 )
