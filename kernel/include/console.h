@@ -7,11 +7,10 @@ struct console {
     void (*write)(struct console *con, const char *str, size_t count);
     void *priv;
 
+    u64 log_seq_num;
     struct console *next;
 };
 extern struct console *g_consoles;
 
 error_t register_console(struct console *con);
 error_t unregister_console(struct console *con);
-
-void console_write(const char *str, size_t count);
