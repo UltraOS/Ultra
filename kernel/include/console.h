@@ -9,6 +9,7 @@ struct console {
 
     struct console *next;
 };
+extern struct console *g_consoles;
 
 error_t register_console(struct console *con);
 error_t unregister_console(struct console *con);
