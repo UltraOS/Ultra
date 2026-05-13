@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/helpers.h>
+#include <common/attributes.h>
 #include <linker.h>
 
 #define INIT_CODE SECTION(FREE_AFTER_INIT_TEXT_SECTION)
