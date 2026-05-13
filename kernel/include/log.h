@@ -19,6 +19,7 @@
 #define SYSLOG_NOTICE  5
 #define SYSLOG_INFO    6
 #define SYSLOG_DEBUG   7
+#define LOG_LEVEL_CONTINUED 8
 
 enum log_level {
     LOG_LEVEL_EMERG   = SYSLOG_EMERG,
@@ -45,6 +46,7 @@ enum log_level {
 #define LOG_NOTICE  LOG_LEVEL_PREFIX TO_STR(SYSLOG_NOTICE)
 #define LOG_INFO    LOG_LEVEL_PREFIX TO_STR(SYSLOG_INFO)
 #define LOG_DEBUG   LOG_LEVEL_PREFIX TO_STR(SYSLOG_DEBUG)
+#define LOG_CONT    LOG_LEVEL_PREFIX TO_STR(LOG_LEVEL_CONTINUED)
 
 void vprint(const char *msg, va_list vlist);
 
@@ -63,6 +65,7 @@ void print(const char *msg, ...);
 #define pr_notice(msg, ...)  print(LOG_NOTICE  MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_info(msg, ...)    print(LOG_INFO    MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_debug(msg, ...)   print(LOG_DEBUG   MSG_FMT(msg), ##__VA_ARGS__)
+#define pr_cont(msg, ...)    print(LOG_CONT    msg, ##__VA_ARGS__)
 
 // Defined in arch/registers.h
 struct registers;

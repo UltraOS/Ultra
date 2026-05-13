@@ -6,6 +6,11 @@
 #include <log.h>
 #include <symbols.h>
 #include <unwind.h>
+#include <log_ring.h>
+
+#include <arch/constants.h>
+
+MAKE_LOG_RING(s_log_ring, PAGE_SHIFT + 3, 6);
 
 static char s_hw_id[256] = "Unknown Hardware";
 
@@ -18,6 +23,27 @@ void log_set_hardware_identity_string(const char *fmt, ...)
     va_end(va);
 }
 
+static void print_flush(void)
+{
+    static char buf[512];
+    struct console *con;
+    struct log_record rec;
+    error_t ret;
+
+    for (con = g_consoles; con; con = con->next) {
+        for (;;) {
+            ret = log_ring_read(
+                &s_log_ring, con->log_seq_num, buf, sizeof(buf), &rec
+            );
+            if (ret != EOK)
+                break;
+
+            con->write(con, buf, rec.length);
+            con->log_seq_num = rec.seq_num + 1;
+        }
+    }
+}
+
 static size_t extract_msg_level(const char *msg, enum log_level *out_level)
 {
     u8 level;
@@ -28,7 +54,7 @@ static size_t extract_msg_level(const char *msg, enum log_level *out_level)
         return 1;
 
     level = msg[1] - '0';
-    if (likely(level < LOG_LEVEL_COUNT))
+    if (likely(level <= LOG_LEVEL_COUNT))
         *out_level = level;
 
     return 2;
@@ -36,20 +62,79 @@ static size_t extract_msg_level(const char *msg, enum log_level *out_level)
 
 void vprint(const char *msg, va_list vlist)
 {
-    static char log_buf[256];
-    enum log_level level = LOG_LEVEL_DEFAULT;
+    struct log_ring_reservation res;
     int chars;
+    char prefix_buf[4];
+    va_list vlist_copy;
+    error_t ret;
+    enum log_level level = LOG_LEVEL_DEFAULT;
+    size_t write_offset = 0, prefix_len = 0;
+    bool had_newline = false, is_extended = false;
 
     if (unlikely(!msg))
         return;
 
-    msg += extract_msg_level(msg, &level);
+    /*
+     * Format the entire log string, but only capture the prefix in order to
+     * figure out the requested log level (it may be specified as a format
+     * string itself). This is also how we find out the number of bytes to
+     * allocate from the log ring.
+     */
+    va_copy(vlist_copy, vlist);
+    chars = vsnprintf(prefix_buf, sizeof(prefix_buf), msg, vlist_copy) + 1;
+    va_end(vlist_copy);
 
-    chars = vscnprintf(log_buf, sizeof(log_buf), msg, vlist);
-    if (unlikely(chars < 0))
+    if (unlikely(chars <= 0))
         return;
 
-    console_write(log_buf, chars);
+    prefix_len = extract_msg_level(prefix_buf, &level);
+    chars -= prefix_len;
+
+    if (level == LOG_LEVEL_CONTINUED) {
+        size_t prev_length = 0;
+
+        ret = log_ring_reserve_extend(&s_log_ring, chars, &res, &prev_length);
+        if (ret == EOK) {
+            is_extended = true;
+            if (prev_length > 0)
+                write_offset = prev_length - 1;
+        } else {
+            /*
+             * Something raced against the initial print, so we can no longer
+             * extend it. Do a new one from scratch so it's not lost
+             * completely.
+             */
+            level = LOG_LEVEL_DEFAULT;
+        }
+    }
+
+    if (!is_extended) {
+        ret = log_ring_reserve(&s_log_ring, chars, level, &res);
+        if (is_error(ret))
+            return;
+    }
+
+    res.resident_length = write_offset + vsnprintf_skip_n(
+        res.reserved_data + write_offset, chars, msg, vlist, prefix_len
+    ) + 1;
+
+    if (res.resident_length >= 2 &&
+        res.reserved_data[res.resident_length - 2] == '\n') {
+        // Strip the vsnprintf null terminator
+        res.resident_length--;
+        had_newline = true;
+    } else if (res.resident_length >= 1) {
+        // Replace the null terminator with a newline if one was missing
+        res.reserved_data[res.resident_length - 1] = '\n';
+    }
+
+    if (!had_newline) {
+        log_ring_commit(&res);
+        return;
+    }
+
+    log_ring_publish(&res);
+    print_flush();
 }
 
 void print(const char *msg, ...)
@@ -71,7 +156,10 @@ static bool do_dump_frame(void *user, ptr_t addr, bool addr_after_call)
     ptr_t lookup_addr;
 
     lookup_addr = addr_after_call ? addr - 1 : addr;
-    print("    #%zu in %pSM\n", state->depth++, &lookup_addr);
+    print(
+        LOG_LEVEL_PREFIX"%c    #%zu in %pSM\n",
+        state->level, state->depth++, &lookup_addr
+    );
 
     return true;
 }
@@ -79,12 +167,11 @@ static bool do_dump_frame(void *user, ptr_t addr, bool addr_after_call)
 void dump_stack(enum log_level level, struct registers *regs)
 {
     struct dump_state state = {
-        // FIXME: support extracting the log level via %s
         .level = level,
         .depth = 0,
     };
 
-    print("Hardware: %s\n", s_hw_id);
-    print("Call trace (most recent call first):\n");
+    print(LOG_LEVEL_PREFIX"%cHardware: %s\n", level, s_hw_id);
+    print(LOG_LEVEL_PREFIX"%cCall trace (most recent call first):\n", level);
     unwind_walk(regs, do_dump_frame, &state);
 }

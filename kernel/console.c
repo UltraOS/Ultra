@@ -47,11 +47,3 @@ error_t unregister_console(struct console *con)
 
     return EINVAL;
 }
-
-void console_write(const char *str, size_t count)
-{
-    struct console *con;
-
-    for (con = g_consoles; con; con = con->next)
-        con->write(con, str, count);
-}
