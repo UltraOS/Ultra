@@ -11,9 +11,17 @@ struct nested_printf {
     va_list *vlist;
 };
 
-MAYBE_NERR(int) vsnprintf(
-    char *restrict buffer, size_t capacity, const char *fmt, va_list vlist
+MAYBE_NERR(int) vsnprintf_skip_n(
+    char *restrict buffer, size_t capacity, const char *fmt, va_list vlist,
+    size_t chars_to_skip
 );
+
+static inline MAYBE_NERR(int) vsnprintf(
+    char *restrict buffer, size_t capacity, const char *fmt, va_list vlist
+)
+{
+    return vsnprintf_skip_n(buffer, capacity, fmt, vlist, 0);
+}
 
 static inline MAYBE_NERR(int) vscnprintf(
     char *restrict buffer, size_t capacity, const char *fmt, va_list vlist

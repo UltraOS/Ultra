@@ -13,6 +13,7 @@ struct fmt_buf_state {
     char *buffer;
     size_t capacity;
     size_t bytes_written;
+    size_t chars_to_skip;
 };
 
 struct fmt_spec {
@@ -31,6 +32,11 @@ struct fmt_spec {
 
 static void write_one(struct fmt_buf_state *fb_state, char c)
 {
+    if (fb_state->chars_to_skip) {
+        fb_state->chars_to_skip--;
+        return;
+    }
+
     if (fb_state->bytes_written < fb_state->capacity)
         fb_state->buffer[fb_state->bytes_written] = c;
 
@@ -49,6 +55,17 @@ static void write_many(
     struct fmt_buf_state *fb_state, const char *string, size_t count
 )
 {
+    if (fb_state->chars_to_skip) {
+        if (fb_state->chars_to_skip >= count) {
+            fb_state->chars_to_skip -= count;
+            return;
+        }
+
+        string += fb_state->chars_to_skip;
+        count -= fb_state->chars_to_skip;
+        fb_state->chars_to_skip = 0;
+    }
+
     if (fb_state->bytes_written < fb_state->capacity) {
         size_t count_to_write;
 
@@ -474,9 +491,9 @@ static MAYBE_NERR(int) do_vsnprintf(
     return 0;
 }
 
-MAYBE_NERR(int) vsnprintf(
-    char *buffer, size_t capacity, const char *fmt_str,
-    va_list vlist
+MAYBE_NERR(int) vsnprintf_skip_n(
+    char *restrict buffer, size_t capacity, const char *fmt_str, va_list vlist,
+    size_t chars_to_skip
 )
 {
     struct fmt_buf_state fb_state = { 0 };
@@ -488,6 +505,7 @@ MAYBE_NERR(int) vsnprintf(
     fb_state.buffer = buffer;
     fb_state.capacity = capacity;
     fb_state.bytes_written = 0;
+    fb_state.chars_to_skip = chars_to_skip;
 
     ret = do_vsnprintf(&fb_state, fmt, vlist);
     if (is_nerror(ret))
