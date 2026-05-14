@@ -3,7 +3,7 @@
 #include <common/format.h>
 
 #include <boot/boot.h>
-#include <io.h>
+#include <memory/io.h>
 
 #include <uacpi/kernel_api.h>
 

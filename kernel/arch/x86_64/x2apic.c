@@ -6,7 +6,8 @@
 
 #include <common/bit.h>
 
-#include <io.h>
+#include <memory/io.h>
+
 #include <log.h>
 #include <panic.h>
 #include <free_after_init.h>

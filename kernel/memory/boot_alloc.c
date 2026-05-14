@@ -11,8 +11,9 @@
 
 #include <log.h>
 #include <bug.h>
-#include <io.h>
 #include <free_after_init.h>
+
+#include <memory/io.h>
 
 struct memory_range {
     phys_addr_t physical_address;

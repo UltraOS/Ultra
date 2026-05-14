@@ -66,7 +66,6 @@ ultra_sources(
     panic.c
     console.c
     log.c
-    io.c
     symbols.c
     unwind.c
     param.c

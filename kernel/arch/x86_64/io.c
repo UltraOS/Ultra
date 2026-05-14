@@ -5,7 +5,8 @@
 
 #include <bug.h>
 #include <switch.h>
-#include <io.h>
+
+#include <memory/io.h>
 
 ptr_or_error_t arch_map_memory_io(phys_addr_t phys_base, size_t length)
 {

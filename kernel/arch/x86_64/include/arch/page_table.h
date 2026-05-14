@@ -5,7 +5,7 @@
 
 #include <arch/constants.h>
 #include <memory/vm_flags.h>
-#include <io.h>
+#include <memory/io.h>
 
 #define X86_MAX_PHYS_BITS 52
 #define X86_PHYS_MASK MAKE_BIT_MASK(X86_MAX_PHYS_BITS - 1, 0)

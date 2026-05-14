@@ -3,10 +3,11 @@
 #include <arch/private/ioapic.h>
 #include <arch/constants.h>
 
-#include <io.h>
 #include <log.h>
 #include <bug.h>
 #include <free_after_init.h>
+
+#include <memory/io.h>
 
 #include <uacpi/acpi.h>
 #include <uacpi/tables.h>
