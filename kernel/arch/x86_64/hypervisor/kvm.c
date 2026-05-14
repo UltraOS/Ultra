@@ -7,10 +7,10 @@
 
 #include <time/pvclock.h>
 #include <boot/alloc.h>
+#include <memory/io.h>
 
 #include <free_after_init.h>
 #include <log.h>
-#include <io.h>
 
 static struct kvm_ctx {
     u32 features;

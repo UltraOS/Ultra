@@ -6,9 +6,10 @@
 
 #include <module.h>
 #include <console.h>
-#include <io.h>
 #include <param.h>
 #include <arch/private/cpu.h>
+
+#include <memory/io.h>
 
 static io_window s_e9_iow;
 

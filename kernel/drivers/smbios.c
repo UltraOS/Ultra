@@ -4,7 +4,7 @@
 #include <smbios.h>
 
 #include <boot/boot.h>
-#include <io.h>
+#include <memory/io.h>
 #include <free_after_init.h>
 
 #include <common/byte_order.h>

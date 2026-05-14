@@ -6,13 +6,14 @@
 #include <per_cpu.h>
 #include <log.h>
 #include <bug.h>
-#include <io.h>
 #include <free_after_init.h>
 #include <config.h>
 
 #include <common/string.h>
 #include <common/error.h>
 #include <common/align.h>
+
+#include <memory/io.h>
 
 #include <private/per_cpu.h>
 
