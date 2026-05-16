@@ -16,7 +16,7 @@ static io_window s_e9_iow;
 static void e9_write(struct console *con, const char *str, size_t count)
 {
     UNREFERENCED_PARAMETER(con);
-    iowrite8_many(s_e9_iow, 0, (const u8*)str, count);
+    iowrite8_relaxed_many(&s_e9_iow, 0, (const u8*)str, count);
 }
 
 static struct console e9_console = {
@@ -35,7 +35,7 @@ static error_t e9_console_init(void)
     if (is_error(ret))
         return ret;
 
-    if (ioread8(s_e9_iow) != 0xE9)
+    if (ioread8(&s_e9_iow, 0) != 0xE9)
         goto unmap;
 
     ret = register_console(&e9_console);
@@ -45,7 +45,7 @@ static error_t e9_console_init(void)
     return ret;
 
 unmap:
-    io_window_unmap(&s_e9_iow);
+    io_window_unmap(&s_e9_iow, 1);
     return ret;
 }
 

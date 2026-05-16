@@ -21,6 +21,9 @@
     /* Kernel address space & direct memory map have been set up */ \
     INIT_LEVEL(KERNEL_ADDRESS_SPACE_AVAILABLE) \
     ARCH_INIT_LEVELS_AFTER_ADDRESS_SPACE_AVAILABLE \
+    /* io_window_map family of helpers can now be used */ \
+    INIT_LEVEL(EARLY_IO_AVAILABLE) \
+    ARCH_INIT_LEVELS_AFTER_EARLY_IO_AVAILABLE \
     /*
      * Early ACPI, FDT & SMBIOS are available
      * Architecture-specific code is expected to properly set both
@@ -57,6 +60,10 @@
 
 #ifndef ARCH_INIT_LEVELS_AFTER_ADDRESS_SPACE_AVAILABLE
 #define ARCH_INIT_LEVELS_AFTER_ADDRESS_SPACE_AVAILABLE
+#endif
+
+#ifndef ARCH_INIT_LEVELS_AFTER_EARLY_IO_AVAILABLE
+#define ARCH_INIT_LEVELS_AFTER_EARLY_IO_AVAILABLE
 #endif
 
 #ifndef ARCH_INIT_LEVELS_AFTER_PLATFORM_INFO_AVAILABLE
