@@ -17,12 +17,12 @@ static io_window s_xapic_io;
 
 static u32 xapic_read(enum apic_reg reg)
 {
-    return ioread32_at(s_xapic_io, (u32)reg);
+    return ioread32(&s_xapic_io, (u32)reg);
 }
 
 static void xapic_write(enum apic_reg reg, u32 data)
 {
-    iowrite32_at(s_xapic_io, (u32)reg, data);
+    iowrite32(&s_xapic_io, (u32)reg, data);
 }
 
 static void INIT_CODE xapic_setup(void)

@@ -286,8 +286,8 @@ static u32 ioapic_read(struct ioapic *ioapic, enum ioapic_reg reg)
 {
     u32 value;
 
-    iowrite32_at(ioapic->iow, IOAPIC_IOREGSEL, (u32)reg);
-    value = ioread32_at(ioapic->iow, IOAPIC_IOWIN);
+    iowrite32(&ioapic->iow, IOAPIC_IOREGSEL, (u32)reg);
+    value = ioread32(&ioapic->iow, IOAPIC_IOWIN);
 
     return value;
 }
@@ -339,7 +339,7 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     );
 
     if (unlikely(ioapic_check_collisions(new_ioapic))) {
-        io_window_unmap(&new_ioapic->iow);
+        io_window_unmap(&new_ioapic->iow, PAGE_SIZE);
         return;
     }
 

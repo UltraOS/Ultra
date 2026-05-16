@@ -139,6 +139,9 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     kernel_address_space_setup();
     init_level_raise(INIT_LEVEL_KERNEL_ADDRESS_SPACE_AVAILABLE);
 
+    early_io_map_init();
+    init_level_raise(INIT_LEVEL_EARLY_IO_AVAILABLE);
+
     smbios_setup();
     acpi_setup_tables();
     init_level_raise(INIT_LEVEL_PLATFORM_INFO_AVAILABLE);

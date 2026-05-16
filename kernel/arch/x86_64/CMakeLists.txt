@@ -7,7 +7,6 @@ ultra_sources(
     ioapic.c
     entry.c
     entry.S
-    io.c
     cpu.c
     smp.c
     memory.c

@@ -57,6 +57,8 @@ static error_t INIT_CODE x86_platform_init(void)
     setup_smp_topology();
 
     x86_detect_hypervisor();
+    if (hypervisor_supports(HYPERVISOR_FEATURE_SKIP_PORT_IO_DELAY))
+        g_can_skip_pio_delay = true;
 
     return EOK;
 }

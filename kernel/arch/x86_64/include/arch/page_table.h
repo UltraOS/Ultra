@@ -31,6 +31,29 @@
 // Raw arch-specific page table entry flags
 typedef struct pt_prot { u64 value; } pt_prot;
 
+static inline pt_prot io_window_pt_prot(pt_prot prot)
+{
+    // Strong UC mode
+    prot.value |= X86_PT_UNCACHED | X86_PT_WRITETHROUGH;
+    return prot;
+}
+
+#define ARCH_HAS_IO_WINDOW_WT_PT_PROT
+static inline pt_prot io_window_wt_pt_prot(pt_prot prot)
+{
+    prot.value |= X86_PT_WRITETHROUGH;
+    return prot;
+}
+
+extern u64 g_wc_pt_prot;
+
+#define ARCH_HAS_IO_WINDOW_WC_PT_PROT
+static inline pt_prot io_window_wc_pt_prot(pt_prot prot)
+{
+    prot.value |= g_wc_pt_prot;
+    return prot;
+}
+
 /*
  * Intel® Xeon Phi™ Processor x200 Product Family (KNL4):
  *     The A (Accessed, bit 5) and/or D (Dirty, bit 6) bits in a
