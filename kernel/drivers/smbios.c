@@ -4,6 +4,8 @@
 #include <smbios.h>
 
 #include <boot/boot.h>
+#include <boot/alloc.h>
+
 #include <memory/io.h>
 #include <free_after_init.h>
 
@@ -21,7 +23,7 @@ static struct saved_smbios_id {
     (memcmp((ptr), (signature), sizeof(signature) - 1) == 0)
 
 static struct smbios_ctx {
-    void *base;
+    phys_addr_t phys_base;
     u8 major, minor, docrev;
     u32 size;
     i32 num_items;
@@ -81,13 +83,13 @@ static INIT_CODE void smbios3_setup(void *base)
     if (!checksum_ok(entry, entry->size))
         return;
 
-    s_ctx.base = phys_to_virt(le64_to_cpu(entry->table_address));
     s_ctx.num_items = -1;
     s_ctx.major = entry->major;
     s_ctx.minor = entry->minor;
     s_ctx.docrev = entry->docrev;
     s_ctx.size = le32_to_cpu(entry->max_structure_size);
     s_ctx.present = s_ctx.size != 0;
+    s_ctx.phys_base = le64_to_cpu(entry->table_address);
 }
 
 static INIT_CODE void dmi_setup(void *base)
@@ -97,9 +99,9 @@ static INIT_CODE void dmi_setup(void *base)
     if (!checksum_ok(entry, sizeof(struct dmi_entrypoint)))
         return;
 
-    s_ctx.base = phys_to_virt(le32_to_cpu(entry->table_address));
     s_ctx.num_items = le16_to_cpu(entry->num_items);
     s_ctx.size = le16_to_cpu(entry->table_length);
+    s_ctx.phys_base = le32_to_cpu(entry->table_address);
 
     if (!s_ctx.major && !s_ctx.minor) {
         s_ctx.major = entry->revision >> 4;
@@ -127,20 +129,52 @@ static INIT_CODE void smbios2_setup(void *base)
     dmi_setup(&entry->dmi_entryoint);
 }
 
+static void* INIT_DATA s_pool;
+static size_t INIT_DATA s_bytes_left;
+
 static INIT_CODE void smbios_save_string(
     enum smbios_id_type type, const struct smbios_structure_hdr *hdr,
     struct smbios_string_value *str_value
 )
 {
     const char *str;
+    char *str_copy;
+    size_t bytes_needed;
 
     str = smbios_get_string(hdr, str_value);
     if (str == NULL)
         return;
 
+    bytes_needed = strlen(str) + 1;
+    if (s_bytes_left < bytes_needed) {
+        phys_addr_or_error_t ret;
+
+        if (unlikely(bytes_needed > PAGE_SIZE)) {
+            pr_warn(
+                "string too large to save: %.32s...<%zu more bytes>\n",
+                str, bytes_needed - 32
+            );
+            return;
+        }
+
+        ret = boot_alloc(1);
+        if (error_phys_addr(ret)) {
+            pr_warn("out of memory\n");
+            return;
+        }
+
+        s_pool = phys_to_virt(ret);
+        s_bytes_left = PAGE_SIZE;
+    }
+
+    str_copy = s_pool;
+    s_pool += bytes_needed;
+    s_bytes_left -= bytes_needed;
+
+    memcpy(str_copy, str, bytes_needed);
     s_saved_ids[type - 1] = (struct saved_smbios_id) {
         .id = {
-            .str = str,
+            .str = str_copy,
             .type = SMBIOS_ENTRY_TYPE_STRING,
         },
         .present = true,
@@ -328,15 +362,21 @@ done:
 
 void INIT_CODE smbios_setup(void)
 {
-    phys_addr_t anchor = g_boot_ctx.platform_info->smbios_address;
+    phys_addr_t anchor_phys = g_boot_ctx.platform_info->smbios_address;
     void *smbios_base;
+    error_t ret;
 
-    if (!anchor) {
+    if (!anchor_phys) {
         pr_info("not supported on this platform\n");
         return;
     }
 
-    smbios_base = phys_to_virt(anchor);
+    smbios_base = io_window_map_cached(anchor_phys, PAGE_SIZE);
+    if (unlikely(smbios_base == nullptr)) {
+        pr_err("unable to map\n");
+        return;
+    }
+
     if (CHECK_SIGNATURE(smbios_base, SMBIOS3_SIGNATURE))
         smbios3_setup(smbios_base);
     else if (CHECK_SIGNATURE(smbios_base, SMBIOS2_SIGNATURE))
@@ -346,13 +386,24 @@ void INIT_CODE smbios_setup(void)
     else
         pr_info("bad/unsupported signature\n");
 
+    io_window_unmap_ptr(smbios_base, PAGE_SIZE);
+
     if (!smbios_available())
         return;
 
     pr_info("version %d.%d.%d\n", s_ctx.major, s_ctx.minor, s_ctx.docrev);
 
-    if (is_error(smbios_for_each(smbios_parse, nullptr))) {
+    ret = smbios_for_each(smbios_parse, nullptr);
+    if (is_error(ret)) {
+        /*
+         * The table might've been too large to fit into the early io remapper,
+         * in that case don't print anything nor disable it.
+         */
+        if (ret == ENOMEM)
+            return;
+
         pr_err("disabled due to parsing errors\n");
+        s_ctx.present = false;
         return;
     }
 
@@ -362,12 +413,20 @@ void INIT_CODE smbios_setup(void)
 error_t smbios_for_each(smbios_callback cb, void *user)
 {
     i32 item_idx = 0;
-    u32 bytes_left = s_ctx.size;
-    void *ptr = s_ctx.base;
+    u32 bytes_left, map_size;
+    void *ptr, *cursor;
     error_t ret = ENODEV;
 
     if (!smbios_available())
         return ret;
+
+    bytes_left = map_size = s_ctx.size;
+
+    ptr = io_window_map_cached(s_ctx.phys_base, map_size);
+    if (unlikely(ptr == nullptr))
+        return ENOMEM;
+
+    cursor = ptr;
 
     for (;;) {
         struct smbios_structure_hdr *hdr;
@@ -378,7 +437,7 @@ error_t smbios_for_each(smbios_callback cb, void *user)
         if (bytes_left == 0)
             break;
 
-        hdr = ptr;
+        hdr = cursor;
         if (unlikely(hdr->size > bytes_left || hdr->size < sizeof(*hdr))) {
             pr_err(
                 "invalid entry[%d]: size %d (with %u bytes left)\n",
@@ -388,13 +447,13 @@ error_t smbios_for_each(smbios_callback cb, void *user)
         }
 
         bytes_left -= hdr->size;
-        ptr += hdr->size;
+        cursor += hdr->size;
 
         /*
          * Find the end of this entry & make sure it's not out-of-bounds in the
          * array of structures.
          */
-        for (probe_cursor = ptr;; probe_cursor += 1, bytes_left -= 1) {
+        for (probe_cursor = cursor;; probe_cursor += 1, bytes_left -= 1) {
             // At least a \0 string + \0 to signify end-of-strings
             if (bytes_left < 2)
                 goto out;
@@ -402,7 +461,7 @@ error_t smbios_for_each(smbios_callback cb, void *user)
             if (probe_cursor[0] == '\0' && probe_cursor[1] == '\0') {
                 // A valid entry that's properly terminated, we're done
                 bytes_left -= 2;
-                ptr = probe_cursor + 2;
+                cursor = probe_cursor + 2;
                 break;
             }
         }
@@ -425,7 +484,7 @@ error_t smbios_for_each(smbios_callback cb, void *user)
 
         ret = cb(hdr, user);
         if (is_error(ret))
-            return ret;
+            goto out_unmap;
 
     next_item:
         item_idx++;
@@ -447,12 +506,14 @@ out:
         );
         s_ctx.size -= bytes_left;
 
-        if (unlikely(bytes_left == 0)) {
+        if (unlikely(s_ctx.size == 0)) {
             s_ctx.present = false;
             ret = EINVAL;
         }
     }
 
+out_unmap:
+    io_window_unmap_ptr(ptr, map_size);
     return ret;
 }
 
