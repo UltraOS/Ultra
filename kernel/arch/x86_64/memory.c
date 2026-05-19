@@ -19,6 +19,51 @@ u64 g_pt4_num_entries = 1;
 
 static ptr_t s_supported_pt_bits = UNSIGNED_MAX(ptr_t);
 
+// The default reset value specified in the manuals
+static u64 s_pat = IA32_PAT_MAKE(PAT_WB, PAT_WT, PAT_UC_MINUS, PAT_UC,
+                                 PAT_WB, PAT_WT, PAT_UC_MINUS, PAT_UC);
+
+// UC- by default
+u64 g_wc_pt_prot = X86_PT_UNCACHED;
+
+static void INIT_CODE cache_init(void)
+{
+    error_t ret;
+
+    if (!all_cpus_have(X86_FEATURE_PAT))
+        return;
+
+    ret = rdmsr(MSR_IA32_PAT, &s_pat);
+    if (is_error(ret)) {
+        // Assume the PAT is using the defaut reset configuration then
+        pr_warn("unable to read PAT configuration!\n");
+        return;
+    }
+
+    /*
+     * Set the desired configuration. Why we want this specific config:
+     * 1. The bottom 4 slots are kept as is, this means in case PAT is
+     *    supported, default PTE flags for WB, WT, UC- and UC remain
+     *    completely untouched.
+     * 2. Slots 5, 6 are identity mapped to their lower counterparts,
+     *    this makes potential errata on very old CPUs that ignore the
+     *    PAT bit completely safe. Essentially we never use them so we're
+     *    not affected.
+     * 3. Slots 7, 8 are changed to WP and WC, since we have to put them
+     *    somewhere. Again, in case of the errata this means WP is downgraded
+     *    to UC- and WC is downgraded to UC. Technically it's not ideal because
+     *    we would want WC downgraded to UC- (so that WC can be enabled via an
+     *    MTRR range), but this would require reordering the default flags for
+     *    lower "compatibility" slots, so let's roll with this setup.
+     */
+    s_pat = IA32_PAT_MAKE(PAT_WB, PAT_WT, PAT_UC_MINUS, PAT_UC,
+                          PAT_WB, PAT_WT, PAT_WP, PAT_WC);
+    wrmsr_or_die(MSR_IA32_PAT, s_pat);
+
+    // WC is entry 7, so 0b111, set all 3 bits
+    g_wc_pt_prot = X86_PT_SMALL_PAT | X86_PT_UNCACHED | X86_PT_WRITETHROUGH;
+}
+
 static error_t INIT_CODE x86_early_paging_init(void)
 {
     reg_t cr4_features = 0;
@@ -53,6 +98,8 @@ static error_t INIT_CODE x86_early_paging_init(void)
         efer_feature_enable(IA32_EFER_NX);
     else
         s_supported_pt_bits &= ~X86_PT_NX;
+
+    cache_init();
 
     return EOK;
 }
