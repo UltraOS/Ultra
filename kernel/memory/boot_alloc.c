@@ -478,6 +478,28 @@ phys_addr_or_error_t INIT_CODE boot_alloc_zeroed(size_t num_pages)
     return ret;
 }
 
+void* INIT_CODE boot_alloc_or_die(size_t num_pages, const char *why)
+{
+    phys_addr_or_error_t ret;
+
+    ret = boot_alloc(num_pages);
+    if (error_phys_addr(ret)) {
+        panic(
+            "Unable to satisfy a critical allocation of %zu pages for %s",
+            num_pages, why
+        );
+    }
+
+    return phys_to_virt(ret);
+}
+
+void* INIT_CODE boot_alloc_zeroed_or_die(size_t num_pages, const char *why)
+{
+    return memzero(
+        boot_alloc_or_die(num_pages, why), num_pages << PAGE_SHIFT
+    );
+}
+
 phys_addr_or_error_t INIT_CODE boot_alloc_at(
     phys_addr_t address, size_t num_pages
 )
