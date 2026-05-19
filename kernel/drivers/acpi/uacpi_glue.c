@@ -18,14 +18,12 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address)
 
 void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 {
-    UNREFERENCED_PARAMETER(len);
-    return phys_to_virt(addr);
+    return io_window_map_cached(addr, len);
 }
 
 void uacpi_kernel_unmap(void *addr, uacpi_size len)
 {
-    UNREFERENCED_PARAMETER(addr);
-    UNREFERENCED_PARAMETER(len);
+    io_window_unmap_ptr(addr, len);
 }
 
 static u8 uacpi_log_level_to_syslog(uacpi_log_level lvl)
