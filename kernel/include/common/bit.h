@@ -42,7 +42,8 @@
 #define MAKE_BIT_MASK(end_bit, start_bit) \
     MAKE_BIT_MASK_OF_TYPE(end_bit, start_bit, reg_t)
 
-#define BIT_FIELD_SHIFT(mask) (__builtin_ffsll(mask) - 1)
+#define BIT_UNIT_FIND_FIRST_SET(unit) __builtin_ffsl(unit)
+#define BIT_FIELD_SHIFT(mask) (BIT_UNIT_FIND_FIRST_SET(mask) - 1)
 
 #define BIT_FIELD_VALIDATE_INPUT(mask, value)                                    \
     EMBED_STATIC_ASSERT(IS_UNSIGNED_TYPE(mask), "field mask must be unsigned") + \
@@ -129,6 +130,7 @@
 #define BIT_UNIT(x) ((x) / BITS_PER_UNIT)
 #define BIT_INDEX(x) ((x) % BITS_PER_UNIT)
 #define BIT_MASK_IN_UNIT(x) ((reg_t)1 << BIT_INDEX(x))
+#define NUM_UNITS_FOR_BITS(num_bits) CEILING_DIVIDE(num_bits, BITS_PER_UNIT)
 
 static inline void bit_set(reg_t *bit_array, reg_t bit)
 {
@@ -168,3 +170,34 @@ static inline bool bit_test_atomic(
     unit = atomic_load_explicit(&bit_array[BIT_UNIT(bit)], mo);
     return unit & BIT_MASK_IN_UNIT(bit);
 }
+
+reg_t find_next_bit_base(
+    const reg_t *bit_array, reg_t num_bits, reg_t start, bool inverted
+);
+
+static inline reg_t find_first_set_bit(const reg_t *bit_array, reg_t num_bits)
+{
+    return find_next_bit_base(bit_array, num_bits, 0, false);
+}
+
+static inline reg_t find_first_zero_bit(const reg_t *bit_array, reg_t num_bits)
+{
+    return find_next_bit_base(bit_array, num_bits, 0, true);
+}
+
+static inline reg_t find_next_set_bit(
+    const reg_t *bit_array, reg_t num_bits, reg_t start
+)
+{
+    return find_next_bit_base(bit_array, num_bits, start, false);
+}
+
+static inline reg_t find_next_zero_bit(
+    const reg_t *bit_array, reg_t num_bits, reg_t start
+)
+{
+    return find_next_bit_base(bit_array, num_bits, start, true);
+}
+
+#define MAKE_BITMAP(name, num_bits) \
+    reg_t name[NUM_UNITS_FOR_BITS(num_bits)]

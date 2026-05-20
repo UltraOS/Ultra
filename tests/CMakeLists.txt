@@ -108,7 +108,6 @@ KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "align.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "atomic.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "error.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "ctype.h")
-KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "bit.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "byte_order.h")
 KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "string_container.c"
@@ -121,6 +120,10 @@ KERNEL_FILE(
 KERNEL_FILE(
     SOURCE_PATH "common" SOURCE FILE "format.c"
     INCLUDE_PATH "common" INCLUDE_FILE "format.h"
+)
+KERNEL_FILE(
+    SOURCE_PATH "common" SOURCE_FILE "bit.c"
+    INCLUDE_PATH "common" INCLUDE_FILE "bit.h"
 )
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "boot.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "ultra_protocol.h")
