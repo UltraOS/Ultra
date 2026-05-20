@@ -7,6 +7,7 @@
 
 #include <memory/page_table.h>
 #include <memory/address_space.h>
+#include <memory/tlb.h>
 
 #include <free_after_init.h>
 #include <init_level.h>
@@ -150,4 +151,12 @@ struct pt4 *pt4_from_pt5(struct pt5 *pt5, virt_addr_t addr)
 
     pt4 = pt5_to_virt(pt5);
     return &pt4[pt4_index(addr)];
+}
+
+void tlb_invalidate_kernel_range(virt_addr_t va_start, virt_addr_t va_end)
+{
+    while (va_start < va_end) {
+        asm volatile("invlpg (%0)" :: "r" (va_start) : "memory");
+        va_start += PT1_SIZE;
+    }
 }
