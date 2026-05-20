@@ -52,7 +52,7 @@
     )
 
 #define STATIC_ASSERT_IF_CONSTEXPR(expr, msg) \
-    CHOOSE_EXPR(IS_CONSTEXPR(expr), EMBED_STATIC_ASSERT((expr), msg), 0)
+    EMBED_STATIC_ASSERT(CHOOSE_EXPR(IS_CONSTEXPR(expr), (expr), 1), msg)
 
 #define CEILING_DIVIDE(x, y) (!!(x) + (((x) - !!(x)) / (y)))
 
