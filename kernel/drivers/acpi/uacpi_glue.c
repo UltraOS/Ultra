@@ -1,3 +1,5 @@
+#define MSG_FMT(msg) "acpi: " msg
+
 #include <common/format.h>
 
 #include <boot/boot.h>
@@ -50,10 +52,7 @@ void uacpi_kernel_log(uacpi_log_level lvl, const uacpi_char *fmt, ...)
     npf.fmt = fmt;
     npf.vlist = &vlist;
 
-    print(
-        "%c%cacpi: %pV", LOG_LEVEL_PREFIX_CHAR, uacpi_log_level_to_syslog(lvl),
-        &npf
-    );
+    pr_lvl(uacpi_log_level_to_syslog(lvl), "%pV", &npf);
 
     va_end(vlist);
 }
