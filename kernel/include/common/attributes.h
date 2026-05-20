@@ -19,6 +19,7 @@
 #endif
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
+#define NEVER_INLINE __attribute__((noinline))
 
 #define ERROR_EMITTER(msg) __attribute__((__error__(msg)))
 
