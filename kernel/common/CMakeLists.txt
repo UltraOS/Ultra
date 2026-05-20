@@ -1,4 +1,5 @@
 ultra_sources(
+    bit.c
     conversions.c
     ctype.c
     format.c
