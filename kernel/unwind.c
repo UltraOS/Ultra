@@ -91,7 +91,7 @@ static error_t decode_format(
 )
 {
     error_t ret;
-    u8 num_bytes, num_bits = 0;
+    u8 num_bytes = 0, num_bits = 0;
     u64 value = 0;
 
     switch (format) {
