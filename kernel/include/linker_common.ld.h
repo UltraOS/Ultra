@@ -171,9 +171,11 @@
     .debug_loclists    0x000000000 : { *(.debug_loclists) }                 \
     .debug_rnglists    0x000000000 : { *(.debug_rnglists) }
 
-#define DISCARDS     \
-    /DISCARD/ : {    \
-        *(.comment)  \
+#define DISCARDS              \
+    /DISCARD/ : {             \
+        *(.comment)           \
+        *(.note.GNU-stack)    \
+        *(.note.gnu.build-id) \
     }
 
 #define EXPECT_EMPTY_RELOC(type, input)                                             \

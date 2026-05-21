@@ -6,11 +6,11 @@ endmacro()
 
 function(ultra_compile_options)
     ultra_kernel_targets_apply(
-        target_compile_options
+        ultra_target_compile_options
         PRIVATE
         ${ARGN}
     )
-    target_compile_options(
+    ultra_target_compile_options(
         ${ULTRA_KERNEL_OBJECTS}
         PRIVATE
         ${ARGN}

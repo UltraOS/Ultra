@@ -66,11 +66,7 @@ add_ultra_ld_template(
 
 ultra_link_options(
     -T${ULTRA_LD_SCRIPT}
-    -z max-page-size=4096
+    -Wl,-z,max-page-size=4096
 )
-
-if (ULTRA_TOOLCHAIN STREQUAL "gcc")
-    ultra_link_libraries(${ULTRA_LIBGCC_PATH})
-endif()
 
 add_subdirectory(hypervisor)
