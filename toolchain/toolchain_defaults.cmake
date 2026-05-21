@@ -1,26 +1,25 @@
 # Sane defaults that should work for most non-quirky toolchains
 
-set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR ${ULTRA_ARCH})
 set(CMAKE_SYSROOT "")
 
-set(CMAKE_C_LINK_EXECUTABLE
-    "<CMAKE_LINKER> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> \
-     <OBJECTS> -o <TARGET> <LINK_LIBRARIES>"
-)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 function(ultra_target_compile_options TARGET)
     target_compile_options(
         ${TARGET}
-        PRIVATE
         ${ARGN}
     )
+
+    if (CONFIG_LTO)
+        ultra_target_link_options(${ARGV})
+    endif ()
 endfunction()
 
 function(ultra_target_link_options TARGET)
     target_link_options(
         ${TARGET}
-        PRIVATE
         ${ARGN}
     )
 endfunction()

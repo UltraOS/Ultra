@@ -82,6 +82,8 @@ ultra_include_directories(
 )
 
 ultra_compile_options(
+    -fno-pic
+    -fno-pie
     -std=gnu23
     -ffreestanding
     -fasynchronous-unwind-tables
@@ -96,15 +98,18 @@ ultra_compile_options(
 )
 
 if (CONFIG_LTO)
-    ultra_compile_options(-flto=full)
+    ultra_compile_options(${ULTRA_TOOLCHAIN_LTO_FLAGS})
 endif ()
 
 ultra_compile_options(-O${CONFIG_OPTIMIZATION_LEVEL})
 
 ultra_link_options(
     -nostdlib
-    --eh-frame-hdr
-    --orphan-handling=error
+    -Wl,--no-pie
+    -Wl,--eh-frame-hdr
+    -Wl,--orphan-handling=error
+    -Wl,--build-id=none
+    -Wl,-z,noexecstack
 )
 
 ultra_compile_definitions(ULTRA_GIT_SHA="${ULTRA_GIT_SHA}")
