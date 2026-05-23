@@ -363,8 +363,10 @@ static MAYBE_NERR(int) do_vsnprintf(
                     write_many(fb_state, sym, len);
                 } else {
                     write_cstr(fb_state, sym);
-                    len = snprintf(sym, sizeof(sym), "+%zu", offset);
-                    write_many(fb_state, sym, len);
+                    if (offset) {
+                        len = snprintf(sym, sizeof(sym), "+%zu", offset);
+                        write_many(fb_state, sym, len);
+                    }
                 }
 
                 continue;
