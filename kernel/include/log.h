@@ -67,6 +67,9 @@ void print(const char *msg, ...);
 #define pr_debug(msg, ...)   print(LOG_DEBUG   MSG_FMT(msg), ##__VA_ARGS__)
 #define pr_cont(msg, ...)    print(LOG_CONT    msg, ##__VA_ARGS__)
 
+#define pr_lvl(lvl, msg, ...) \
+    print(LOG_LEVEL_PREFIX"%c" MSG_FMT(msg), lvl, ##__VA_ARGS__)
+
 // Defined in arch/registers.h
 struct registers;
 
