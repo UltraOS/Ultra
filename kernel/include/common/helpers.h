@@ -88,3 +88,9 @@
 
 #define IS_SIGNED_TYPE(x) (((typeof(x))-1) < ((typeof(x))1))
 #define IS_UNSIGNED_TYPE(x) (!IS_SIGNED_TYPE(x))
+
+#ifdef __has_builtin
+    #define HAS_BUILTIN(x) __has_builtin(x)
+#else
+    #define HAS_BUILTIN(x) 0
+#endif

@@ -8,12 +8,6 @@
 #define NORETURN _Noreturn
 #endif
 
-#ifdef __has_builtin
-    #define HAS_BUILTIN(x) __has_builtin(x)
-#else
-    #define HAS_BUILTIN(x) 0
-#endif
-
 #define PACKED __attribute__((packed))
 
 #ifdef __clang__
