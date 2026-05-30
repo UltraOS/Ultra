@@ -14,6 +14,20 @@ extern "C" {
 
 struct boot_context g_boot_ctx;
 
+/*
+ * There is no loader-provided memory map in userspace, so boot_alloc_init()
+ * has nothing to walk. Tests seed the boot allocator by writing its range
+ * buffer directly instead, this only has to exist to satisfy the reference.
+ */
+void for_each_memory_map_range(
+    memory_map_range_cb_t mem_cb, memory_filter_cb_t filter_cb, void *user
+)
+{
+    UNREFERENCED_PARAMETER(mem_cb);
+    UNREFERENCED_PARAMETER(filter_cb);
+    UNREFERENCED_PARAMETER(user);
+}
+
 void vprint(const char *msg, va_list vlist)
 {
     // TODO: save to a buffer and only show if a test fails

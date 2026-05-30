@@ -14,6 +14,136 @@
 #include <free_after_init.h>
 #include <log.h>
 
+static phys_addr_t s_max_ram_addr;
+
+static void INIT_CODE do_for_each_memory_map_range(
+    memory_map_range_cb_t mem_cb, memory_filter_cb_t filter_cb, void *user,
+    bool erase_ram_type
+)
+{
+    struct ultra_memory_map_attribute *mm = g_boot_ctx.memory_map;
+    struct ultra_memory_map_entry *mme, *next_me;
+    size_t num_entries, i = 0;
+    u32 type;
+
+    num_entries = ULTRA_MEMORY_MAP_ENTRY_COUNT(mm->header);
+
+    while (i < num_entries) {
+        phys_addr_t p_start, p_end;
+        bool is_ram;
+
+        mme = &mm->entries[i];
+
+        if (!filter_cb(mme)) {
+            i++;
+            continue;
+        }
+
+        is_ram = ultra_mme_is_ram(mme);
+        p_start = mme->physical_address;
+        p_end = mme->physical_address + mme->size;
+        i++;
+
+        /*
+         * Only RAM ranges are ever merged. Merging a non-ram range with
+         * anything would lose its type, and the merged result would take
+         * the wrong truncation path below.
+         */
+        while (is_ram && i < num_entries) {
+            next_me = &mm->entries[i];
+
+            if (!ultra_mme_is_ram(next_me))
+                break;
+
+            // We were explicitly forbidden to erase the ram type
+            if ((mme->type != next_me->type) && !erase_ram_type)
+                break;
+
+            if (p_end != next_me->physical_address || !filter_cb(next_me))
+                break;
+
+            p_end += next_me->size;
+            i++;
+        }
+
+        type = mme->type;
+
+        if (is_ram) {
+            if (erase_ram_type)
+                type = ULTRA_MEMORY_TYPE_FREE;
+
+            if (p_end > s_max_ram_addr)
+                s_max_ram_addr = p_end;
+
+            // Always truncate RAM ranges to the maximum physical address
+            p_end = MIN(p_end, MAX_PHYS_ADDR);
+        } else if (unlikely(p_end > MAX_PHYS_ADDR)) {
+            /*
+             * Truncating a non-ram range would hand out a partial mapping
+             * of something a caller is trying to locate, so skip it. Loud
+             * because no sane firmware produces this.
+             */
+            pr_warn(
+                "skipping out of bounds range 0x%llx-0x%llx (type %u)\n",
+                p_start, p_end, type
+            );
+            continue;
+        }
+
+        // p_end might've been truncated below p_start
+        if (likely(p_start < p_end))
+            mem_cb(p_start, p_end, type, user);
+    }
+}
+
+void INIT_CODE for_each_memory_map_range(
+    memory_map_range_cb_t mem_cb, memory_filter_cb_t filter_cb, void *user
+)
+{
+    do_for_each_memory_map_range(mem_cb, filter_cb, user, false);
+}
+
+struct for_each_ram_range_ctx {
+    memory_range_cb_t mem_cb;
+    void *user;
+};
+
+static void INIT_CODE propagate_ram_range(
+    phys_addr_t start, phys_addr_t end, u32 type, void *user
+)
+{
+    struct for_each_ram_range_ctx *ctx = user;
+
+    // Type will always be ULTRA_MEMORY_TYPE_FREE here
+    UNREFERENCED_PARAMETER(type);
+
+    ctx->mem_cb(start, end, ctx->user);
+}
+
+/*
+ * This is factored out of for_each_ram_range to allow internal callers that
+ * might need additional filtering on top of ultra_mme_is_ram, like the direct
+ * map builder.
+ */
+static void INIT_CODE do_for_each_ram_range(
+    memory_range_cb_t mem_cb, memory_filter_cb_t filter_cb, void *user
+)
+{
+    struct for_each_ram_range_ctx ctx = {
+        .mem_cb = mem_cb,
+        .user = user,
+    };
+
+    do_for_each_memory_map_range(
+        propagate_ram_range, filter_cb, &ctx, true
+    );
+}
+
+void INIT_CODE for_each_ram_range(memory_range_cb_t mem_cb, void *user)
+{
+    do_for_each_ram_range(mem_cb, ultra_mme_is_ram, user);
+}
+
 struct address_space g_kernel_address_space;
 
 struct map_range {
@@ -177,24 +307,16 @@ static void INIT_CODE split_ram_range(
     }
 }
 
-static bool INIT_CODE mme_is_ram(u64 type)
+static bool INIT_CODE ultra_mme_is_ram_except_kernel_binary(
+    struct ultra_memory_map_entry *mme
+)
 {
-    switch (type) {
-    case ULTRA_MEMORY_TYPE_FREE:
-    case ULTRA_MEMORY_TYPE_RECLAIMABLE:
-    case ULTRA_MEMORY_TYPE_LOADER_RECLAIMABLE:
-    case ULTRA_MEMORY_TYPE_MODULE:
-    case ULTRA_MEMORY_TYPE_KERNEL_STACK:
-        return true;
-
     /*
      * The kernel binary is excluded on purpose so we don't have r/w mappings
      * for it and can't accidentally corrupt it.
      */
-    case ULTRA_MEMORY_TYPE_KERNEL_BINARY:
-    default:
-        return false;
-    }
+    return mme->type != ULTRA_MEMORY_TYPE_KERNEL_BINARY &&
+           ultra_mme_is_ram(mme);
 }
 
 static bool INIT_CODE is_leaf_level(
@@ -368,55 +490,17 @@ static void INIT_CODE split_and_map_range(
     }
 }
 
-static void INIT_CODE build_kernel_direct_map(struct direct_mapping_ctx *ctx)
+static void INIT_CODE direct_map_one(
+    phys_addr_t start, phys_addr_t end, void *ctx
+)
 {
-    struct ultra_memory_map_attribute *mm = g_boot_ctx.memory_map;
-    struct ultra_memory_map_entry *me, *next_me;
-    size_t num_entries, i = 0;
-
-    num_entries = ULTRA_MEMORY_MAP_ENTRY_COUNT(mm->header);
-
-    while (i < num_entries) {
-        me = &mm->entries[i];
-        phys_addr_t start, end;
-
-        /*
-         * Only RAM is mapped in the kernel direct map.
-         * MMIO and other memory uses io_window_map with proper caching
-         * attributes. The direct map is always write-back cached.
-         */
-        if (!mme_is_ram(me->type)) {
-            i++;
-            continue;
-        }
-
-        start = me->physical_address;
-        end = me->physical_address + me->size;
-        i++;
-
-        /*
-         * Merge adjacent synthetic bootloader memory map entries such as
-         * modules, kernel stack, etc. They're all RAM and must be included
-         * in the direct map.
-         */
-        while (i < num_entries) {
-            next_me = &mm->entries[i];
-
-            if (end != next_me->physical_address || !mme_is_ram(next_me->type))
-                break;
-
-            end += next_me->size;
-            i++;
-        }
-
-        pr_debug(
-            "direct mapping [0x%016llX - 0x%016llX] as:\n",
-            start, end
-        );
-        split_and_map_range(
-            ctx, start, end, VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE
-        );
-    }
+    pr_debug(
+        "direct mapping [0x%016llX - 0x%016llX] as:\n",
+        start, end
+    );
+    split_and_map_range(
+        ctx, start, end, VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE
+    );
 }
 
 extern u8 LINKER_SYMBOL(executable_data_begin)[];
@@ -500,8 +584,20 @@ void INIT_CODE kernel_address_space_setup(void)
 
     build_kernel_mappings(&ctx);
 
+    /*
+     * Only RAM is mapped in the kernel direct map.
+     * MMIO and other memory uses io_window_map with proper caching
+     * attributes. The direct map is always write-back cached.
+     */
     ctx.virt_base = g_direct_map_base;
-    build_kernel_direct_map(&ctx);
+    do_for_each_ram_range(
+        direct_map_one, ultra_mme_is_ram_except_kernel_binary, &ctx
+    );
 
     g_kernel_address_space.pt = ctx.pt;
+    pr_lvl(
+        s_max_ram_addr <= MAX_PHYS_ADDR ? LOG_LEVEL_INFO : LOG_LEVEL_WARN,
+        "max RAM address: %llX, max supported: %llX",
+        s_max_ram_addr, MAX_PHYS_ADDR
+    );
 }

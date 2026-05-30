@@ -25,6 +25,41 @@ struct boot_context {
     struct string cmdline;
 };
 
+static inline bool INIT_CODE ultra_mme_is_ram(
+    struct ultra_memory_map_entry *mme
+)
+{
+    switch (mme->type) {
+    case ULTRA_MEMORY_TYPE_FREE:
+    case ULTRA_MEMORY_TYPE_RECLAIMABLE:
+    case ULTRA_MEMORY_TYPE_LOADER_RECLAIMABLE:
+    case ULTRA_MEMORY_TYPE_MODULE:
+    case ULTRA_MEMORY_TYPE_KERNEL_STACK:
+    case ULTRA_MEMORY_TYPE_KERNEL_BINARY:
+        return true;
+    default:
+        return false;
+    }
+}
+
+typedef bool (*memory_filter_cb_t)(
+    struct ultra_memory_map_entry *mme
+);
+
+typedef void (*memory_map_range_cb_t)(
+    phys_addr_t start, phys_addr_t end, u32 type, void *user
+);
+
+void for_each_memory_map_range(
+    memory_map_range_cb_t, memory_filter_cb_t, void *user
+);
+
+typedef void (*memory_range_cb_t)(
+    phys_addr_t start, phys_addr_t end, void *user
+);
+
+void for_each_ram_range(memory_range_cb_t, void *user);
+
 extern struct boot_context g_boot_ctx;
 
 void entry(struct ultra_boot_context *ctx);

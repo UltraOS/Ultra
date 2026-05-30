@@ -536,43 +536,32 @@ void INIT_CODE boot_free(phys_addr_t address, size_t num_pages)
     allocate_out_of(mr_idx, &freed_range);
 }
 
+static void INIT_CODE boot_alloc_add_one(
+    phys_addr_t start, phys_addr_t end, u32 type, void *user
+)
+{
+    struct memory_range range;
+    u8 boot_alloc_type;
+
+    UNREFERENCED_PARAMETER(user);
+
+    boot_alloc_type = type == ULTRA_MEMORY_TYPE_FREE ?
+                        MEMORY_FREE : MEMORY_ALLOCATED;
+
+    range.physical_address = start;
+    range.size_and_type = MR_ENCODE(end - start, boot_alloc_type);
+
+    if (boot_alloc_type == MEMORY_FREE) {
+        pr_info(
+            "adding memory 0x%016llX -> 0x%016llX\n",
+            range.physical_address, range.physical_address + MR_SIZE(&range)
+        );
+    }
+
+    WARN_ON(range_append(&range));
+}
+
 void INIT_CODE boot_alloc_init(void)
 {
-    struct ultra_memory_map_attribute *mm;
-    struct ultra_memory_map_entry *entry;
-    struct memory_range range;
-    u8 type;
-    size_t i;
-
-    mm = g_boot_ctx.memory_map;
-
-    for (i = 0; i < ULTRA_MEMORY_MAP_ENTRY_COUNT(mm->header); i++) {
-        entry = &mm->entries[i];
-
-        switch (entry->type) {
-        case ULTRA_MEMORY_TYPE_RECLAIMABLE:
-        case ULTRA_MEMORY_TYPE_KERNEL_BINARY:
-        case ULTRA_MEMORY_TYPE_LOADER_RECLAIMABLE:
-            type = MEMORY_ALLOCATED;
-            break;
-        case ULTRA_MEMORY_TYPE_FREE:
-            type = MEMORY_FREE;
-            break;
-
-        default:
-            continue;
-        }
-
-        range.physical_address = entry->physical_address;
-        range.size_and_type = MR_ENCODE(entry->size, type);
-
-        if (type == MEMORY_FREE) {
-            pr_info(
-                "adding memory 0x%016llX -> 0x%016llX\n",
-                range.physical_address, range.physical_address + MR_SIZE(&range)
-            );
-        }
-
-        WARN_ON(range_append(&range));
-    }
+    for_each_memory_map_range(boot_alloc_add_one, ultra_mme_is_ram, nullptr);
 }
