@@ -34,13 +34,13 @@ static inline phys_addr_t mr_end(struct memory_range *mr)
 }
 
 #define BOOT_ALLOC_INITIAL_CAPACITY (PAGE_SIZE / sizeof(struct memory_range))
-static INIT_DATA struct memory_range g_initial_buffer[
+static INIT_DATA struct memory_range s_initial_buffer[
     BOOT_ALLOC_INITIAL_CAPACITY
 ];
 
-static INIT_DATA struct memory_range *g_buffer = g_initial_buffer;
-static INIT_DATA size_t g_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
-static INIT_DATA size_t g_entry_count = 0;
+static INIT_DATA struct memory_range *s_buffer = s_initial_buffer;
+static INIT_DATA size_t s_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
+static INIT_DATA size_t s_entry_count = 0;
 
 static INIT_CODE void range_insert(
     struct memory_range *mr, size_t idx, size_t count
@@ -53,18 +53,18 @@ static INIT_CODE void range_insert(
         goto range_place;
 
     bytes_to_move = (count - idx) * sizeof(*mr);
-    memmove(&g_buffer[idx + 1], &g_buffer[idx], bytes_to_move);
+    memmove(&s_buffer[idx + 1], &s_buffer[idx], bytes_to_move);
 
 range_place:
-    g_buffer[idx] = *mr;
+    s_buffer[idx] = *mr;
 }
 
 static INIT_CODE void range_emplace_at(size_t idx, struct memory_range *mr)
 {
-    BUG_ON(idx > g_entry_count);
-    BUG_ON(g_entry_count >= g_capacity);
+    BUG_ON(idx > s_entry_count);
+    BUG_ON(s_entry_count >= s_capacity);
 
-    range_insert(mr, idx, g_entry_count++);
+    range_insert(mr, idx, s_entry_count++);
 }
 
 enum allow_one_above {
@@ -77,14 +77,14 @@ static ssize_t INIT_CODE find_range(
 )
 {
     ssize_t left = 0;
-    ssize_t right = g_entry_count - 1;
+    ssize_t right = s_entry_count - 1;
 
     while (left <= right) {
         ssize_t middle = left + ((right - left) / 2);
 
-        if (g_buffer[middle].physical_address < value) {
+        if (s_buffer[middle].physical_address < value) {
             left = middle + 1;
-        } else if (value < g_buffer[middle].physical_address) {
+        } else if (value < s_buffer[middle].physical_address) {
             right = middle - 1;
         } else {
             return middle;
@@ -93,14 +93,14 @@ static ssize_t INIT_CODE find_range(
 
     // Left is always lower bound, right is always lower bound - 1
     if (right >= 0) {
-        struct memory_range *mr = &g_buffer[right];
+        struct memory_range *mr = &s_buffer[right];
 
         if (mr->physical_address < value && value < mr_end(mr))
             return right;
     }
 
     // Don't return out of bounds range, even if it's lower bound
-    if (left == (ssize_t)g_entry_count)
+    if (left == (ssize_t)s_entry_count)
         left = -1;
 
     // Either return the lower bound range (aka one after "value") or none
@@ -128,22 +128,22 @@ static INIT_CODE void merge_ranges(
 
 static INIT_CODE struct memory_range *range_before(size_t mr_idx)
 {
-    return mr_idx ? &g_buffer[mr_idx - 1] : NULL;
+    return mr_idx ? &s_buffer[mr_idx - 1] : NULL;
 }
 
 static INIT_CODE struct memory_range *range_after(size_t mr_idx)
 {
-    if (mr_idx == g_entry_count - 1)
+    if (mr_idx == s_entry_count - 1)
         return NULL;
 
-    return &g_buffer[mr_idx + 1];
+    return &s_buffer[mr_idx + 1];
 }
 
 static INIT_CODE void allocate_out_of(
     size_t mr_idx, struct memory_range *new_mr
 )
 {
-    struct memory_range *current_mr = &g_buffer[mr_idx];
+    struct memory_range *current_mr = &s_buffer[mr_idx];
     struct memory_range mr_lhs_piece, mr_rhs_piece;
     struct memory_range *mr_before, *mr_after;
     bool mergeable_before, mergeable_after;
@@ -201,7 +201,7 @@ static INIT_CODE void allocate_out_of(
 
     // Case 1
     if (MR_SIZE(&mr_lhs_piece) != 0 && MR_SIZE(&mr_rhs_piece) != 0) {
-        g_buffer[mr_idx++] = mr_lhs_piece;
+        s_buffer[mr_idx++] = mr_lhs_piece;
         range_emplace_at(mr_idx++, new_mr);
         range_emplace_at(mr_idx, &mr_rhs_piece);
 
@@ -224,7 +224,7 @@ static INIT_CODE void allocate_out_of(
         }
 
         // Case 2b
-        g_buffer[mr_idx++] = *new_mr;
+        s_buffer[mr_idx++] = *new_mr;
         range_emplace_at(mr_idx, &mr_rhs_piece);
         return;
     }
@@ -242,7 +242,7 @@ static INIT_CODE void allocate_out_of(
         }
 
         // Case 3b
-        g_buffer[mr_idx++] = mr_lhs_piece;
+        s_buffer[mr_idx++] = mr_lhs_piece;
         range_emplace_at(mr_idx, new_mr);
         return;
     }
@@ -273,10 +273,10 @@ out_case4:
     if (mr_after != NULL) {
         memmove(
             current_mr, mr_after,
-            ((g_buffer + g_entry_count) - mr_after) * sizeof(*mr_after)
+            ((s_buffer + s_entry_count) - mr_after) * sizeof(*mr_after)
         );
     }
-    g_entry_count -= mergeable_before + mergeable_after;
+    s_entry_count -= mergeable_before + mergeable_after;
 }
 
 static INIT_CODE phys_addr_t allocate_top_down(
@@ -286,7 +286,7 @@ static INIT_CODE phys_addr_t allocate_top_down(
     phys_addr_t range_end, bytes_to_allocate = page_count * PAGE_SIZE;
     phys_addr_t allocated_end = 0;
     struct memory_range allocated_mr;
-    size_t i = g_entry_count;
+    size_t i = s_entry_count;
 
     BUG_ON_WITH_MSG(
         bytes_to_allocate <= page_count,
@@ -294,7 +294,7 @@ static INIT_CODE phys_addr_t allocate_top_down(
     );
 
     while (i-- > 0) {
-        struct memory_range *mr = &g_buffer[i];
+        struct memory_range *mr = &s_buffer[i];
 
         if (mr->physical_address >= upper_limit)
             continue;
@@ -356,11 +356,11 @@ static INIT_CODE phys_addr_t allocate_within(
     if (mr_idx < 0)
         return encode_error_phys_addr(ENOMEM);
 
-    for (; mr_idx < (ssize_t)g_entry_count; ++mr_idx) {
+    for (; mr_idx < (ssize_t)s_entry_count; ++mr_idx) {
         phys_addr_t end;
         u64 available_gap;
 
-        picked_mr = &g_buffer[mr_idx];
+        picked_mr = &s_buffer[mr_idx];
         end = mr_end(picked_mr);
 
         if (picked_mr->physical_address > upper_limit)
@@ -382,7 +382,7 @@ static INIT_CODE phys_addr_t allocate_within(
             return encode_error_phys_addr(ENOMEM);
     }
 
-    if (mr_idx == (ssize_t)g_entry_count)
+    if (mr_idx == (ssize_t)s_entry_count)
         return encode_error_phys_addr(ENOMEM);
 
     range_begin = MAX(lower_limit, picked_mr->physical_address);
@@ -423,30 +423,30 @@ static INIT_CODE bool maybe_grow_buffer(void)
      * If the current buffer is a dynamic allocation, we must account for the
      * boot_free() "allocation" as well.
      */
-    if (g_buffer != g_initial_buffer)
+    if (s_buffer != s_initial_buffer)
         growth_watermark += BOOT_ALLOC_WORST_CASE_GROWTH_PER_ALLOCATION;
 
-    if ((g_capacity - g_entry_count) >= growth_watermark)
+    if ((s_capacity - s_entry_count) >= growth_watermark)
         return true;
 
-    new_capacity = PAGE_ROUND_UP(g_capacity * 2 * sizeof(struct memory_range));
+    new_capacity = PAGE_ROUND_UP(s_capacity * 2 * sizeof(struct memory_range));
 
     addr = boot_alloc_nogrow(new_capacity >> PAGE_SHIFT);
     if (WARN_ON(addr == 0))
         return false;
 
     new_buffer = phys_to_virt(addr);
-    memcpy(new_buffer, g_buffer, g_entry_count * sizeof(*g_buffer));
+    memcpy(new_buffer, s_buffer, s_entry_count * sizeof(*s_buffer));
 
-    if (g_buffer != g_initial_buffer) {
+    if (s_buffer != s_initial_buffer) {
         size_t byte_capacity;
 
-        byte_capacity = PAGE_ROUND_UP(g_capacity * sizeof(struct memory_range));
-        boot_free(virt_to_phys(g_buffer), byte_capacity >> PAGE_SHIFT);
+        byte_capacity = PAGE_ROUND_UP(s_capacity * sizeof(struct memory_range));
+        boot_free(virt_to_phys(s_buffer), byte_capacity >> PAGE_SHIFT);
     }
 
-    g_buffer = new_buffer;
-    g_capacity = new_capacity / sizeof(struct memory_range);
+    s_buffer = new_buffer;
+    s_capacity = new_capacity / sizeof(struct memory_range);
     return true;
 }
 
@@ -455,7 +455,7 @@ static INIT_CODE error_t range_append(struct memory_range *mr)
     if (unlikely(!maybe_grow_buffer()))
         return ENOMEM;
 
-    range_emplace_at(g_entry_count, mr);
+    range_emplace_at(s_entry_count, mr);
     return EOK;
 }
 
