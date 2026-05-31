@@ -289,7 +289,7 @@ static INIT_CODE phys_addr_t allocate_top_down(
     size_t i = s_entry_count;
 
     BUG_ON_WITH_MSG(
-        bytes_to_allocate <= page_count,
+        (bytes_to_allocate / PAGE_SIZE) != page_count,
         "invalid allocation size (%zu pages)\n", page_count
     );
 
