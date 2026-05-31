@@ -408,9 +408,9 @@ static INIT_CODE phys_addr_t boot_alloc_nogrow(size_t num_pages)
 
 static INIT_CODE bool maybe_grow_buffer(void)
 {
-    void *new_buffer;
+    void *new_buffer, *old_buffer;
     phys_addr_t addr;
-    size_t growth_watermark, new_capacity;
+    size_t growth_watermark, new_capacity, old_capacity;
 
     /*
      * Base watermark is the capacity for at least two worst-cast allocations:
@@ -438,15 +438,21 @@ static INIT_CODE bool maybe_grow_buffer(void)
     new_buffer = phys_to_virt(addr);
     memcpy(new_buffer, s_buffer, s_entry_count * sizeof(*s_buffer));
 
-    if (s_buffer != s_initial_buffer) {
-        size_t byte_capacity;
-
-        byte_capacity = PAGE_ROUND_UP(s_capacity * sizeof(struct memory_range));
-        boot_free(virt_to_phys(s_buffer), byte_capacity >> PAGE_SHIFT);
-    }
+    old_buffer = s_buffer;
+    old_capacity = s_capacity;
 
     s_buffer = new_buffer;
     s_capacity = new_capacity / sizeof(struct memory_range);
+
+    if (old_buffer != s_initial_buffer) {
+        size_t byte_capacity;
+
+        byte_capacity = PAGE_ROUND_UP(
+            old_capacity * sizeof(struct memory_range)
+        );
+        boot_free(virt_to_phys(old_buffer), byte_capacity >> PAGE_SHIFT);
+    }
+
     return true;
 }
 

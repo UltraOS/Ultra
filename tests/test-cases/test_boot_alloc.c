@@ -290,3 +290,32 @@ TEST_CASE(buffer_growth)
         RANGE(0x2000, 0x2000, MEMORY_ALLOCATED),
     );
 }
+
+TEST_CASE(buffer_growth_multi)
+{
+    BASE_STATE(
+        RANGE(0x1000, 0x10000, MEMORY_FREE),
+    );
+
+    // Map the physical memory so phys_to_virt works inside the allocator
+    malloc_phys_range(0x1000, 0x10000);
+
+    // Only one spare slot
+    s_capacity = 2;
+
+    ALLOC_EXPECT(1, 0xF000);
+
+    // Ensure we actually migrated away from the static buffer
+    ASSERT_NE(s_buffer, s_initial_buffer);
+
+    // 2 spare slots, to trigger a resize again
+    s_capacity = s_entry_count + 2;
+
+    ALLOC_EXPECT(1, 0x10000);
+
+    // Verify the allocator merged the internal arrays
+    CHECK_STATE(
+        RANGE(0x1000, 0xD000, MEMORY_FREE),
+        RANGE(0xE000, 0x3000, MEMORY_ALLOCATED),
+    );
+}
