@@ -280,11 +280,11 @@ out_case4:
 }
 
 static INIT_CODE phys_addr_t allocate_top_down(
-    size_t page_count, phys_addr_t upper_limit
+    size_t page_count, phys_addr_t upper_limit, size_t align
 )
 {
     phys_addr_t range_end, bytes_to_allocate = page_count * PAGE_SIZE;
-    phys_addr_t allocated_end = 0;
+    phys_addr_t alloc_start, allocated_end = 0;
     struct memory_range allocated_mr;
     size_t i = s_entry_count;
 
@@ -292,6 +292,8 @@ static INIT_CODE phys_addr_t allocate_top_down(
         (bytes_to_allocate / PAGE_SIZE) != page_count,
         "invalid allocation size (%zu pages)\n", page_count
     );
+
+    align = MAX(align, (size_t)PAGE_SIZE);
 
     while (i-- > 0) {
         struct memory_range *mr = &s_buffer[i];
@@ -303,12 +305,14 @@ static INIT_CODE phys_addr_t allocate_top_down(
             continue;
 
         range_end = MIN(mr_end(mr), upper_limit);
-
-        // Not enough length after cutoff
-        if ((range_end - mr->physical_address) < bytes_to_allocate)
+        if (range_end < bytes_to_allocate)
             continue;
 
-        allocated_end = range_end;
+        alloc_start = ALIGN_DOWN(range_end - bytes_to_allocate, align);
+        if (alloc_start < mr->physical_address)
+            continue;
+
+        allocated_end = alloc_start + bytes_to_allocate;
         break;
     }
 
@@ -401,9 +405,9 @@ out_invalid_allocation:
     );
 }
 
-static INIT_CODE phys_addr_t boot_alloc_nogrow(size_t num_pages)
+static INIT_CODE phys_addr_t boot_alloc_nogrow(size_t num_pages, size_t align)
 {
-    return allocate_top_down(num_pages, -1ull);
+    return allocate_top_down(num_pages, -1ull, align);
 }
 
 static INIT_CODE bool maybe_grow_buffer(void)
@@ -431,7 +435,7 @@ static INIT_CODE bool maybe_grow_buffer(void)
 
     new_capacity = PAGE_ROUND_UP(s_capacity * 2 * sizeof(struct memory_range));
 
-    addr = boot_alloc_nogrow(new_capacity >> PAGE_SHIFT);
+    addr = boot_alloc_nogrow(new_capacity >> PAGE_SHIFT, 0);
     if (WARN_ON(addr == 0))
         return false;
 
@@ -470,7 +474,7 @@ phys_addr_or_error_t INIT_CODE boot_alloc(size_t num_pages)
     if (unlikely(!maybe_grow_buffer()))
         return encode_error_phys_addr(ENOMEM);
 
-    return boot_alloc_nogrow(num_pages);
+    return boot_alloc_nogrow(num_pages, 0);
 }
 
 phys_addr_or_error_t INIT_CODE boot_alloc_zeroed(size_t num_pages)
@@ -478,6 +482,30 @@ phys_addr_or_error_t INIT_CODE boot_alloc_zeroed(size_t num_pages)
     phys_addr_or_error_t ret;
 
     ret = boot_alloc(num_pages);
+    if (error_phys_addr(ret))
+        return ret;
+
+    memzero(phys_to_virt(ret), num_pages << PAGE_SHIFT);
+    return ret;
+}
+
+phys_addr_or_error_t INIT_CODE boot_alloc_aligned(
+    size_t num_pages, size_t align
+)
+{
+    if (unlikely(!maybe_grow_buffer()))
+        return encode_error_phys_addr(ENOMEM);
+
+    return boot_alloc_nogrow(num_pages, align);
+}
+
+phys_addr_or_error_t INIT_CODE boot_alloc_aligned_zeroed(
+    size_t num_pages, size_t align
+)
+{
+    phys_addr_or_error_t ret;
+
+    ret = boot_alloc_aligned(num_pages, align);
     if (error_phys_addr(ret))
         return ret;
 

@@ -7,6 +7,9 @@ void boot_alloc_init(void);
 phys_addr_or_error_t boot_alloc(size_t num_pages);
 phys_addr_or_error_t boot_alloc_zeroed(size_t num_pages);
 
+phys_addr_or_error_t boot_alloc_aligned(size_t num_pages, size_t align);
+phys_addr_or_error_t boot_alloc_aligned_zeroed(size_t num_pages, size_t align);
+
 void *boot_alloc_or_die(size_t num_pages, const char *why);
 void *boot_alloc_zeroed_or_die(size_t num_pages, const char *why);
 

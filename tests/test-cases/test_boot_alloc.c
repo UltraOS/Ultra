@@ -319,3 +319,82 @@ TEST_CASE(buffer_growth_multi)
         RANGE(0xE000, 0x3000, MEMORY_ALLOCATED),
     );
 }
+
+#define ALLOC_ALIGNED_EXPECT(num_pages, alignment, expect)          \
+    do {                                                            \
+        phys_addr_t ret = boot_alloc_aligned(num_pages, alignment); \
+        ASSERT_EQ(ret, expect);                                     \
+    } while (0)
+
+TEST_CASE(alloc_aligned_middle_split)
+{
+    BASE_STATE(
+        RANGE(0x1000, 0x6000, MEMORY_FREE),
+    );
+
+    /*
+     * Request 1 page (0x1000), aligned to 0x4000
+     * allocator logic: ALIGN_DOWN(0x7000 - 0x1000, 0x4000) = 0x4000
+     * It should carve out 0x4000 -> 0x5000
+     */
+    ALLOC_ALIGNED_EXPECT(1, 0x4000, 0x4000);
+
+    CHECK_STATE(
+        RANGE(0x1000, 0x3000, MEMORY_FREE),
+        RANGE(0x4000, 0x1000, MEMORY_ALLOCATED),
+        RANGE(0x5000, 0x2000, MEMORY_FREE),
+    );
+}
+
+TEST_CASE(alloc_aligned_bottom_match)
+{
+    BASE_STATE(
+        RANGE(0x4000, 0x3000, MEMORY_FREE),
+    );
+
+    /*
+     * Request 2 pages (0x2000), aligned to 0x4000
+     * ALIGN_DOWN(0x7000 - 0x2000, 0x4000) = 0x4000
+     * Carves out 0x4000 -> 0x6000
+     */
+    ALLOC_ALIGNED_EXPECT(2, 0x4000, 0x4000);
+
+    CHECK_STATE(
+        RANGE(0x4000, 0x2000, MEMORY_ALLOCATED),
+        RANGE(0x6000, 0x1000, MEMORY_FREE),
+    );
+}
+
+TEST_CASE(alloc_aligned_top_match)
+{
+    BASE_STATE(
+        RANGE(0x1000, 0x4000, MEMORY_FREE),
+    );
+
+    /*
+     * Request 1 page (0x1000), aligned to 0x4000
+     * ALIGN_DOWN(0x5000 - 0x1000, 0x4000) = 0x4000
+     * Carves out 0x4000 -> 0x5000
+     */
+    ALLOC_ALIGNED_EXPECT(1, 0x4000, 0x4000);
+
+    CHECK_STATE(
+        RANGE(0x1000, 0x3000, MEMORY_FREE),
+        RANGE(0x4000, 0x1000, MEMORY_ALLOCATED),
+    );
+}
+
+TEST_CASE(alloc_aligned_oom)
+{
+    BASE_STATE(
+        RANGE(0x1000, 0x2000, MEMORY_FREE),
+        RANGE(0x5000, 0x2000, MEMORY_FREE),
+    );
+
+    ALLOC_ALIGNED_EXPECT(1, 0x4000, encode_error_phys_addr(ENOMEM));
+
+    CHECK_STATE(
+        RANGE(0x1000, 0x2000, MEMORY_FREE),
+        RANGE(0x5000, 0x2000, MEMORY_FREE),
+    );
+}
