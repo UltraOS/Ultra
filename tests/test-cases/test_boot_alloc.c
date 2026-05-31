@@ -3,20 +3,20 @@
 
 static void allocator_setup(struct memory_range *ranges, size_t count)
 {
-    g_buffer = g_initial_buffer;
-    g_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
-    g_entry_count = count;
+    s_buffer = s_initial_buffer;
+    s_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
+    s_entry_count = count;
 
-    memcpy(g_buffer, ranges, sizeof(*ranges) * count);
+    memcpy(s_buffer, ranges, sizeof(*ranges) * count);
 }
 
 static void verify_state(struct memory_range *ranges, size_t count)
 {
-    ASSERT_EQ(g_entry_count, count);
+    ASSERT_EQ(s_entry_count, count);
 
     for (size_t i = 0; i < count; i++) {
         struct memory_range *expected = &ranges[i];
-        struct memory_range *actual = &g_buffer[i];
+        struct memory_range *actual = &s_buffer[i];
 
         ASSERT_EQ(expected->physical_address, actual->physical_address);
         ASSERT_EQ(MR_SIZE(expected), MR_SIZE(actual));
@@ -279,11 +279,11 @@ TEST_CASE(buffer_growth)
     );
 
     malloc_phys_range(0x1000, 0x3000);
-    g_capacity = 2;
+    s_capacity = 2;
 
     // Will grab 0x3000 -> 0x4000 to resize itself
     ALLOC_EXPECT(1, 0x2000);
-    ASSERT_EQ((uintptr_t)g_buffer, (uintptr_t)phys_to_virt(0x3000));
+    ASSERT_EQ((uintptr_t)s_buffer, (uintptr_t)phys_to_virt(0x3000));
 
     CHECK_STATE(
         RANGE(0x1000, 0x1000, MEMORY_FREE),
