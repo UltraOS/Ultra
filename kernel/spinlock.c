@@ -47,7 +47,7 @@ bool spin_try_lock(struct spinlock *lock)
 {
     u32 ctrl;
 
-    ctrl = atomic_load_acquire(&lock->control);
+    ctrl = atomic_load_relaxed(&lock->control);
     if (CURRENT_TICKET(ctrl) != LAST_FREED_TICKET(ctrl))
         return false;
 
@@ -89,7 +89,7 @@ bool spin_is_locked(struct spinlock *lock)
     u32 ctrl;
 
     ctrl = atomic_load_relaxed(&lock->control);
-    return CURRENT_TICKET(ctrl) > LAST_FREED_TICKET(ctrl);
+    return CURRENT_TICKET(ctrl) != LAST_FREED_TICKET(ctrl);
 }
 
 bool spin_is_contended(struct spinlock *lock)
