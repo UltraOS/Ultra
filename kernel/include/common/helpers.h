@@ -20,6 +20,7 @@
 #define CHOOSE_EXPR(cond, if_true, if_false) \
     __builtin_choose_expr((cond), (if_true), (if_false))
 #define IS_POWER_OF_TWO(x) (__builtin_popcountll(x) == 1)
+#define IS_POWER_OF_TWO_OR_ZERO(x) (__builtin_popcountll(x) <= 1)
 
 #define DO_CONTAINER_OF(ptr, ptr_name, type, member) ({                    \
     char *ptr_name = (char*)(ptr);                                         \
