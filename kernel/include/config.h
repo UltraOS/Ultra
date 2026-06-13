@@ -48,6 +48,7 @@
 #define IS_BUILTIN(option) IS_DEFINED(CONFIG_##option)
 #define IS_MODULE(option) IS_DEFINED(CONFIG_##option##_MODULE)
 #define IS_ENABLED(option) CONFIG_OR(IS_BUILTIN(option), IS_MODULE(option))
+#define IS_DISABLED(option) !IS_ENABLED(option)
 
 /*
  * Check if this piece of code is allowed to call into or use variables from
