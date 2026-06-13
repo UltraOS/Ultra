@@ -67,6 +67,7 @@ ultra_sources(
     console.c
     log.c
     symbols.c
+    spinlock.c
     unwind.c
     param.c
     log_ring.c
