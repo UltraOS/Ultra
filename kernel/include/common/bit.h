@@ -49,8 +49,10 @@
     EMBED_STATIC_ASSERT(IS_UNSIGNED_TYPE(mask), "field mask must be unsigned") + \
     EMBED_STATIC_ASSERT(IS_CONSTEXPR(mask), "field mask must be a constant") +   \
     EMBED_STATIC_ASSERT(mask != 0, "field mask must be a non-zero value") +      \
-    EMBED_STATIC_ASSERT(IS_POWER_OF_TWO(mask + BIT(BIT_FIELD_SHIFT(mask))),      \
-                        "field mask must be contiguous") +                       \
+    EMBED_STATIC_ASSERT(                                                         \
+        IS_POWER_OF_TWO_OR_ZERO(mask + BIT(BIT_FIELD_SHIFT(mask))),              \
+        "field mask must be contiguous"                                          \
+    ) +                                                                          \
     STATIC_ASSERT_IF_CONSTEXPR(                                                  \
         (~(mask >> BIT_FIELD_SHIFT(mask)) & (value)) == 0,                       \
         "value is larger than the field mask accepts"                            \
