@@ -6,4 +6,5 @@ add_test_cases(
     test_smbios.c
     test_list.c
     test_slist.c
+    test_time.c
 )

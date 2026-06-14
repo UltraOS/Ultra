@@ -122,12 +122,26 @@ KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "bit.c"
     INCLUDE_PATH "common" INCLUDE_FILE "bit.h"
 )
+KERNEL_FILE(
+    SOURCE_PATH "time" SOURCE_FILE "counter_device.c"
+    INCLUDE_PATH "time" INCLUDE_FILE "counter_device.h"
+)
+KERNEL_FILE(INCLUDE_PATH "private/time" INCLUDE_FILE "counter_device.h")
+KERNEL_FILE(INCLUDE_PATH "time" INCLUDE_FILE "time.h")
+KERNEL_FILE(
+    SOURCE_PATH "time" SOURCE_FILE "keeper.c"
+    INCLUDE_PATH "private/time" INCLUDE_FILE "keeper.h"
+)
+KERNEL_FILE(INCLUDE_PATH "time" INCLUDE_FILE "units.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "boot.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "ultra_protocol.h")
 KERNEL_FILE(INCLUDE_FILE "log.h")
 KERNEL_FILE(INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_FILE "panic.h")
 KERNEL_FILE(INCLUDE_FILE "linker.h")
+KERNEL_FILE(INCLUDE_FILE "seq.h")
+KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "init_level.h")
+KERNEL_FILE(INCLUDE_FILE "spinlock.h" SOURCE_FILE "spinlock.c")
 
 get_property(EXTERNAL_KERNEL_FILES_LOCAL GLOBAL PROPERTY EXTERNAL_KERNEL_FILES)
 add_custom_target(external_files DEPENDS ${EXTERNAL_KERNEL_FILES_LOCAL})
@@ -142,7 +156,11 @@ endmacro()
 
 include("test-cases/files.cmake")
 
-add_executable(run_tests run_tests.cpp kernel_helpers.cpp test_harness.cpp ${TEST_SOURCES})
+add_executable(
+    run_tests
+    run_tests.cpp kernel_helpers.cpp test_harness.cpp ${TEST_SOURCES}
+    kernel-source/spinlock.c
+)
 set_property(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     PROPERTY VS_STARTUP_PROJECT
