@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional, Tuple
 try:
     from elftools.elf.elffile import ELFFile
     from elftools.elf.relocation import RelocationSection
+    from elftools.elf.sections import Section, SymbolTableSection
 except Exception as ex:
     print(f"Skipped: {ex}")
     sys.exit(0)
@@ -124,9 +125,11 @@ def find_calling_symbol(
 
 
 def find_illegal_free_after_init_references(elf: ELFFile) -> int:
-    symtab = elf.get_section_by_name('.symtab')
+    symtab: Optional[Section] = elf.get_section_by_name('.symtab')
     if not symtab:
         sys.exit("No symbol table found in file")
+
+    assert isinstance(symtab, SymbolTableSection)
 
     sec_names: List[str] = [sec.name for sec in elf.iter_sections()]
     sym_map, sym_is_init = build_symbol_data(symtab, sec_names)
