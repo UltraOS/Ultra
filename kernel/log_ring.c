@@ -6,6 +6,8 @@
 #include <common/helpers.h>
 #include <common/types.h>
 
+#include <time/time.h>
+
 #include <log_ring.h>
 #include <irq_helpers.h>
 
@@ -968,11 +970,12 @@ error_t log_ring_reserve(
     error_t ret;
     struct log_info_record *info;
     struct log_descriptor_ring *desc_ring = &ring->descriptor_ring;
-    u64 seq_num;
+    u64 seq_num, timestamp;
 
     if (!ring_can_fit(ring, length))
         return ENOSPC;
 
+    timestamp = ns_since_boot();
     res->details.irq_state = irq_state_save();
     res->details.ring = ring;
 
@@ -1019,6 +1022,7 @@ error_t log_ring_reserve(
 
     atomic_store_release(&info->level, level);
     atomic_store_release(&info->facility, SYSLOG_FACILITY_KERN);
+    atomic_store_release(&info->timestamp_ns, timestamp);
 
     return EOK;
 }
