@@ -121,25 +121,35 @@ void* translate_phys_to_virt(uint64_t phys)
     return it->virt_from_phys(phys);
 }
 
-std::unordered_map<std::string, std::vector<test_case*>>& test_groups()
+std::unordered_map<std::string, test_group>& test_groups()
 {
-    static std::unordered_map<std::string, std::vector<test_case*>> groups;
+    static std::unordered_map<std::string, test_group> groups;
     return groups;
 }
 
-void add_test_case(struct test_case *test, const char *file)
+static auto file_to_test_group_name(const char *file)
 {
-    // Transform the absolute path like /foo/bar/test_baz.c into test_baz
-    auto filename =
-        std::filesystem::path(file).filename()
-                                   .replace_extension()
-                                   .string();
-
+    // 1. Transform the absolute path like /foo/bar/test_baz.c into test_baz
+    auto filename = std::filesystem::path(file).filename()
+                                               .replace_extension()
+                                               .string();
     // 2. Transform test_baz into baz
     if (filename.starts_with("test_"))
         filename.erase(0, std::strlen("test_"));
 
-    test_groups()[filename].push_back(test);
+    return filename;
+}
+
+void add_test_case(struct test_case *test, const char *file)
+{
+    auto group = file_to_test_group_name(file);
+    test_groups()[group].test_cases.push_back(test);
+}
+
+void teardown_callback_register(void (*callback)(void), const char *file)
+{
+    auto group = file_to_test_group_name(file);
+    test_groups()[group].teardown_callback = callback;
 }
 
 #define NANOSECONDS_PER_SECOND 1000000000ull

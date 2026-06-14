@@ -21,14 +21,16 @@ auto get_test_group(const std::string& name)
 
 auto get_test(const auto& group, const std::string& name)
 {
+    auto& cases = group->second.test_cases;
+
     auto it = std::find_if(
-        group->second.begin(), group->second.end(),
+        cases.begin(), cases.end(),
         [&name](const auto* test) {
             return name == test->name;
         }
     );
 
-    if (it == group->second.end()) {
+    if (it == cases.end()) {
         std::fprintf(
             stderr, "No test %s inside group %s\n",
             name.c_str(), group->first.c_str()
@@ -81,7 +83,7 @@ int main(int argc, char **argv)
 
         std::printf("Test group %s:\n", name.c_str());
 
-        for (auto& test_case : group->second)
+        for (auto& test_case : group->second.test_cases)
             std::printf("  - %s\n", test_case->name);
 
         return EXIT_SUCCESS;
@@ -104,16 +106,19 @@ int main(int argc, char **argv)
         }
     };
 
-    auto run_group = [&] (const std::string& name, const auto& cases) {
+    auto run_group = [&] (const std::string& name, const auto& group) {
         #define GROUP_HEADER "===== Tests for '%s' ====="
         std::printf(GROUP_HEADER"\n", name.c_str());
 
-        for (auto* test : cases)
+        for (auto* test : group.test_cases)
             run_one(test);
 
         // Subtract 2 for '%s' and 1 for \0
         std::string terminator(sizeof(GROUP_HEADER) - 3 + name.length(), '=');
         std::cout << terminator << "\n";
+
+        if (group.teardown_callback)
+            group.teardown_callback();
     };
 
     if (!args.is_set("select")) {
@@ -129,6 +134,8 @@ int main(int argc, char **argv)
             run_group(group->first, group->second);
         } else {
             run_one(get_test(group, name.substr(sep_idx + 1)));
+            if (group->second.teardown_callback)
+                group->second.teardown_callback();
         }
     }
 

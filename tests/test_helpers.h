@@ -23,4 +23,9 @@ private:
     bool disarmed{ false };
 };
 
-std::unordered_map<std::string, std::vector<test_case*>>& test_groups();
+struct test_group {
+    std::vector<test_case*> test_cases;
+    void (*teardown_callback)(void);
+};
+
+std::unordered_map<std::string, test_group>& test_groups();
