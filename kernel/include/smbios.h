@@ -2,6 +2,7 @@
 
 #include <common/error.h>
 #include <common/types.h>
+#include <common/string.h>
 
 #include <smbios_structures.h>
 
@@ -133,6 +134,16 @@ bool smbios_get_id(enum smbios_id_type id, struct smbios_id *out_id);
 static inline bool smbios_has_id(enum smbios_id_type id)
 {
     return smbios_get_id(id, NULL);
+}
+
+static inline bool bios_version_check(const char *prefix)
+{
+    struct smbios_id bios_version;
+
+    if (!smbios_get_id(SMBIOS_ID_BIOS_VERSION, &bios_version))
+        return false;
+
+    return strstr(bios_version.str, prefix) == bios_version.str;
 }
 
 typedef error_t (*smbios_callback)
