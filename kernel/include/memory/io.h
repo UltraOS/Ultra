@@ -66,7 +66,7 @@ void *io_window_map_cached(phys_addr_t phys_base, size_t length);
 // Retrieves the raw pointer underlying this io_window
 void *io_window_raw_ptr(io_window*);
 
-void io_window_unmap(io_window*, size_t length);
+void io_window_unmap(io_window*);
 void io_window_unmap_ptr(void*, size_t length);
 
 #define IO_FN_DECL(width, suffix)                                               \

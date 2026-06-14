@@ -346,15 +346,15 @@ void CODE_REFERENCES_INIT_DATA io_window_unmap_ptr(void *virt, size_t length)
     early_io_unmap(virt, length);
 }
 
-void io_window_unmap(io_window *iow, size_t size)
+void io_window_unmap(io_window *iow)
 {
     switch (iow->type)
     {
     case IO_TYPE_MEM_IO:
-        io_window_unmap_ptr(iow->mmio_address, size);
+        io_window_unmap_ptr(iow->mmio_address, iow->length);
         break;
     case IO_TYPE_PORT_IO:
-        arch_unmap_pio(iow->port_address, size);
+        arch_unmap_pio(iow->port_address, iow->length);
         break;
         default:
     case IO_TYPE_UNMAPPED:
