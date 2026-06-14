@@ -11,6 +11,26 @@
 #define PT4_SIZE (1ul << PT4_SHIFT)
 #define PT5_SIZE (1ul << PT5_SHIFT)
 
+#define MAKE_GENERIC_PTX_IS_FOLDED(lvl, value) \
+    static inline bool pt##lvl##_is_folded(void) { return value; }
+
+#ifndef ARCH_HAS_CUSTOM_PT5_IS_FOLDED
+    MAKE_GENERIC_PTX_IS_FOLDED(5, false)
+#endif
+
+#ifndef ARCH_HAS_CUSTOM_PT4_IS_FOLDED
+    MAKE_GENERIC_PTX_IS_FOLDED(4, false)
+#endif
+
+/*
+ * The minimum number of real page table levels that we support is 2,
+ * which should hold for every 64-bit architecture and page size
+ * combination.
+ */
+#ifndef ARCH_HAS_CUSTOM_PT3_IS_FOLDED
+    MAKE_GENERIC_PTX_IS_FOLDED(3, false)
+#endif
+
 #define DO_MAKE_GENERIC_PTN_INDEX(lvl, shift, num_entries) \
     static inline size_t pt##lvl##_index(virt_addr_t addr) \
     {                                                      \
