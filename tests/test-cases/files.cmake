@@ -4,4 +4,5 @@ add_test_cases(
     test_log_ring.c
     test_bit.c
     test_smbios.c
+    test_list.c
 )
