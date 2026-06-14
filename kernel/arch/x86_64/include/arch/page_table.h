@@ -135,6 +135,13 @@ MAKE_X86_PT_TYPE(5)
 
 // Set dynamically based on LA57 support
 extern bool g_la57;
+
+#define ARCH_HAS_CUSTOM_PT5_IS_FOLDED
+static inline bool pt5_is_folded(void)
+{
+    return !g_la57;
+}
+
 extern u64 g_pt5_shift;
 extern u64 g_pt4_num_entries;
 
@@ -162,7 +169,7 @@ extern u64 g_pt4_num_entries;
 
 static inline void pt5_populate(struct pt5 *parent, struct pt4 *child)
 {
-    if (!g_la57)
+    if (pt5_is_folded())
         return;
 
     parent->value = virt_to_phys(child) | X86_PT_MASK;
@@ -170,7 +177,7 @@ static inline void pt5_populate(struct pt5 *parent, struct pt4 *child)
 
 static inline bool pt5_present(struct pt5 *pt)
 {
-    if (!g_la57)
+    if (pt5_is_folded())
         return true;
 
     return pt->value & X86_PT_PRESENT;
@@ -178,7 +185,7 @@ static inline bool pt5_present(struct pt5 *pt)
 
 static inline bool pt5_none(struct pt5 *pt)
 {
-    if (!g_la57)
+    if (pt5_is_folded())
         return false;
 
     return (pt->value & ~X86_KNL4_ERRATUM_MASK) == 0;
