@@ -1,3 +1,5 @@
+config SMBIOS
+    bool
 
 rsource "time/Kconfig"
 rsource "acpi/Kconfig"
