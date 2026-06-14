@@ -339,7 +339,7 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     );
 
     if (unlikely(ioapic_check_collisions(new_ioapic))) {
-        io_window_unmap(&new_ioapic->iow, PAGE_SIZE);
+        io_window_unmap(&new_ioapic->iow);
         return;
     }
 

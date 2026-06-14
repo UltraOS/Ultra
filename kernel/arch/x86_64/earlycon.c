@@ -45,7 +45,7 @@ static error_t e9_console_init(void)
     return ret;
 
 unmap:
-    io_window_unmap(&s_e9_iow, 1);
+    io_window_unmap(&s_e9_iow);
     return ret;
 }
 
