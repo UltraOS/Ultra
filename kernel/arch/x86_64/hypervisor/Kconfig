@@ -8,6 +8,10 @@ config KVM_GUEST
     select PVCLOCK
     default y
 
+config BHYVE_GUEST
+    bool "Support for running as a Bhyve guest"
+    default y
+
 config EMULATOR_GUEST
     bool "Support for Bochs and QEMU+TCG"
     default y
