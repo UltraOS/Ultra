@@ -1,0 +1,3 @@
+config ACPI
+    depends on ARCH_LITTLE_ENDIAN
+    bool

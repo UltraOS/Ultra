@@ -2,16 +2,17 @@ function(add_ultra_module)
     cmake_parse_arguments(
         MODULE
         ""
-        "NAME;TYPE"
+        "NAME;CONFIG"
         "SOURCES;PUBLIC_CFLAGS;PRIVATE_CFLAGS;PUBLIC_DEFINITIONS;PRIVATE_DEFINITIONS;PUBLIC_INCLUDE_DIRS;PRIVATE_INCLUDE_DIRS"
         ${ARGN}
     )
 
-    if (NOT MODULE_NAME OR NOT MODULE_SOURCES)
-        message(FATAL_ERROR "NAME AND SOURCES must be specified")
+    if (NOT MODULE_NAME OR NOT MODULE_SOURCES OR NOT MODULE_CONFIG)
+        message(FATAL_ERROR "NAME, SOURCES, and CONFIG must be specified")
     endif ()
 
-    if (MODULE_TYPE STREQUAL "DISABLED")
+    string(PREPEND MODULE_CONFIG "CONFIG_")
+    if (NOT ${MODULE_CONFIG})
         return()
     endif ()
 
@@ -40,14 +41,7 @@ function(add_ultra_module)
         ${MODULE_PRIVATE_INCLUDE_DIRS}
     )
 
-    if (MODULE_TYPE STREQUAL "COMPILED_IN")
-        set_property(
-            GLOBAL APPEND PROPERTY
-            ULTRA_OBJECT_TARGETS
-            ${MODULE_OBJECT_TARGET}
-        )
-        ultra_link_libraries(${MODULE_OBJECT_TARGET})
-    elseif (MODULE_TYPE STREQUAL "RUNTIME")
+    if (${MODULE_CONFIG} STREQUAL "m")
         set(MODULE_OUTPUT "${CMAKE_BINARY_DIR}/${MODULE_NAME}.ko")
 
         # We use this "hack" because cmake doesn't offer an easy way to override
@@ -76,7 +70,12 @@ function(add_ultra_module)
             ULTRA_RUNTIME_MODULE
         )
     else ()
-        message(FATAL_ERROR "Invalid module type '${MODULE_TYPE}'")
+        set_property(
+            GLOBAL APPEND PROPERTY
+            ULTRA_OBJECT_TARGETS
+            ${MODULE_OBJECT_TARGET}
+        )
+        ultra_link_libraries(${MODULE_OBJECT_TARGET})
     endif ()
 
     ultra_compile_definitions(${MODULE_PUBLIC_DEFINITIONS})
