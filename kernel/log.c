@@ -1,12 +1,15 @@
 #include <common/helpers.h>
 #include <common/format.h>
 #include <common/error.h>
+#include <common/minmax.h>
 
 #include <console.h>
 #include <log.h>
 #include <symbols.h>
 #include <unwind.h>
 #include <log_ring.h>
+
+#include <time/units.h>
 
 #include <arch/constants.h>
 
@@ -25,20 +28,34 @@ void log_set_hardware_identity_string(const char *fmt, ...)
 
 static void print_flush(void)
 {
-    static char buf[512];
+    static char msg_buf[512], out_buf[512 + 64];
+
     struct console *con;
     struct log_record rec;
     error_t ret;
+    u64 sec, usec;
+    int prefix_len;
+    size_t copy_len;
 
     for (con = g_consoles; con; con = con->next) {
         for (;;) {
             ret = log_ring_read(
-                &s_log_ring, con->log_seq_num, buf, sizeof(buf), &rec
+                &s_log_ring, con->log_seq_num, msg_buf, sizeof(msg_buf), &rec
             );
             if (ret != EOK)
                 break;
 
-            con->write(con, buf, rec.length);
+            sec = rec.timestamp_ns / NS_PER_SEC;
+            usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
+
+            prefix_len = snprintf(
+                out_buf, sizeof(out_buf), "[%5llu.%06llu] ", sec, usec
+            );
+
+            copy_len = MIN(rec.length, sizeof(out_buf) - prefix_len);
+            memcpy(out_buf + prefix_len, msg_buf, copy_len);
+
+            con->write(con, out_buf, prefix_len + copy_len);
             con->log_seq_num = rec.seq_num + 1;
         }
     }
