@@ -15,6 +15,7 @@ config ARCH_X86_64_BASE
     select ARCH_LITTLE_ENDIAN
     select ARCH_64BIT
     select ACPI
+    select ACPI_PM
     select HPET
 
 rsource "hypervisor/Kconfig"
