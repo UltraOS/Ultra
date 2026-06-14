@@ -57,21 +57,8 @@ uint64_t ns_timer(void);
         add_test_case(&test_##case_name, __FILE__); \
     }
 
-#ifdef _MSC_VER
-    #pragma section(".CRT$XCU", read)
-    #define TEST_CASE(case_name)                                  \
-        DO_MAKE_TEST_CASE(case_name)                              \
-                                                                  \
-        static void case_name##_init(void);                       \
-        __declspec(allocate(".CRT$XCU"))                          \
-        void (*case_name##_hook)(void) = case_name##_init;        \
-                                                                  \
-        __pragma(comment(linker, "/include:" #case_name "_hook")) \
-        static void case_name(void)
-#else
-    #define TEST_CASE(case_name)                    \
-        __attribute__((constructor))                \
-        static void CONCAT(case_name, _init)(void); \
-        DO_MAKE_TEST_CASE(case_name)                \
-        static void case_name(void)
-#endif
+#define TEST_CASE(case_name)                    \
+    __attribute__((constructor))                \
+    static void CONCAT(case_name, _init)(void); \
+    DO_MAKE_TEST_CASE(case_name)                \
+    static void case_name(void)
