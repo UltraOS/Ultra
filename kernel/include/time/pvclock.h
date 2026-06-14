@@ -35,3 +35,5 @@ void pvclock_enable_stable_bit(void);
 
 u64 pvclock_read_from(struct pvclock_vcpu_time_info*);
 #define pvclock_read() pvclock_read_from(this_cpu_read(g_this_cpu_time_info))
+
+u64 pvclock_calculate_tsc_hz(struct pvclock_vcpu_time_info*);
