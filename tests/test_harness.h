@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 void add_test_case(struct test_case *test, const char *file);
+void teardown_callback_register(void (*callback)(void), const char *file);
 
 void do_assert_eq(uint64_t lhs, uint64_t rhs, const char *file, size_t line);
 void do_assert_ne(uint64_t lhs, uint64_t rhs, const char *file, size_t line);
@@ -44,6 +45,16 @@ uint64_t ns_timer(void);
 #ifdef __cplusplus
 }
 #endif
+
+#define TEST_TEARDOWN()                                      \
+    static void test_teardown(void);                         \
+                                                             \
+    __attribute__((constructor))                             \
+    static void test_teardown_register(void)                 \
+    {                                                        \
+        teardown_callback_register(test_teardown, __FILE__); \
+    }                                                        \
+    static void test_teardown(void)
 
 #define DO_MAKE_TEST_CASE(case_name)                \
     static void case_name(void);                    \
