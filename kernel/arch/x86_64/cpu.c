@@ -16,14 +16,26 @@ static reg_t s_cr4;
 struct x86_cpu_info g_cpu_info;
 DEFINE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
+static void intel_init(void)
+{
+    /*
+     * All x86_64 intel CPUs have constant TSC.
+     *
+     * Earlier models might have it halt in lower C states, but we never
+     * enter those, so for us it doesn't really matter.
+     */
+    all_cpus_enable(X86_FEATURE_TSC_RELIABLE);
+}
+
 struct cpu_ident {
     char vendor_string[13];
     enum x86_cpu_vendor vendor;
+    void (*init)(void);
 };
 
 static const struct cpu_ident INIT_RODATA s_supported_cpus[] = {
-    { "GenuineIntel", X86_VENDOR_INTEL },
-    { "AuthenticAMD", X86_VENDOR_AMD   },
+    { "GenuineIntel", X86_VENDOR_INTEL, intel_init },
+    { "AuthenticAMD", X86_VENDOR_AMD,   nullptr    },
 };
 
 static void INIT_CODE cpu_vendor_detect(struct x86_cpu_info *info)
@@ -44,6 +56,8 @@ static void INIT_CODE cpu_vendor_detect(struct x86_cpu_info *info)
             continue;
 
         info->vendor = this_id->vendor;
+        if (this_id->init)
+            this_id->init();
         break;
     }
 }
@@ -183,6 +197,19 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
          */
         s_efer = rdmsr_or_die(MSR_IA32_EFER);
         asm volatile ("mov %%cr4, %0" : "=r"(s_cr4));
+
+        /*
+         * We don't look at the TSC invariant bit directly because:
+         * - We don't really care about it halting in lower C states because
+         *   we don't use those, so really what matter is only that it's
+         *   constant
+         * - Hypervisors might want to force a specific setting, which is
+         *   unrelated to what the actual CPUID bit reports
+         * - CPU-specific init might have extra knowledge that is outside of
+         *   this bit (like intel)
+         */
+        if (all_cpus_have(X86_FEATURE_TSC_INVARIANT))
+            all_cpus_enable(X86_FEATURE_TSC_RELIABLE);
     }
 }
 
