@@ -5,4 +5,5 @@ add_test_cases(
     test_bit.c
     test_smbios.c
     test_list.c
+    test_slist.c
 )
