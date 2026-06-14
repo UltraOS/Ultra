@@ -4,6 +4,7 @@
 #include <arch/private/kvm.h>
 #include <arch/private/cpu.h>
 #include <arch/private/msr.h>
+#include <arch/private/tsc.h>
 
 #include <time/pvclock.h>
 #include <boot/alloc.h>
@@ -73,6 +74,7 @@ static INIT_CODE void kvm_setup_pvclock(void)
 {
     size_t bytes_to_allocate;
     phys_addr_or_error_t time_info_base;
+    void *this_info;
 
     pr_info(
         "pvclock at 0x%08X/0x%08X\n",
@@ -94,10 +96,12 @@ static INIT_CODE void kvm_setup_pvclock(void)
     if (kvm_has_feature(KVM_FEATURE_CLOCKSOURCE_STABLE_BIT))
         pvclock_enable_stable_bit();
 
-    this_cpu_write(g_this_cpu_time_info, phys_to_virt(time_info_base));
+    this_info = phys_to_virt(time_info_base);
+    this_cpu_write(g_this_cpu_time_info, this_info);
     s_ctx.time_info_base = time_info_base;
 
     kvm_start_pvclock();
+    tsc_set_known_frequency(pvclock_calculate_tsc_hz(this_info), "pvclock");
 }
 
 static INIT_CODE void kvm_setup(struct active_hypervisor *hv)

@@ -1,6 +1,19 @@
 #include <arch/private/cpu.h>
+#include <arch/private/tsc.h>
 
 #include <time/pvclock.h>
+#include <time/counter_device.h>
+
+#include <init_level.h>
+
+/*
+ * From Documentation/virt/kvm/x86/msr.rst
+ *     The conversion from tsc to nanoseconds involves an additional right
+ *     shift by 32 bits.
+ */
+#define PVCLOCK_SHIFT 32
+
+#define PVCLOCK_HZ NS_PER_SEC
 
 static bool s_has_stable_bit;
 
@@ -38,7 +51,7 @@ static u64 pvclock_cycles_to_ns(struct pvclock_vcpu_time_info *info, u64 tsc)
         elapsed_ticks <<= shift;
 
     mul = atomic_load_relaxed(&info->guest_tsc_mul);
-    elapsed_ns = ((u128)elapsed_ticks * mul) >> 32;
+    elapsed_ns = ((u128)elapsed_ticks * mul) >> PVCLOCK_SHIFT;
 
     host_ns = atomic_load_relaxed(&info->host_ns_since_boot);
 
@@ -88,3 +101,51 @@ u64 pvclock_read_from(struct pvclock_vcpu_time_info *info)
      */
     return pvclock_read_stablize(ns_since_boot);
 }
+
+u64 pvclock_calculate_tsc_hz(struct pvclock_vcpu_time_info *info)
+{
+    u64 hz;
+
+    hz = (PVCLOCK_HZ << PVCLOCK_SHIFT) / info->guest_tsc_mul;
+
+    if (info->guest_tsc_shift < 0)
+        hz <<= -info->guest_tsc_shift;
+    else
+        hz >>= info->guest_tsc_shift;
+
+    return hz;
+}
+
+static u64 pvclock_read_cd(struct counter_device *cd)
+{
+    UNREFERENCED_PARAMETER(cd);
+    return pvclock_read();
+}
+
+static struct counter_device s_pvclock_cd = {
+    .name = "pv-clock",
+    .read = pvclock_read_cd,
+    .mask = COUNTER_MASK(64),
+    .rating = TSC_PRECISE_RATING + 1,
+};
+
+static error_t pvclock_time_counter_register(void)
+{
+    if (!this_cpu_read(g_this_cpu_time_info))
+        return EOK;
+
+    /*
+     * By default, we rate ourselves higher than TSC, so that we're used
+     * unconditionally in VMs. However, if the host has explicitly enabled
+     * the invariant bit, it promises that the TSC frequency will never change
+     * between VCPU migrations (or that VM migration is disabled entirely),
+     * thus we can use the TSC directly and skip pvclock entirely (since it's
+     * a bit more expensive to read than the TSC and always involves 128-bit
+     * math).
+     */
+    if (all_cpus_have(X86_FEATURE_TSC_INVARIANT))
+        s_pvclock_cd.rating = TSC_PRECISE_RATING - 1;
+
+    return counter_device_register(&s_pvclock_cd, PVCLOCK_HZ);
+}
+INIT_CALL_PRE(X86_EARLY_TIME_SETUP, pvclock_time_counter_register);
