@@ -19,6 +19,7 @@ ultra_sources(
     irq.c
     exceptions.c
     earlycon.c
+    tsc.c
 )
 ultra_include_directories(include)
 

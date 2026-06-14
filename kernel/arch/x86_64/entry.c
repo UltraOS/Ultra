@@ -60,6 +60,7 @@ static error_t INIT_CODE x86_platform_init(void)
     if (hypervisor_supports(HYPERVISOR_FEATURE_SKIP_PORT_IO_DELAY))
         g_can_skip_pio_delay = true;
 
+    init_level_raise_deferred(INIT_LEVEL_X86_EARLY_TIME_SETUP);
     return EOK;
 }
 INIT_CALL_POST(PLATFORM_INFO_AVAILABLE, x86_platform_init);

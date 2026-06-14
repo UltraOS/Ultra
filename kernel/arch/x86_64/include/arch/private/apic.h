@@ -62,3 +62,5 @@ struct apic {
 };
 
 void apic_detect(void);
+
+void apic_set_known_frequency(u64 khz);

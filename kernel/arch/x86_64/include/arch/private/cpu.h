@@ -18,6 +18,7 @@ enum x86_feature_dword {
     X86_FEATURE_DWORD_8000_0001_D,
     X86_FEATURE_DWORD_8000_0007_D,
     X86_FEATURE_DWORD_8000_0008_B,
+    X86_FEATURE_DWORD_SYNTHETIC_0,
     X86_FEATURE_DWORD_COUNT,
 };
 
@@ -293,6 +294,9 @@ enum x86_feature {
     X86_FEATURE_BTC_NOT_AFFECTED = X86_FEATURE_DWORD_BIT(8000_0008_B, 29),
     X86_FEATURE_IBPB_RET = X86_FEATURE_DWORD_BIT(8000_0008_B, 30),
     X86_FEATURE_BRS = X86_FEATURE_DWORD_BIT(8000_0008_B, 31),
+
+    // This bit is fully usable only after hypervisor detection
+    X86_FEATURE_TSC_RELIABLE = X86_FEATURE_DWORD_BIT(SYNTHETIC_0, 0),
 };
 
 enum x86_cpu_vendor : u8 {
@@ -337,6 +341,9 @@ DECLARE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
 #define this_cpu_has(feature) \
     bit_test(this_cpu_ptr(&g_this_cpu_info)->feature_bit_array, (feature))
+
+#define all_cpus_disable(feature) bit_clear(g_cpu_info.feature_bit_array, (feature))
+#define all_cpus_enable(feature) bit_set(g_cpu_info.feature_bit_array, (feature))
 
 struct cpuid_res {
     u32 a;
