@@ -2,7 +2,7 @@ include(uacpi/uacpi.cmake)
 
 add_ultra_module(
     NAME acpi
-    TYPE COMPILED_IN
+    CONFIG ACPI
     SOURCES
         acpi.c
         ${UACPI_SOURCES}

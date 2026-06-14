@@ -1,2 +1,3 @@
 
 rsource "time/Kconfig"
+rsource "acpi/Kconfig"
