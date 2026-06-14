@@ -599,3 +599,19 @@ void INIT_CODE boot_alloc_init(void)
 {
     for_each_memory_map_range(boot_alloc_add_one, ultra_mme_is_ram, nullptr);
 }
+
+void INIT_CODE boot_alloc_for_each_range(memory_range_cb_t cb)
+{
+    struct boot_alloc_for_each_ctx ctx;
+    struct memory_range *range = s_buffer;
+    size_t i;
+
+    for (i = 0; i < s_entry_count; i++, range++) {
+        ctx.is_free = MR_TYPE(range) == MEMORY_FREE;
+        cb(
+           range->physical_address,
+           range->physical_address + MR_SIZE(range),
+           &ctx
+        );
+    }
+}
