@@ -6,3 +6,7 @@ ultra_sources_if(
     CONFIG_KVM_GUEST
     kvm.c
 )
+ultra_sources_if(
+    CONFIG_EMULATOR_GUEST
+    emulators.c
+)

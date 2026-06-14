@@ -8,4 +8,8 @@ config KVM_GUEST
     select PVCLOCK
     default y
 
+config EMULATOR_GUEST
+    bool "Support for Bochs and QEMU+TCG"
+    default y
+
 endif
