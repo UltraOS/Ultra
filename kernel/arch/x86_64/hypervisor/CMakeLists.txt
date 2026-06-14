@@ -7,6 +7,10 @@ ultra_sources_if(
     kvm.c
 )
 ultra_sources_if(
+    CONFIG_BHYVE_GUEST
+    bhyve.c
+)
+ultra_sources_if(
     CONFIG_EMULATOR_GUEST
     emulators.c
 )
