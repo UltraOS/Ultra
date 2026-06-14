@@ -6,3 +6,7 @@ ultra_sources_if(
     CONFIG_HPET
     hpet.c
 )
+ultra_sources_if(
+    CONFIG_ACPI_PM
+    acpi_pm.c
+)

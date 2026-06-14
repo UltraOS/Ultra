@@ -5,3 +5,7 @@ config PVCLOCK
 config HPET
     depends on ACPI
     bool
+
+config ACPI_PM
+    depends on ARCH_X86_64 && ACPI
+    bool
