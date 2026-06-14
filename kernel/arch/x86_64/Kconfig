@@ -14,6 +14,7 @@ config ARCH_X86_64_BASE
     bool
     select ARCH_LITTLE_ENDIAN
     select ARCH_64BIT
+    select SMBIOS
     select ACPI
     select ACPI_PM
     select HPET
