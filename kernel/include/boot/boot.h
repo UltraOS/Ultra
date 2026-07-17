@@ -31,7 +31,7 @@ static inline bool INIT_CODE ultra_mme_is_ram(
 {
     switch (mme->type) {
     case ULTRA_MEMORY_TYPE_FREE:
-    case ULTRA_MEMORY_TYPE_RECLAIMABLE:
+    case ULTRA_MEMORY_TYPE_ACPI_RECLAIMABLE:
     case ULTRA_MEMORY_TYPE_LOADER_RECLAIMABLE:
     case ULTRA_MEMORY_TYPE_MODULE:
     case ULTRA_MEMORY_TYPE_KERNEL_STACK:

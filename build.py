@@ -231,28 +231,8 @@ def make_hyper_image(
     )
 
 
-def platform_has_native_hyper() -> bool:
-    this_os = platform.system()
-    this_arch = platform.machine()
-
-    msg = "Hyper loader doesn't get installer releases for {arg}.\n" \
-          "Please compile manually and specify with --hyper-installer " \
-          "to be able to produce bootable raw images or hybrid ISOs with "\
-          "this utility."
-
-    if this_os not in ["Linux", "Windows"]:
-        print(msg.format(arg=this_os))
-        return False
-
-    if this_arch != "x86_64":
-        print(msg.format(arg=this_arch))
-        return False
-
-    return True
-
-
 def hyper_get_binary(name: str, optional: bool = False) -> Optional[str]:
-    hyper_version = "v0.10.0"
+    hyper_version = "v0.12.0"
     root = pg.project_root_relative(f"hyper-{hyper_version}")
     binary_path = os.path.join(root, name)
 
@@ -273,19 +253,8 @@ def hyper_get_binary(name: str, optional: bool = False) -> Optional[str]:
     return binary_path
 
 
-def hyper_get_installer_name() -> str:
-    # This assumes we're running on a supported system
-    this_os = platform.system()
-    basename = "hyper_install"
-
-    if this_os == "Windows":
-        return f"{basename}-win64.exe"
-
-    return f"{basename}-linux-x86_64"
-
-
 def hyper_get_installer() -> str:
-    ret = hyper_get_binary(hyper_get_installer_name())
+    ret = hyper_get_binary("hyper_install")
     assert ret
     return ret
 
@@ -513,10 +482,7 @@ def main() -> None:
             image_name = "image.raw"
 
         if not hyper_installer:
-            if platform_has_native_hyper():
-                hyper_installer = hyper_get_installer()
-            elif args.image_type != "iso":  # only mandatory for HDDs
-                sys.exit(1)
+            hyper_installer = hyper_get_installer()
 
         if not hyper_iso_br:
             hyper_iso_br = hyper_get_iso_br()
