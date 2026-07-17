@@ -13,6 +13,7 @@
 #define ULTRA_ATTRIBUTE_COMMAND_LINE     5
 #define ULTRA_ATTRIBUTE_FRAMEBUFFER_INFO 6
 #define ULTRA_ATTRIBUTE_APM_INFO         7
+#define ULTRA_ATTRIBUTE_UEFI_INFO        8
 
 struct ultra_attribute_header {
     uint32_t type;
@@ -43,12 +44,22 @@ struct ultra_platform_info_attribute {
 #define ULTRA_PARTITION_TYPE_RAW     1
 #define ULTRA_PARTITION_TYPE_MBR     2
 #define ULTRA_PARTITION_TYPE_GPT     3
+#define ULTRA_PARTITION_TYPE_PXE_V4  4
+#define ULTRA_PARTITION_TYPE_PXE_V6  5
 
 struct ultra_guid {
     uint32_t data1;
     uint16_t data2;
     uint16_t data3;
     uint8_t  data4[8];
+};
+
+struct ultra_ipv4_addr {
+    uint8_t addr[4];
+};
+
+struct ultra_ipv6_addr {
+    uint8_t addr[16];
 };
 
 #define ULTRA_PATH_MAX 256
@@ -60,11 +71,20 @@ struct ultra_kernel_info_attribute {
     uint64_t virtual_base;
     uint64_t size;
 
+    // one of ULTRA_PARTITION_TYPE_*
     uint64_t partition_type;
 
-    // only valid if partition_type == PARTITION_TYPE_GPT
+    // only valid if partition_type == ULTRA_PARTITION_TYPE_GPT
     struct ultra_guid disk_guid;
-    struct ultra_guid partition_guid;
+
+    union {
+        // only valid if partition_type == ULTRA_PARTITION_TYPE_GPT
+        struct ultra_guid partition_guid;
+        // only valid if partition_type == ULTRA_PARTITION_TYPE_PXE_V4
+        struct ultra_ipv4_addr pxe_v4;
+        // only valid if partition_type == ULTRA_PARTITION_TYPE_PXE_V6
+        struct ultra_ipv6_addr pxe_v6;
+    };
 
     // always valid
     uint32_t disk_index;
@@ -76,8 +96,8 @@ struct ultra_kernel_info_attribute {
 #define ULTRA_MEMORY_TYPE_INVALID            0x00000000
 #define ULTRA_MEMORY_TYPE_FREE               0x00000001
 #define ULTRA_MEMORY_TYPE_RESERVED           0x00000002
-#define ULTRA_MEMORY_TYPE_RECLAIMABLE        0x00000003
-#define ULTRA_MEMORY_TYPE_NVS                0x00000004
+#define ULTRA_MEMORY_TYPE_ACPI_RECLAIMABLE   0x00000003
+#define ULTRA_MEMORY_TYPE_ACPI_NVS           0x00000004
 #define ULTRA_MEMORY_TYPE_LOADER_RECLAIMABLE 0xFFFF0001
 #define ULTRA_MEMORY_TYPE_MODULE             0xFFFF0002
 #define ULTRA_MEMORY_TYPE_KERNEL_STACK       0xFFFF0003
@@ -106,10 +126,21 @@ struct ultra_module_info_attribute {
     char name[64];
     uint64_t address;
     uint64_t size;
+    char description[];
 };
+
+/*
+ * NOTE: The size of the description is impossible to derive from header.size
+ *       due to alignment reason. Use str{n}len() or similar.
+ */
+#define ULTRA_MODULE_HAS_DESCRIPTION(header) ((((header).size) - sizeof(struct ultra_module_info_attribute)) > 0)
 
 struct ultra_command_line_attribute {
     struct ultra_attribute_header header;
+    /*
+     * NOTE: The size of 'text' is impossible to derive from header.size
+     *       due to alignment reason. Use str{n}len() or similar.
+     */
     char text[];
 };
 
@@ -152,6 +183,23 @@ struct ultra_apm_attribute {
     struct ultra_attribute_header header;
     struct ultra_apm_info info;
 };
+
+struct ultra_uefi_info_attribute {
+    struct ultra_attribute_header header;
+
+    uint64_t system_table_address;
+
+    uint32_t descriptor_size;
+    uint32_t descriptor_version;
+
+    // Width of the UEFI firmware in bits, either 32 or 64
+    uint32_t firmware_width;
+    uint32_t reserved;
+
+    uint8_t memory_descriptors[];
+};
+
+#define ULTRA_UEFI_INFO_MEM_DESC_COUNT(info) ((((info).header.size) - sizeof(struct ultra_uefi_info_attribute)) / (info).descriptor_size)
 
 struct ultra_boot_context {
     uint8_t protocol_major;
