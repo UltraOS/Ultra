@@ -5,12 +5,16 @@
 #include <common/format.h>
 #include <common/minmax.h>
 
+#include <arch/memory.h>
+
 #include <boot/boot.h>
 #include <boot/alloc.h>
 #include <private/memory.h>
 #include <memory/units.h>
 #include <memory/page_table.h>
 #include <memory/address_space.h>
+#include <memory/page.h>
+#include <memory/buddy.h>
 
 #include <free_after_init.h>
 #include <log.h>
@@ -169,7 +173,7 @@ struct direct_mapping_ctx {
 
 static void* INIT_CODE pt_early_page_alloc(void)
 {
-    return boot_alloc_zeroed_or_die(1, "building kernel address space");
+    return boot_alloc_zeroed_or_die(1, "early kernel page tables");
 }
 
 static void INIT_CODE detect_page_sizes(struct direct_mapping_ctx *ctx)
@@ -586,4 +590,173 @@ void INIT_CODE kernel_address_space_setup(void)
         "max RAM address: %llX, max supported: %llX",
         s_max_ram_addr, MAX_PHYS_ADDR
     );
+}
+
+static pt_prot s_kernel_memory_map_pt_prot;
+
+static void INIT_CODE memory_map_populate_pt1(
+    struct pt1 *pt1, virt_addr_t virt, virt_addr_t end
+)
+{
+    virt_addr_t next;
+    phys_addr_t pa;
+
+    for (; virt < end; virt = next, pt1++) {
+        next = ALIGN_DOWN(virt, PT1_SIZE) + PT1_SIZE;
+        if (next < virt || next > end)
+            next = end;
+
+        if (!pt1_present(pt1)) {
+            pa = virt_to_phys(boot_alloc_or_die(1, "kernel memory map"));
+            pt1_exclusive_make_leaf(pt1, pa, s_kernel_memory_map_pt_prot);
+        }
+    }
+}
+
+static void INIT_CODE memory_map_populate_pt2(
+    struct pt2 *pt2, virt_addr_t virt, virt_addr_t end
+)
+{
+    virt_addr_t next;
+    struct pt1 *pt1;
+    phys_addr_t huge_pt;
+
+    for (; virt < end; virt = next, pt2++) {
+        next = ALIGN_DOWN(virt, PT2_SIZE) + PT2_SIZE;
+        if (next < virt || next > end)
+            next = end;
+
+        if (!pt2_can_be_leaf())
+            goto do_small_pages;
+        if (!IS_ALIGNED(virt, PT2_SIZE) || (next - virt) != PT2_SIZE)
+            goto do_small_pages;
+
+        if (pt2_present(pt2)) {
+            if (pt2_is_leaf(pt2))
+                continue;
+
+            goto do_small_pages;
+        }
+
+        huge_pt = boot_alloc_aligned(PT2_SIZE / PAGE_SIZE, PT2_SIZE);
+        if (error_phys_addr(huge_pt))
+            goto do_small_pages;
+
+        pt2_exclusive_make_leaf(pt2, huge_pt, s_kernel_memory_map_pt_prot);
+        continue;
+
+    do_small_pages:
+        if (!pt2_present(pt2))
+            pt2_exclusive_populate(pt2, pt_early_page_alloc());
+
+        pt1 = pt1_from_pt2(pt2, virt);
+        memory_map_populate_pt1(pt1, virt, next);
+    }
+}
+
+static void INIT_CODE memory_map_populate_pt3(
+    struct pt3 *pt3, virt_addr_t virt, virt_addr_t end
+)
+{
+    virt_addr_t next;
+    struct pt2 *pt2;
+
+    for (; virt < end; virt = next, pt3++) {
+        next = ALIGN_DOWN(virt, PT3_SIZE) + PT3_SIZE;
+        if (next < virt || next > end)
+            next = end;
+
+        if (!pt3_present(pt3))
+            pt3_exclusive_populate(pt3, pt_early_page_alloc());
+
+        pt2 = pt2_from_pt3(pt3, virt);
+        memory_map_populate_pt2(pt2, virt, next);
+    }
+}
+
+static void INIT_CODE memory_map_populate_pt4(
+    struct pt4 *pt4, virt_addr_t virt, virt_addr_t end
+)
+{
+    virt_addr_t next;
+    struct pt3 *pt3;
+
+    for (; virt < end; virt = next, pt4++) {
+        next = ALIGN_DOWN(virt, PT4_SIZE) + PT4_SIZE;
+        if (next < virt || next > end)
+            next = end;
+
+        if (!pt4_present(pt4))
+            pt4_exclusive_populate(pt4, pt_early_page_alloc());
+
+        pt3 = pt3_from_pt4(pt4, virt);
+        memory_map_populate_pt3(pt3, virt, next);
+    }
+}
+
+static void INIT_CODE memory_map_populate_pt5(
+    virt_addr_t virt, virt_addr_t end
+)
+{
+    virt_addr_t next;
+    struct pt5 *pt5;
+    struct pt4 *pt4;
+
+    pt5 = pt_root_from_address_space(&g_kernel_address_space, virt);
+
+    for (; virt < end; virt = next, pt5++) {
+        next = ALIGN_DOWN(virt, PT5_SIZE) + PT5_SIZE;
+        if (next < virt || next > end)
+            next = end;
+
+        if (!pt5_present(pt5))
+            pt5_exclusive_populate(pt5, pt_early_page_alloc());
+
+        pt4 = pt4_from_pt5(pt5, virt);
+        memory_map_populate_pt4(pt4, virt, next);
+    }
+}
+
+#define BUDDY_ALIGNMENT (PAGE_SIZE * BIT_PHYS(BUDDY_MAX_ORDER))
+
+static inline virt_addr_t phys_to_memory_map(phys_addr_t phys)
+{
+    return MEMORY_MAP_BASE + ((phys / PAGE_SIZE) * sizeof(struct page));
+}
+
+static void INIT_CODE kernel_memory_setup_one(
+    phys_addr_t p_start, phys_addr_t p_end, void *unused
+)
+{
+    virt_addr_t v_start, v_end;
+
+    UNREFERENCED_PARAMETER(unused);
+
+    p_start = ALIGN_DOWN(p_start, BUDDY_ALIGNMENT);
+    p_end = ALIGN_UP(p_end, BUDDY_ALIGNMENT);
+
+    v_start = phys_to_memory_map(p_start);
+    v_end = phys_to_memory_map(p_end);
+
+    v_start = ALIGN_DOWN(v_start, PAGE_SIZE);
+    v_end = ALIGN_UP(v_end, PAGE_SIZE);
+
+    pr_debug(
+        "populating memmap [0x%016zX/%0llX - 0x%016zX/%0llX]\n",
+        v_start, p_start, v_end, p_end
+    );
+
+    memory_map_populate_pt5(v_start, v_end);
+}
+
+struct page *g_memory_map;
+
+void INIT_CODE kernel_memory_map_setup(void)
+{
+    s_kernel_memory_map_pt_prot = pt_prot_from_vm_prot(
+        VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE
+    );
+
+    for_each_ram_range(kernel_memory_setup_one, nullptr);
+    g_memory_map = (struct page*)MEMORY_MAP_BASE;
 }
