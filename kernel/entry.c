@@ -149,5 +149,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     per_cpu_setup();
     init_level_raise(INIT_LEVEL_PER_CPU_AVAILABLE);
 
+    kernel_memory_map_setup();
+
     for (;;);
 }

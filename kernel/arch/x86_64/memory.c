@@ -1,6 +1,7 @@
 #include <arch/private/cpu.h>
 #include <arch/private/cr.h>
 #include <arch/private/msr.h>
+#include <arch/memory.h>
 
 #include <common/bit.h>
 #include <boot/boot.h>
@@ -9,6 +10,8 @@
 #include <memory/address_space.h>
 #include <memory/tlb.h>
 #include <memory/io.h>
+#include <memory/units.h>
+#include <memory/page.h>
 
 #include <free_after_init.h>
 #include <init_level.h>
@@ -81,20 +84,62 @@ static void INIT_CODE cache_init(void)
 
 u8 g_max_phys_bits = MAX_PHYS_BITS_NO_LA57;
 
+virt_addr_t g_memory_map_base, g_memory_map_end;
+
+/*
+ * 1/64 TiB perfectly cover all 46/52 bits of physical address space we cap
+ * !LA57/LA57 CPUs at, (given a struct page is 64 bytes at max). Asserts
+ * below ensure the hardcoded size here is enough to fit all possible struct
+ * pages.
+ */
+#define MEMORY_MAP_SIZE_NO_LA57 (1 * TiB)
+#define MEMORY_MAP_SIZE_LA57 (64 * TiB)
+
+#define MEMORY_MAP_MAX_NR_PAGES_NO_LA57 (MAX_PHYS_ADDR_NO_LA57 >> PAGE_SHIFT)
+#define MEMORY_MAP_MAX_NR_PAGES_LA57 (MAX_PHYS_ADDR_LA57 >> PAGE_SHIFT)
+
+#define MEMORY_MAP_MAX_SIZE_NO_LA57 \
+    (MEMORY_MAP_MAX_NR_PAGES_NO_LA57 * sizeof(struct page))
+#define MEMORY_MAP_MAX_SIZE_LA57 \
+    (MEMORY_MAP_MAX_NR_PAGES_LA57 * sizeof(struct page))
+
+/*
+ * Ensure that the memory map size covers worst case
+ * (RAM at the very top of the physical address space)
+ */
+BUILD_BUG_ON_WITH_MSG(
+    MEMORY_MAP_SIZE_NO_LA57 < MEMORY_MAP_MAX_SIZE_NO_LA57 ||
+    MEMORY_MAP_SIZE_LA57 < MEMORY_MAP_MAX_SIZE_LA57,
+    "Memory map is too small to accomodate all possible struct pages"
+);
+
 static error_t INIT_CODE x86_early_paging_init(void)
 {
     reg_t cr4_features = 0;
+    size_t memmap_size;
 
-    // Just stick with the page table depth our bootloader has picked
+    /*
+     * Just stick with the page table depth our bootloader has picked,
+     * but sanity check the protocol-enforced direct map base.
+     */
     if (g_boot_ctx.platform_info->page_table_depth == 5) {
+        BUG_ON(g_direct_map_base != 0xFF00000000000000);
         BUG_ON(!all_cpus_have(X86_FEATURE_LA57));
         g_la57 = true;
         g_max_phys_bits = MAX_PHYS_BITS_LA57;
         g_pt4_num_entries = 512;
         g_pt5_shift += X86_PT_LVL_SHIFT;
+
+        memmap_size = MEMORY_MAP_SIZE_LA57;
     } else {
+        BUG_ON(g_direct_map_base != 0xFFFF800000000000);
         BUG_ON(g_boot_ctx.platform_info->page_table_depth != 4);
+
+        memmap_size = MEMORY_MAP_SIZE_NO_LA57;
     }
+
+    g_memory_map_base = g_direct_map_base + MAX_PHYS_ADDR;
+    g_memory_map_end = g_memory_map_base + memmap_size;
 
     /*
      * Enable large & global pages if they're supported
