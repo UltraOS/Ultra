@@ -159,17 +159,6 @@ pt_prot pt_prot_from_vm_prot(enum vm_prot vm_prot)
     return prot;
 }
 
-struct pt4 *pt4_from_pt5(struct pt5 *pt5, virt_addr_t addr)
-{
-    struct pt4 *pt4;
-
-    if (!g_la57)
-        return (struct pt4*)pt5;
-
-    pt4 = pt5_to_virt(pt5);
-    return &pt4[pt4_index(addr)];
-}
-
 void tlb_invalidate_kernel_range(virt_addr_t va_start, virt_addr_t va_end)
 {
     while (va_start < va_end) {

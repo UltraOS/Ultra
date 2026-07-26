@@ -323,7 +323,7 @@ static void INIT_CODE direct_map_pt1(
         if (next < phys || next > end)
             next = end;
 
-        pt1_populate(pt1, phys, pt_prot_from_vm_prot(prot));
+        pt1_exclusive_make_leaf(pt1, phys, pt_prot_from_vm_prot(prot));
     }
 }
 
@@ -346,10 +346,10 @@ static void INIT_CODE direct_map_pt2(
             next_phys = end;
 
         if (is_leaf_level(ctx, mr, PT2_SIZE)) {
-            pt2_make_leaf(pt2, phys, pt_prot_from_vm_prot(prot));
+            pt2_exclusive_make_leaf(pt2, phys, pt_prot_from_vm_prot(prot));
         } else {
             if (!pt2_present(pt2))
-                pt2_populate(pt2, pt_early_page_alloc());
+                pt2_exclusive_populate(pt2, pt_early_page_alloc());
 
             pt1 = pt1_from_pt2(pt2, virt);
             direct_map_pt1(pt1, phys, next_phys, prot);
@@ -376,10 +376,10 @@ static void INIT_CODE direct_map_pt3(
             next_phys = end;
 
         if (is_leaf_level(ctx, mr, PT3_SIZE)) {
-            pt3_make_leaf(pt3, phys, pt_prot_from_vm_prot(prot));
+            pt3_exclusive_make_leaf(pt3, phys, pt_prot_from_vm_prot(prot));
         } else {
             if (!pt3_present(pt3))
-                pt3_populate(pt3, pt_early_page_alloc());
+                pt3_exclusive_populate(pt3, pt_early_page_alloc());
 
             pt2 = pt2_from_pt3(pt3, virt);
             direct_map_pt2(ctx, mr, pt2, phys, next_phys, prot);
@@ -406,10 +406,10 @@ static void INIT_CODE direct_map_pt4(
             next_phys = end;
 
         if (is_leaf_level(ctx, mr, PT4_SIZE)) {
-            pt4_make_leaf(pt4, phys, pt_prot_from_vm_prot(prot));
+            pt4_exclusive_make_leaf(pt4, phys, pt_prot_from_vm_prot(prot));
         } else {
             if (!pt4_present(pt4))
-                pt4_populate(pt4, pt_early_page_alloc());
+                pt4_exclusive_populate(pt4, pt_early_page_alloc());
 
             pt3 = pt3_from_pt4(pt4, virt);
             direct_map_pt3(ctx, mr, pt3, phys, next_phys, prot);
@@ -439,10 +439,10 @@ static void INIT_CODE direct_map_pt5(
             next_phys = end;
 
         if (is_leaf_level(ctx, mr, PT5_SIZE)) {
-            pt5_make_leaf(pt5, phys, pt_prot_from_vm_prot(prot));
+            pt5_exclusive_make_leaf(pt5, phys, pt_prot_from_vm_prot(prot));
         } else {
             if (!pt5_present(pt5))
-                pt5_populate(pt5, pt_early_page_alloc());
+                pt5_exclusive_populate(pt5, pt_early_page_alloc());
 
             pt4 = pt4_from_pt5(pt5, virt);
             direct_map_pt4(ctx, mr, pt4, phys, next_phys, prot);
