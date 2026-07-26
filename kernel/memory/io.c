@@ -106,15 +106,15 @@ void INIT_CODE early_io_map_init(void)
 
     pt5 = pt_root_from_address_space(&g_kernel_address_space, va);
     if (pt5_none(pt5))
-        pt5_populate(pt5, io_pt_early_page_alloc());
+        pt5_exclusive_populate(pt5, io_pt_early_page_alloc());
 
     pt4 = pt4_from_pt5(pt5, va);
     if (pt4_none(pt4))
-        pt4_populate(pt4, io_pt_early_page_alloc());
+        pt4_exclusive_populate(pt4, io_pt_early_page_alloc());
 
     pt3 = pt3_from_pt4(pt4, va);
     if (pt3_none(pt3))
-        pt3_populate(pt3, io_pt_early_page_alloc());
+        pt3_exclusive_populate(pt3, io_pt_early_page_alloc());
 
     s_early_pt3 = pt3;
 
@@ -122,7 +122,7 @@ void INIT_CODE early_io_map_init(void)
     for (i = 0; i < NUM_EARLY_PT2_RESERVED_TOTAL; i++, va += PT2_SIZE) {
         pt2 = pt2_from_pt3(pt3, va);
         if (pt2_none(pt2))
-            pt2_populate(pt2, io_pt_early_page_alloc());
+            pt2_exclusive_populate(pt2, io_pt_early_page_alloc());
     }
 
     pr_info(
@@ -143,7 +143,7 @@ static void INIT_CODE do_io_window_early_map(
     for (i = 0; i < length; i += PT1_SIZE, va += PT1_SIZE, pa += PT1_SIZE) {
         pt2 = pt2_from_pt3(s_early_pt3, va);
         pt1 = pt1_from_pt2(pt2, va);
-        pt1_populate(pt1, pa, prot);
+        pt1_exclusive_make_leaf(pt1, pa, prot);
     }
 }
 
@@ -208,7 +208,7 @@ static void INIT_CODE do_io_window_early_unmap(
         pt2 = pt2_from_pt3(s_early_pt3, va);
         pt1 = pt1_from_pt2(pt2, va);
 
-        pt1_clear(pt1);
+        pt1_exclusive_clear(pt1);
         va += PT1_SIZE;
     }
 
