@@ -5,4 +5,5 @@ ultra_sources(
     boot_alloc.c
     io.c
     page_table.c
+    buddy.c
 )
