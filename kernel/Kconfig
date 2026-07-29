@@ -45,6 +45,9 @@ menu "Debug options"
 config VERBOSE_INIT_LEVELS
     bool "Trace all kernel initialization level transitions"
 
+config DEBUG_MM
+    bool "Enable debug assertions for the memory management subsystem"
+
 endmenu
 
 rsource "arch/Kconfig"
