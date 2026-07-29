@@ -357,3 +357,6 @@ static inline bool block_is_kernel_heap(const struct page_block *block)
 
     return type == PAGE_TYPE_KHEAP || type == PAGE_TYPE_KHEAP_LARGE;
 }
+
+void block_ref(struct page_block *block);
+void block_unref(struct page_block *block);

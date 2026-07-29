@@ -9,6 +9,7 @@
 
 #include <boot/boot.h>
 #include <boot/alloc.h>
+#include <private/buddy.h>
 #include <private/memory.h>
 #include <memory/units.h>
 #include <memory/page_table.h>
@@ -717,8 +718,6 @@ static void INIT_CODE memory_map_populate_pt5(
     }
 }
 
-#define BUDDY_ALIGNMENT (PAGE_SIZE * BIT_PHYS(BUDDY_MAX_ORDER))
-
 static inline virt_addr_t phys_to_memory_map(phys_addr_t phys)
 {
     return MEMORY_MAP_BASE + ((phys / PAGE_SIZE) * sizeof(struct page));
@@ -732,8 +731,8 @@ static void INIT_CODE kernel_memory_setup_one(
 
     UNREFERENCED_PARAMETER(unused);
 
-    p_start = ALIGN_DOWN(p_start, BUDDY_ALIGNMENT);
-    p_end = ALIGN_UP(p_end, BUDDY_ALIGNMENT);
+    p_start = ALIGN_DOWN(p_start, BUDDY_MAX_SIZE);
+    p_end = ALIGN_UP(p_end, BUDDY_MAX_SIZE);
 
     v_start = phys_to_memory_map(p_start);
     v_end = phys_to_memory_map(p_end);
