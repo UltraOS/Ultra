@@ -12,4 +12,6 @@ enum alloc_behavior {
      * Zero the allocated memory.
      */
     ALLOC_ZEROED = 1 << 0,
+
+    ALLOC_GENERIC_ZEROED = ALLOC_GENERIC | ALLOC_ZEROED,
 };
