@@ -6,4 +6,5 @@ ultra_sources(
     io.c
     page_table.c
     buddy.c
+    valloc.c
 )

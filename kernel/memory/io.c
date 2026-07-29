@@ -6,6 +6,7 @@
 #include <common/align.h>
 
 #include <memory/alloc.h>
+#include <memory/valloc.h>
 #include <memory/io.h>
 #include <memory/page_table.h>
 #include <memory/address_space.h>
@@ -81,6 +82,14 @@ static inline size_t io_mapping_align(
 #define EARLY_IO_MAP_BASE_SMALL EARLY_IO_MAP_BASE
 #define EARLY_IO_MAP_BASE_LARGE \
     (EARLY_IO_MAP_BASE_SMALL + (NUM_EARLY_SMALL_PT2_RESERVED * PT2_SIZE))
+
+static error_t INIT_CODE register_early_mmio_area(void)
+{
+    return vreserve_permanent(
+        EARLY_IO_MAP_BASE_SMALL, KERNEL_VA_END, "early MMIO area"
+    );
+}
+INIT_CALL_PRE(VALLOC_AVAILABLE, register_early_mmio_area);
 
 static struct pt3* INIT_DATA s_early_pt3;
 
@@ -179,9 +188,6 @@ static void* INIT_CODE early_io_map_with_prot(
 )
 {
     virt_addr_t va = 0;
-    size_t offset;
-
-    offset = io_mapping_align(&phys_base, &length);
 
     if (length <= PT1_SIZE)
         va = alloc_small_mapping();
@@ -193,7 +199,7 @@ static void* INIT_CODE early_io_map_with_prot(
         return nullptr;
 
     do_io_window_early_map(va, phys_base, length, prot);
-    return (void*)(va + offset);
+    return (void*)va;
 }
 
 static void INIT_CODE do_io_window_early_unmap(
@@ -215,33 +221,45 @@ static void INIT_CODE do_io_window_early_unmap(
     tlb_invalidate_kernel_range(va_start, va_end);
 }
 
-static void INIT_CODE early_io_unmap(void *addr, size_t length)
+static void INIT_CODE early_io_unmap(virt_addr_t va_start, size_t length)
 {
-    virt_addr_t va = (virt_addr_t)addr;
-    virt_addr_t va_start;
-    size_t offset;
-    size_t real_length;
     reg_t slot;
-
-    offset = va & (PT1_SIZE - 1);
-    va_start = ALIGN_DOWN(va, PT1_SIZE);
-    real_length = ALIGN_UP(length + offset, PT1_SIZE);
 
     if (va_start < EARLY_IO_MAP_BASE_LARGE) {
         BUG_ON(va_start < EARLY_IO_MAP_BASE_SMALL);
-        BUG_ON(real_length > PT1_SIZE);
+        BUG_ON(length > PT1_SIZE);
 
         slot = (va_start - EARLY_IO_MAP_BASE_SMALL) >> PT1_SHIFT;
         bit_clear(s_early_small_mappings, slot);
     } else {
-        BUG_ON(real_length > NUM_BYTES_PER_LARGE_EARLY_SLOT);
+        BUG_ON(length > NUM_BYTES_PER_LARGE_EARLY_SLOT);
 
         slot = (va_start - EARLY_IO_MAP_BASE_LARGE) >>
                (PT1_SHIFT + PT1_PER_LARGE_EARLY_SLOT_SHIFT);
         bit_clear(s_early_large_mappings, slot);
     }
 
-    do_io_window_early_unmap(va_start, va_start + real_length);
+    do_io_window_early_unmap(va_start, va_start + length);
+}
+
+static void* CODE_REFERENCES_INIT_DATA io_window_do_map(
+    phys_addr_t phys_base, size_t length, pt_prot prot
+)
+{
+    void *mapping;
+    size_t offset;
+
+    offset = io_mapping_align(&phys_base, &length);
+
+    if (init_level_below(INIT_LEVEL_VALLOC_AVAILABLE))
+        mapping = early_io_map_with_prot(phys_base, length, prot);
+    else
+        mapping = vreserve_and_map(length, phys_base, prot);
+
+    if (mapping == nullptr)
+        return nullptr;
+
+    return mapping + offset;
 }
 
 static error_t CODE_REFERENCES_INIT_DATA io_window_map_with_prot(
@@ -251,10 +269,7 @@ static error_t CODE_REFERENCES_INIT_DATA io_window_map_with_prot(
 {
     void *mapping;
 
-    // TODO: use this check to decide which map helper to use once we support it
-    // if (init_level_below(INIT_LEVEL_IO_WINDOW_AVAILABLE))
-
-    mapping = early_io_map_with_prot(phys_base, length, prot);
+    mapping = io_window_do_map(phys_base, length, prot);
     if (mapping == NULL)
         return ENOMEM;
 
@@ -338,12 +353,31 @@ void* CODE_REFERENCES_INIT_DATA io_window_map_cached(
     phys_addr_t phys_base, size_t length
 )
 {
-    return early_io_map_with_prot(phys_base, length, s_default_pt_prot);
+    return io_window_do_map(phys_base, length, s_default_pt_prot);
 }
 
 void CODE_REFERENCES_INIT_DATA io_window_unmap_ptr(void *virt, size_t length)
 {
-    early_io_unmap(virt, length);
+    virt_addr_t addr = (virt_addr_t)virt;
+    size_t offset;
+
+    // Strip the physical base's offset io_window_do_map() added back
+    offset = addr & (PT1_SIZE - 1);
+    addr = ALIGN_DOWN(addr, PT1_SIZE);
+    length = ALIGN_UP(length + offset, PT1_SIZE);
+
+    if (addr >= EARLY_IO_MAP_BASE) {
+        /*
+         * No reason to unmap early MMIO after proper valloc becomes available
+         * since its slots won't ever be needed by anyone again.
+         */
+        if (init_level_below(INIT_LEVEL_VALLOC_AVAILABLE))
+            early_io_unmap(addr, length);
+
+        return;
+    }
+
+    vrelease((void*)addr);
 }
 
 void io_window_unmap(io_window *iow)

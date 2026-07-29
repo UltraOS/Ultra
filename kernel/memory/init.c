@@ -16,7 +16,10 @@
 #include <memory/address_space.h>
 #include <memory/page.h>
 #include <memory/buddy.h>
+#include <memory/io.h>
+#include <memory/valloc.h>
 
+#include <init_level.h>
 #include <free_after_init.h>
 #include <log.h>
 
@@ -759,3 +762,46 @@ void INIT_CODE kernel_memory_map_setup(void)
     for_each_ram_range(kernel_memory_setup_one, nullptr);
     g_memory_map = (struct page*)MEMORY_MAP_BASE;
 }
+
+/*
+ * Register all permanent virtual areas of the kernel half of the address
+ * space. This is mostly a safety measure so no other caller of the vreserve()
+ * family of APIs is able to overwrite actually in-use kernel regions.
+ *
+ * As a bonus we get a nice way to dump the entire kernel address space.
+ */
+static error_t INIT_CODE register_permanent_areas(void)
+{
+    error_t ret, out_ret = EOK;
+
+    ret = vreserve_permanent(MEMORY_MAP_BASE, MEMORY_MAP_END, "memory map");
+    if (is_error(ret))
+        out_ret = ret;
+
+    ret = vreserve_permanent(
+        g_boot_ctx.kernel_info->virtual_base,
+        g_boot_ctx.kernel_info->virtual_base + g_boot_ctx.kernel_info->size,
+        "kernel binary"
+    );
+    if (is_error(ret))
+        out_ret = ret;
+
+    ret = vreserve_permanent(
+        g_direct_map_base,
+        g_direct_map_base + MAX_PHYS_ADDR,
+        "direct map"
+    );
+    if (is_error(ret))
+        out_ret = ret;
+
+    /*
+     * VALLOC_BASE -> VALLOC_END isn't registered here because it's
+     * not a preallocated region, but rather the "bounds" that valloc()
+     * does its allocations within to keep them organized.
+     */
+
+    if (is_error(out_ret))
+        pr_warn("failed to reserve one or more permanent areas!\n");
+    return out_ret;
+}
+INIT_CALL_PRE(VALLOC_AVAILABLE, register_permanent_areas);

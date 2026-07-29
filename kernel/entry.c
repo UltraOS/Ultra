@@ -156,5 +156,8 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     kernel_heap_init();
     init_level_raise(INIT_LEVEL_HEAP_AVAILABLE);
 
+    valloc_setup();
+    init_level_raise(INIT_LEVEL_VALLOC_AVAILABLE);
+
     for (;;);
 }
