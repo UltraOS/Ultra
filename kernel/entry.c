@@ -153,5 +153,8 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     buddy_setup();
     init_level_raise(INIT_LEVEL_BUDDY_AVAILABLE);
 
+    kernel_heap_init();
+    init_level_raise(INIT_LEVEL_HEAP_AVAILABLE);
+
     for (;;);
 }
