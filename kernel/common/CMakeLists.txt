@@ -5,4 +5,5 @@ ultra_sources(
     format.c
     string.c
     string_container.c
+    rb_tree.c
 )
