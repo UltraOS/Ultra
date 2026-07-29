@@ -329,6 +329,15 @@ static inline struct kheap_page *block_kheap(struct page_block *block)
     return &block_to_page(block)->kheap;
 }
 
+static inline struct page_block *kheap_to_block(struct kheap_page *heap)
+{
+    struct page *page;
+
+    page = container_of(heap, struct page, kheap);
+    MM_BUG_ON(page_type(page) != PAGE_TYPE_KHEAP);
+    return page_to_block(page);
+}
+
 static inline struct ptdesc_page *block_ptdesc(struct page_block *block)
 {
     MM_BUG_ON(block_type(block) != PAGE_TYPE_PTDESC);
