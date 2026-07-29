@@ -85,6 +85,7 @@ static void INIT_CODE cache_init(void)
 u8 g_max_phys_bits = MAX_PHYS_BITS_NO_LA57;
 
 virt_addr_t g_memory_map_base, g_memory_map_end;
+virt_addr_t g_valloc_base, g_valloc_end;
 
 /*
  * 1/64 TiB perfectly cover all 46/52 bits of physical address space we cap
@@ -113,10 +114,14 @@ BUILD_BUG_ON_WITH_MSG(
     "Memory map is too small to accomodate all possible struct pages"
 );
 
+// Random sane pick for !LA57, simple 9 bit scaling for LA57
+#define VALLOC_AREA_SIZE_NO_LA57 (32 * TiB)
+#define VALLOC_AREA_SIZE_LA57 (16 * PiB)
+
 static error_t INIT_CODE x86_early_paging_init(void)
 {
     reg_t cr4_features = 0;
-    size_t memmap_size;
+    size_t memmap_size, valloc_area_size;
 
     /*
      * Just stick with the page table depth our bootloader has picked,
@@ -131,15 +136,28 @@ static error_t INIT_CODE x86_early_paging_init(void)
         g_pt5_shift += X86_PT_LVL_SHIFT;
 
         memmap_size = MEMORY_MAP_SIZE_LA57;
+        valloc_area_size = VALLOC_AREA_SIZE_LA57;
     } else {
         BUG_ON(g_direct_map_base != 0xFFFF800000000000);
         BUG_ON(g_boot_ctx.platform_info->page_table_depth != 4);
 
         memmap_size = MEMORY_MAP_SIZE_NO_LA57;
+        valloc_area_size = VALLOC_AREA_SIZE_NO_LA57;
     }
 
     g_memory_map_base = g_direct_map_base + MAX_PHYS_ADDR;
     g_memory_map_end = g_memory_map_base + memmap_size;
+
+    /*
+     * NOTE:
+     * 1) +1 here is important as g_memory_map_end is already aligned to the
+     *    top level in some configurations
+     * 2) PT5_SIZE is correct only after the above if/else branch finishes
+     *    setting g_pt5_shift, so don't move it around
+     */
+    g_valloc_base = ALIGN_UP(g_memory_map_end + 1, PT5_SIZE);
+    g_valloc_end = g_valloc_base + valloc_area_size;
+    BUG_ON(g_valloc_end > g_boot_ctx.kernel_info->virtual_base);
 
     /*
      * Enable large & global pages if they're supported
