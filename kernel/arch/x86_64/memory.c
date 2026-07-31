@@ -8,6 +8,7 @@
 #include <memory/page_table.h>
 #include <memory/address_space.h>
 #include <memory/tlb.h>
+#include <memory/io.h>
 
 #include <free_after_init.h>
 #include <init_level.h>
@@ -65,6 +66,21 @@ static void INIT_CODE cache_init(void)
     g_wc_pt_prot = X86_PT_SMALL_PAT | X86_PT_UNCACHED | X86_PT_WRITETHROUGH;
 }
 
+/*
+ * Cap to 64TiB of RAM maximum by default, since that's all we map
+ * in the direct map window. LA57 bumps this up to 4 petabytes below
+ * (the theoretical maximum mappable physical address in x86-64 PTEs) since
+ * we can afford to map all of it with 57-bits of virtual address space
+ * to spare.
+ */
+#define MAX_PHYS_BITS_NO_LA57 46
+#define MAX_PHYS_BITS_LA57 X86_MAX_PHYS_BITS
+
+#define MAX_PHYS_ADDR_NO_LA57 BIT_OF_TYPE(phys_addr_t, MAX_PHYS_BITS_NO_LA57)
+#define MAX_PHYS_ADDR_LA57 BIT_OF_TYPE(phys_addr_t, MAX_PHYS_BITS_LA57)
+
+u8 g_max_phys_bits = MAX_PHYS_BITS_NO_LA57;
+
 static error_t INIT_CODE x86_early_paging_init(void)
 {
     reg_t cr4_features = 0;
@@ -73,6 +89,7 @@ static error_t INIT_CODE x86_early_paging_init(void)
     if (g_boot_ctx.platform_info->page_table_depth == 5) {
         BUG_ON(!all_cpus_have(X86_FEATURE_LA57));
         g_la57 = true;
+        g_max_phys_bits = MAX_PHYS_BITS_LA57;
         g_pt4_num_entries = 512;
         g_pt5_shift += X86_PT_LVL_SHIFT;
     } else {
