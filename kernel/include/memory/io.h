@@ -2,9 +2,12 @@
 
 #include <common/types.h>
 #include <common/error.h>
+#include <common/bit.h>
 
 #include <arch/constants.h>
 #include <arch/io.h>
+
+#define MAX_PHYS_ADDR BIT_OF_TYPE(phys_addr_t, MAX_PHYS_BITS)
 
 extern ptr_t g_direct_map_base;
 
