@@ -529,8 +529,8 @@ static void INIT_CODE map_kernel_segment(
 
     BUG_ON(
         v_start >= v_end ||
-        !IS_ALIGNED(v_start, PAGE_SIZE) ||
-        !IS_ALIGNED(v_end, PAGE_SIZE)
+        !IS_PAGE_ALIGNED(v_start) ||
+        !IS_PAGE_ALIGNED(v_end)
     );
 
     p_start = (v_start - ki->virtual_base) + ki->physical_base;
