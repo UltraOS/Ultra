@@ -8,6 +8,7 @@
 #include <boot/boot.h>
 #include <boot/alloc.h>
 #include <private/memory.h>
+#include <memory/units.h>
 #include <memory/page_table.h>
 #include <memory/address_space.h>
 
@@ -171,20 +172,6 @@ static void* INIT_CODE pt_early_page_alloc(void)
     return boot_alloc_zeroed_or_die(1, "building kernel address space");
 }
 
-static void INIT_CODE page_size_to_string(ptr_t page_size, char *buf, size_t buf_size)
-{
-    const char *suffixes[] = { "B", "K", "M", "G", "T", "P", "E" };
-    size_t i = 0;
-
-    while (page_size >= 1024 && IS_ALIGNED(page_size, 1024)
-           && i < ARRAY_SIZE(suffixes) - 1) {
-        page_size >>= 10;
-        i++;
-    }
-
-    snprintf(buf, buf_size, "%zu%s", page_size, suffixes[i]);
-}
-
 static void INIT_CODE detect_page_sizes(struct direct_mapping_ctx *ctx)
 {
     size_t i;
@@ -209,12 +196,10 @@ static void INIT_CODE detect_page_sizes(struct direct_mapping_ctx *ctx)
 out:
     pr_info("supported page sizes:");
     for (i = 0; i < ctx->num_page_sizes; i++) {
-        char size_str[16];
+        struct human_size hs;
 
-        page_size_to_string(
-            ctx->available_page_sizes[i], size_str, sizeof(size_str)
-        );
-        pr_cont("%s%s", i == 0 ? " " : ", ", size_str);
+        size_to_human_short(ctx->available_page_sizes[i], &hs);
+        pr_cont("%s%zu%c", i == 0 ? " " : ", ", hs.value, *hs.unit);
     }
     pr_cont("\n");
 }
@@ -472,7 +457,7 @@ static void INIT_CODE split_and_map_range(
 {
     struct map_range *mr;
     size_t i, page_size;
-    char size_str[16];
+    struct human_size hs;
 
     split_ram_range(ctx, start, end);
 
@@ -480,10 +465,11 @@ static void INIT_CODE split_and_map_range(
         mr = &ctx->ram_ranges[i];
 
         page_size = ctx->available_page_sizes[mr->size_idx];
-        page_size_to_string(page_size, size_str, sizeof(size_str));
+        size_to_human_short(page_size, &hs);
+
         pr_debug(
-            "  [0x%016llX - 0x%016llX] %s pages\n",
-            mr->start, mr->end, size_str
+            "  [0x%016llX - 0x%016llX] %zu%c pages\n",
+            mr->start, mr->end, hs.value, *hs.unit
         );
 
         direct_map_pt5(ctx, mr, prot);
