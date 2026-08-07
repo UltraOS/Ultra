@@ -151,6 +151,7 @@ def main():
     settings = {
         "cmake.buildDirectory": f"${{workspaceFolder}}/{VSCODE_BUILD_DIR}",
         "clangd.arguments": [
+            "--header-insertion=never",
             f"--compile-commands-dir=${{workspaceFolder}}/{VSCODE_BUILD_DIR}"
         ],
         "files.trimTrailingWhitespace": True,
