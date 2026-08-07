@@ -267,7 +267,7 @@ def hyper_get_iso_br() -> str:
 
 def run_qemu(
     arch: str, image_path: str, image_type: str, debug: bool, uefi_boot: bool,
-    uefi_firmware: str, kvm: bool, dry: bool
+    uefi_firmware: str, kvm: bool, la57: bool, dry: bool
 ) -> Optional[subprocess.Popen]:
     extra_args = []
     force_uefi = False
@@ -292,6 +292,9 @@ def run_qemu(
 
     if kvm:
         extra_args.append("--enable-kvm")
+
+    if la57:
+        extra_args.extend(["-cpu", "qemu64,la57=on"])
 
     args = [
         f"qemu-system-{arch}",
@@ -381,6 +384,8 @@ def main() -> None:
                         help="Automatically run in QEMU after building")
     parser.add_argument("--kvm", action="store_true",
                         help="Run QEMU with KVM enabled (implies --run)")
+    parser.add_argument("--la57", action="store_true",
+                        help="Run QEMU with LA57 support (x86_64 only)")
     parser.add_argument("--dry", action="store_true",
                         help="Dump the QEMU command line instead of running")
     parser.add_argument("--uefi", action="store_true",
@@ -467,7 +472,7 @@ def main() -> None:
         build_ultra(args, build_dir)
 
     is_debug = args.debug or args.ide_debug
-    should_run = args.run or args.kvm or is_debug
+    should_run = args.run or args.kvm or args.la57 or is_debug
 
     if should_run or args.make_image:
         hyper_installer = args.hyper_installer
@@ -508,8 +513,12 @@ def main() -> None:
             args.uefi = True
         uefi_boot = hyper_uefi_binary_paths and args.uefi
 
+        if args.la57 and args.arch != "x86_64":
+            raise RuntimeError("--la57 is only supported on x86_64")
+
         qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
-                      uefi_boot, args.uefi_firmware_path, args.kvm, args.dry)
+                      uefi_boot, args.uefi_firmware_path, args.kvm, args.la57,
+                      args.dry)
 
     if args.debug:
         assert qp
