@@ -10,3 +10,10 @@
 
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
+
+/*
+ * The harness physical backing store is tiny, so this only has to be a
+ * plausible ceiling for the range checks that consult it. 52 is what x86_64
+ * reports with 5-level paging, matching the backend in arch/page_table.h.
+ */
+#define MAX_PHYS_BITS 52

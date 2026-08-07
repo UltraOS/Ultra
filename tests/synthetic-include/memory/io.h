@@ -5,6 +5,12 @@
 
 #include <test_harness.h>
 
+// Spelled out rather than via BIT_OF_TYPE to keep the stub free of <bit.h>
+#define MAX_PHYS_ADDR (((phys_addr_t)1) << MAX_PHYS_BITS)
+
+// Kernel direct map base, defined by the test backend (test_allocators.c)
+extern ptr_t g_direct_map_base;
+
 static inline phys_addr_t virt_to_phys(void *virt)
 {
     return translate_virt_to_phys(virt);

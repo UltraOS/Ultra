@@ -6,6 +6,9 @@
 
 #define free test_free
 #include <kernel-source/memory/alloc.c>
+#undef MSG_FMT
+
+#include <kernel-source/memory/valloc.c>
 
 #include <test_harness.h>
 
@@ -1155,4 +1158,429 @@ TEST_CASE(alloc_cache_destroy_releases_slabs)
     ASSERT_EQ(list_len(&cache.empty_slabs), 0);
     ASSERT_EQ(page_type(slab_page), PAGE_TYPE_BUDDY);
     ASSERT_ORDER_FREE(0, 1);
+}
+
+/*
+ * valloc usermode arch backend
+ *
+ * valloc.c is the only consumer of the page-table / address-space layer, so the
+ * handful of globals and shims a real arch would provide live here, next to its
+ * tests. The page-table backend itself is synthetic-include/arch/page_table.h.
+ */
+ptr_t g_direct_map_base;
+phys_addr_t g_valloc_base, g_valloc_end;
+phys_addr_t g_memory_map_base, g_memory_map_end;
+struct address_space g_kernel_address_space;
+
+pt_prot pt_prot_from_vm_prot(enum vm_prot vm_prot)
+{
+    pt_prot prot = { 0 };
+
+    if (vm_prot == VM_PROT_NONE)
+        return prot;
+
+    if (vm_prot & (VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXEC))
+        prot.value |= UM_PT_PRESENT;
+    if (vm_prot & VM_PROT_WRITE)
+        prot.value |= UM_PT_WRITE;
+    if (!(vm_prot & VM_PROT_EXEC))
+        prot.value |= UM_PT_NX;
+    if (!(vm_prot & VM_PROT_KERNEL))
+        prot.value |= UM_PT_USER;
+
+    return prot;
+}
+
+void tlb_invalidate_kernel_range(virt_addr_t start, virt_addr_t end)
+{
+    UNREFERENCED_PARAMETER(start);
+    UNREFERENCED_PARAMETER(end);
+}
+
+/*
+ * A canonical-ish high arena. The vmalloc window is a small slice of it. The
+ * rest stays a free hole so the first allocation exercises the both-sides split
+ * (the arena starts well below VALLOC_BASE).
+ */
+#define TEST_DIRECT_MAP_BASE 0xFFFF800000000000ull
+#define TEST_VALLOC_BASE     (TEST_DIRECT_MAP_BASE + (16ull << 40)) // +16 TiB
+#define TEST_VALLOC_END      (TEST_VALLOC_BASE + (1ull << 30))      // 1 GiB window
+
+static void valloc_test_setup(struct memory_range *ranges, size_t count)
+{
+    struct page_block *root;
+
+    allocator_state_setup(ranges, count);
+
+    // Reset valloc's static trees/lists so each test starts from a clean arena.
+    s_free_ranges.root = nullptr;
+    s_reserved_ranges.root = nullptr;
+    list_init(&s_free_areas);
+    s_spare_varea = nullptr;
+    spin_lock_init(&s_valloc_lock);
+
+    g_direct_map_base = TEST_DIRECT_MAP_BASE;
+    g_valloc_base = TEST_VALLOC_BASE;
+    g_valloc_end = TEST_VALLOC_END;
+    g_memory_map_base = g_memory_map_end = TEST_VALLOC_END;
+
+    root = alloc_block(0, ALLOC_GENERIC);
+    ASSERT(root != nullptr);
+    memzero(block_to_virt(root), PAGE_SIZE);
+    g_kernel_address_space.pt = (pt_root *)block_to_virt(root);
+
+    valloc_setup();
+}
+
+#define VALLOC_TEST_STATE(...)            \
+    struct memory_range base_ranges[] = { \
+        __VA_ARGS__                       \
+    };                                    \
+    valloc_test_setup(base_ranges, ARRAY_SIZE(base_ranges))
+
+// Walk the kernel page tables for 'va', return false if any level is absent.
+static bool valloc_lookup(virt_addr_t va, phys_addr_t *out_phys)
+{
+    struct pt5 *pt5 = pt_root_from_address_space(&g_kernel_address_space, va);
+    struct pt4 *pt4;
+    struct pt3 *pt3;
+    struct pt2 *pt2;
+    struct pt1 *pt1;
+
+    if (!pt5_present(pt5))
+        return false;
+    pt4 = pt4_from_pt5(pt5, va);
+    if (!pt4_present(pt4))
+        return false;
+    pt3 = pt3_from_pt4(pt4, va);
+    if (!pt3_present(pt3))
+        return false;
+    pt2 = pt2_from_pt3(pt3, va);
+    if (!pt2_present(pt2))
+        return false;
+    pt1 = pt1_from_pt2(pt2, va);
+    if (!pt1_present(pt1))
+        return false;
+
+    if (out_phys)
+        *out_phys = pt_entry_read(&pt1->value) & UM_PT_PAGE_MASK;
+    return true;
+}
+
+static bool valloc_range_mapped(virt_addr_t start, size_t size)
+{
+    size_t off;
+
+    for (off = 0; off < size; off += PAGE_SIZE) {
+        if (!valloc_lookup(start + off, nullptr))
+            return false;
+    }
+
+    return true;
+}
+
+/*
+ * valloc() maps every page of the allocation to its backing frame, and the
+ * returned address sits inside the vmalloc window. vrelease() tears the mapping
+ * down and unreserves the area.
+ */
+TEST_CASE(valloc_maps_and_releases)
+{
+    struct varea *area;
+    phys_addr_t mapped;
+    virt_addr_t va;
+    void *p;
+    size_t i;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    p = valloc(3 * PAGE_SIZE, ALLOC_GENERIC);
+    ASSERT(p != nullptr);
+
+    va = (virt_addr_t)p;
+    ASSERT(va >= VALLOC_BASE && va < VALLOC_END);
+    ASSERT_EQ(va % PAGE_SIZE, 0);
+
+    area = reserved_area_find(va);
+    ASSERT(area != nullptr);
+
+    for (i = 0; i < 3; i++) {
+        ASSERT(valloc_lookup(va + i * PAGE_SIZE, &mapped));
+        ASSERT_EQ(mapped, block_to_phys(area->info->pages[i]));
+    }
+
+    vrelease(p);
+
+    ASSERT_FALSE(valloc_lookup(va, nullptr));
+    ASSERT_FALSE(reserved_area_find(va));
+}
+
+// Independent allocations get distinct, individually-mapped ranges.
+TEST_CASE(valloc_distinct_allocations)
+{
+    void *a, *b;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    a = valloc(PAGE_SIZE, ALLOC_GENERIC);
+    b = valloc(PAGE_SIZE, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+
+    ASSERT_NE((uintptr_t)a, (uintptr_t)b);
+    ASSERT(valloc_range_mapped((virt_addr_t)a, PAGE_SIZE));
+    ASSERT(valloc_range_mapped((virt_addr_t)b, PAGE_SIZE));
+}
+
+/*
+ * The first allocation lands at VALLOC_BASE. After it is freed and coalesced,
+ * the next request reuses that same lowest-address hole.
+ */
+TEST_CASE(valloc_reuses_lowest_free)
+{
+    void *a, *b, *c;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    a = valloc(PAGE_SIZE, ALLOC_GENERIC);
+    b = valloc(PAGE_SIZE, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+    ASSERT_EQ((virt_addr_t)a, (virt_addr_t)VALLOC_BASE);
+
+    // Every allocation spans its page plus the trailing guard
+    ASSERT_EQ((virt_addr_t)b, (virt_addr_t)(VALLOC_BASE + 2 * PAGE_SIZE));
+
+    vrelease(a);
+
+    c = valloc(PAGE_SIZE, ALLOC_GENERIC);
+    ASSERT_EQ((uintptr_t)c, (uintptr_t)a);
+}
+
+// vreserve_and_map maps the reserved window straight onto the supplied phys.
+TEST_CASE(vreserve_and_map_uses_given_phys)
+{
+    phys_addr_t target = 0x5000, mapped;
+    pt_prot prot;
+    void *p;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    prot = pt_prot_from_vm_prot(VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE);
+    p = vreserve_and_map(2 * PAGE_SIZE, target, prot);
+    ASSERT(p != nullptr);
+
+    ASSERT(valloc_lookup((virt_addr_t)p, &mapped));
+    ASSERT_EQ(mapped, target);
+    ASSERT(valloc_lookup((virt_addr_t)p + PAGE_SIZE, &mapped));
+    ASSERT_EQ(mapped, target + PAGE_SIZE);
+
+    vrelease(p);
+    ASSERT_FALSE(valloc_lookup((virt_addr_t)p, nullptr));
+}
+
+/*
+ * vmap_reserved() maps an already reserved window onto the supplied phys. The
+ * reservation exists but is unmapped until the call, and vrelease() afterwards
+ * still tears down both halves.
+ */
+TEST_CASE(vmap_reserved_maps_reservation)
+{
+    phys_addr_t target = 0x9000, mapped;
+    virt_addr_t va;
+    pt_prot prot;
+    void *p;
+    size_t i;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    prot = pt_prot_from_vm_prot(VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE);
+
+    va = vreserve(3 * PAGE_SIZE);
+    ASSERT(va != 0);
+    ASSERT_FALSE(valloc_range_mapped(va, 3 * PAGE_SIZE));
+
+    p = vmap_reserved(va, target, 3 * PAGE_SIZE, prot, ALLOC_GENERIC);
+    ASSERT_EQ((virt_addr_t)p, va);
+
+    for (i = 0; i < 3; i++) {
+        ASSERT(valloc_lookup(va + i * PAGE_SIZE, &mapped));
+        ASSERT_EQ(mapped, target + i * PAGE_SIZE);
+    }
+
+    vrelease(p);
+    ASSERT_FALSE(valloc_lookup(va, nullptr));
+}
+
+/*
+ * vmap_reserved() rounds its size the same way the reservation did, so a
+ * sub-page request maps the page it was given instead of being rejected for
+ * not matching the (rounded) reservation.
+ */
+TEST_CASE(vmap_reserved_rounds_size)
+{
+    phys_addr_t target = 0x9000, mapped;
+    virt_addr_t va;
+    pt_prot prot;
+    void *p;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    prot = pt_prot_from_vm_prot(VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE);
+
+    va = vreserve(100);
+    ASSERT(va != 0);
+
+    p = vmap_reserved(va, target, 100, prot, ALLOC_GENERIC);
+    ASSERT_EQ((virt_addr_t)p, va);
+
+    ASSERT(valloc_lookup(va, &mapped));
+    ASSERT_EQ(mapped, target);
+    ASSERT_FALSE(valloc_lookup(va + PAGE_SIZE, nullptr));
+
+    vrelease(p);
+    ASSERT_FALSE(valloc_lookup(va, nullptr));
+}
+
+/*
+ * A permanent reservation removes its window from the arena: a request bounded
+ * to it fails, while the neighbouring space stays allocatable.
+ */
+TEST_CASE(vreserve_permanent_blocks_window)
+{
+    virt_addr_t win, got;
+    error_t ret;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    // Note: read VALLOC_BASE only after setup, it is a runtime global.
+    win = VALLOC_BASE + 0x10000;
+
+    ret = vreserve_permanent(win, win + 0x2000, "test");
+    ASSERT_EQ(ret, EOK);
+
+    got = vreserve_within(win, win + 0x2000, 0x2000);
+    ASSERT_EQ(got, 0);
+
+    got = vreserve_within(win + 0x2000, win + 0x4000, PAGE_SIZE);
+    ASSERT_EQ(got, win + 0x2000);
+}
+
+/*
+ * The reservation includes a trailing guard page: reserved (so nothing else
+ * can be placed there) but never mapped, so a linear overrun faults.
+ */
+TEST_CASE(valloc_guard_page)
+{
+    struct varea *area;
+    virt_addr_t va;
+    void *p;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    p = valloc(PAGE_SIZE, ALLOC_GENERIC);
+    ASSERT(p != nullptr);
+    va = (virt_addr_t)p;
+
+    area = reserved_area_find(va);
+    ASSERT(area != nullptr);
+    ASSERT_EQ(varea_size(area), 2 * PAGE_SIZE);
+
+    ASSERT(valloc_lookup(va, nullptr));
+    ASSERT_FALSE(valloc_lookup(va + PAGE_SIZE, nullptr));
+    ASSERT_EQ(reserved_area_find(va + PAGE_SIZE), area);
+}
+
+/*
+ * A page array bigger than a page is delegated to valloc itself. The full
+ * valloc() path can't run here: the kernel fills such an array through its
+ * valloc mapping, and valloc-window addresses are not host-dereferenceable
+ * in this harness. Exercise the dispatch helpers directly instead.
+ */
+TEST_CASE(valloc_page_array_nesting)
+{
+    struct page_block **small, **large;
+    struct rb_node *root;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    // Small arrays come from the heap, not the valloc window
+    small = alloc_page_array(4, ALLOC_GENERIC);
+    ASSERT(small != nullptr);
+    ASSERT(reserved_area_find((virt_addr_t)small) == nullptr);
+    free_page_array(small, 4);
+
+    // 513 entries push the array just past one page, into valloc
+    large = alloc_page_array(513, ALLOC_GENERIC);
+    ASSERT(large != nullptr);
+    ASSERT(reserved_area_find((virt_addr_t)large) != nullptr);
+    ASSERT(valloc_range_mapped((virt_addr_t)large, 2 * PAGE_SIZE));
+
+    free_page_array(large, 513);
+    ASSERT(reserved_area_find((virt_addr_t)large) == nullptr);
+
+    // The free arena must have coalesced back into a single hole
+    root = s_free_ranges.root;
+    ASSERT(root != nullptr);
+    ASSERT(root->left == nullptr && root->right == nullptr);
+    ASSERT_EQ(varea_of(root)->start, (virt_addr_t)TEST_DIRECT_MAP_BASE);
+    ASSERT_EQ(varea_of(root)->end, (virt_addr_t)KERNEL_VA_END);
+}
+
+/*
+ * A hole that passes the size gate but lies beyond the window's end used to
+ * send the fit walk into an endless climb between the hole's subtree and its
+ * parent. The request must simply fail instead.
+ */
+TEST_CASE(vreserve_window_beyond_end_terminates)
+{
+    virt_addr_t got, win;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    win = VALLOC_BASE;
+    ASSERT_EQ(vreserve_permanent(win, win + 0x2000, "low"), EOK);
+    ASSERT_EQ(vreserve_permanent(win + 0x4000, win + 0x6000, "high"), EOK);
+
+    // The window hole is two pages, the request plus its guard needs three
+    got = vreserve_within(win + 0x2000, win + 0x4000, 2 * PAGE_SIZE);
+    ASSERT_EQ(got, 0);
+
+    // An unguarded exact fit for that same hole still succeeds
+    ASSERT_EQ(vreserve_permanent(win + 0x2000, win + 0x4000, "exact"), EOK);
+}
+
+// Alignment requests are honored even when the window start is unaligned.
+TEST_CASE(vreserve_aligned_within_respects_align)
+{
+    virt_addr_t got;
+
+    VALLOC_TEST_STATE(
+        FREE_RANGE(0x0, 0x100000),
+    );
+
+    got = vreserve_aligned_within(
+        VALLOC_BASE + PAGE_SIZE, VALLOC_END, 4 * PAGE_SIZE, PAGE_SIZE
+    );
+    ASSERT(got != 0);
+    ASSERT_EQ(got % (4 * PAGE_SIZE), 0);
+    ASSERT(got >= VALLOC_BASE + PAGE_SIZE);
 }
