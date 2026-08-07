@@ -122,6 +122,7 @@ KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "bit.c"
     INCLUDE_PATH "common" INCLUDE_FILE "bit.h"
 )
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "buddy.h")
 KERNEL_FILE(
     SOURCE_PATH "time" SOURCE_FILE "counter_device.c"
     INCLUDE_PATH "time" INCLUDE_FILE "counter_device.h"
@@ -133,6 +134,9 @@ KERNEL_FILE(
     INCLUDE_PATH "private/time" INCLUDE_FILE "keeper.h"
 )
 KERNEL_FILE(INCLUDE_PATH "time" INCLUDE_FILE "units.h")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page.h")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "bug.h")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "alloc_behavior.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "boot.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "ultra_protocol.h")
 KERNEL_FILE(INCLUDE_FILE "config_helpers.h")
@@ -159,7 +163,7 @@ include("test-cases/files.cmake")
 
 add_executable(
     run_tests
-    run_tests.cpp kernel_helpers.cpp test_harness.cpp ${TEST_SOURCES}
+    run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
     kernel-source/spinlock.c
 )
 set_property(
