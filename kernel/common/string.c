@@ -1,12 +1,9 @@
 #include <common/string.h>
+#include <common/attributes.h>
 
-#undef memcpy
-#undef memmove
-#undef memset
-#undef memcmp
-#undef strlen
-#undef strcmp
-#undef strstr
+#if HAS_INCLUDE(<arch/private/string.h>)
+#include <arch/private/string.h>
+#endif
 
 /*
  * These functions don't have prototypes because they're invoked from the
@@ -15,6 +12,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
+#ifndef ARCH_HAS_CUSTOM_MEMCPY
+#undef memcpy
 void *memcpy(void *dest, const void *src, size_t count)
 {
     char *cd = dest;
@@ -25,7 +24,10 @@ void *memcpy(void *dest, const void *src, size_t count)
 
     return dest;
 }
+#endif
 
+#ifndef ARCH_HAS_CUSTOM_MEMMOVE
+#undef memmove
 void *memmove(void *dest, const void *src, size_t count)
 {
     char *cd = dest;
@@ -38,12 +40,16 @@ void *memmove(void *dest, const void *src, size_t count)
         while (count--)
             *--cd = *--cs;
     } else {
-        memcpy(dest, src, count);
+        while (count--)
+            *cd++ = *cs++;
     }
 
     return dest;
 }
+#endif
 
+#ifndef ARCH_HAS_CUSTOM_MEMSET
+#undef memset
 void *memset(void *dest, int ch, size_t count)
 {
     unsigned char fill = ch;
@@ -54,7 +60,10 @@ void *memset(void *dest, int ch, size_t count)
 
     return dest;
 }
+#endif
 
+#ifndef ARCH_HAS_CUSTOM_MEMCMP
+#undef memcmp
 int memcmp(const void *lhs, const void *rhs, size_t count)
 {
     const u8 *byte_lhs = lhs;
@@ -68,7 +77,10 @@ int memcmp(const void *lhs, const void *rhs, size_t count)
 
     return 0;
 }
+#endif
 
+#ifndef ARCH_HAS_CUSTOM_STRLEN
+#undef strlen
 size_t strlen(const char *str)
 {
     const char *str1;
@@ -77,7 +89,10 @@ size_t strlen(const char *str)
 
     return str1 - str;
 }
+#endif
 
+#ifndef ARCH_HAS_CUSTOM_STRSTR
+#undef strstr
 char *strstr(const char *str, const char *sub_str)
 {
     const char *cur, *needle_cur, *haystack_cur;
@@ -100,7 +115,10 @@ char *strstr(const char *str, const char *sub_str)
 
     return nullptr;
 }
+#endif
 
+#ifndef ARCH_HAS_CUSTOM_STRCMP
+#undef strcmp
 int strcmp(const char *s1, const char *s2)
 {
     while (*s1 != '\0' && *s1 == *s2) {
@@ -110,5 +128,6 @@ int strcmp(const char *s1, const char *s2)
 
     return (int)(unsigned char)*s1 - (int)(unsigned char)*s2;
 }
+#endif
 
 #pragma GCC diagnostic pop
