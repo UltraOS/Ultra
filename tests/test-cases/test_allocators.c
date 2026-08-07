@@ -1,4 +1,8 @@
 #include <kernel-source/memory/boot_alloc.c>
+#undef MSG_FMT
+
+#include <kernel-source/memory/buddy.c>
+
 #include <test_harness.h>
 
 static void boot_allocator_setup(struct memory_range *ranges, size_t count)
@@ -397,4 +401,246 @@ TEST_CASE(boot_alloc_aligned_oom)
         RANGE(0x1000, 0x2000, MEMORY_FREE),
         RANGE(0x5000, 0x2000, MEMORY_FREE),
     );
+}
+
+static void allocator_state_setup(struct memory_range *ranges, size_t count)
+{
+    size_t i;
+
+    for (i = 0; i < count; i++)
+        malloc_phys_range(ranges[i].physical_address, MR_SIZE(&ranges[i]));
+
+    boot_allocator_setup(ranges, count);
+    buddy_setup();
+}
+
+#define FREE_RANGE(start, length) { start, MR_ENCODE(length, MEMORY_FREE) }
+#define BASE_ALLOCATOR_STATE(...)         \
+    struct memory_range base_ranges[] = { \
+        __VA_ARGS__                       \
+    };                                    \
+    allocator_state_setup(base_ranges, ARRAY_SIZE(base_ranges))
+
+#define ASSERT_ORDER_FREE(order, count) \
+    ASSERT_EQ(s_ctx.free_areas[(order)].num_free, (size_t)(count))
+
+static size_t list_len(struct list_link *head)
+{
+    size_t count = 0;
+    struct list_link *cursor;
+
+    list_for_each(cursor, head)
+        count++;
+
+    return count;
+}
+
+/*
+ * A region that is a power-of-two number of pages and aligned to that size
+ * collapses into exactly one block of the matching order.
+ */
+TEST_CASE(buddy_init_single_block)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x4000),
+    );
+
+    ASSERT_ORDER_FREE(0, 0);
+    ASSERT_ORDER_FREE(1, 0);
+    ASSERT_ORDER_FREE(2, 1);
+    ASSERT_ORDER_FREE(3, 0);
+}
+
+/*
+ * The biggest block the buddy allocator can track is BUDDY_MAX_ORDER. A region
+ * exactly that size must collapse into a single max-order block.
+ */
+TEST_CASE(buddy_init_max_order_block)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, PAGE_SIZE << BUDDY_MAX_ORDER),
+    );
+
+    for (u8 order = 0; order < BUDDY_MAX_ORDER; order++)
+        ASSERT_ORDER_FREE(order, 0);
+
+    ASSERT_ORDER_FREE(BUDDY_MAX_ORDER, 1);
+
+    ASSERT(alloc_block(BUDDY_MAX_ORDER, ALLOC_GENERIC) != nullptr);
+    ASSERT_ORDER_FREE(BUDDY_MAX_ORDER, 0);
+}
+
+/*
+ * A region whose size/alignment is not a single power of two is carved into
+ * the largest naturally-aligned blocks that fit. [0x1000, 0x4000) becomes one
+ * order-0 page (0x1000) and one order-1 block (0x2000..0x4000).
+ */
+TEST_CASE(buddy_init_split_region)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x1000, 0x3000),
+    );
+
+    ASSERT_ORDER_FREE(0, 1);
+    ASSERT_ORDER_FREE(1, 1);
+    ASSERT_ORDER_FREE(2, 0);
+}
+
+/*
+ * Reserved ranges must never enter the free lists, and the free pages on
+ * either side of them must not coalesce across the reserved gap.
+ */
+TEST_CASE(buddy_init_reserved_gap)
+{
+    struct page *reserved;
+
+    BASE_ALLOCATOR_STATE(
+        RANGE(0x0000, 0x1000, MEMORY_FREE),
+        RANGE(0x1000, 0x1000, MEMORY_ALLOCATED),
+        RANGE(0x2000, 0x1000, MEMORY_FREE),
+    );
+
+    ASSERT_ORDER_FREE(0, 2);
+    ASSERT_ORDER_FREE(1, 0);
+
+    reserved = pfn_to_page(0x1000 >> PAGE_SHIFT);
+    ASSERT_EQ(page_type(reserved), PAGE_TYPE_RESERVED);
+}
+
+// Allocating at the exact order present simply removes the block.
+TEST_CASE(buddy_alloc_exact_order)
+{
+    struct page_block *block;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x4000),
+    );
+
+    block = alloc_block(2, ALLOC_GENERIC);
+    ASSERT(block != nullptr);
+    ASSERT_EQ(page_to_pfn(block_to_page(block)), 0);
+    ASSERT_EQ(block_type(block), PAGE_TYPE_GENERIC);
+    ASSERT_EQ(block_num_references(block), 1);
+
+    ASSERT_ORDER_FREE(2, 0);
+}
+
+/*
+ * Allocating a smaller order than is available splits the larger block in half
+ * repeatedly, leaving one free block at each intermediate order.
+ */
+TEST_CASE(buddy_alloc_splits_down)
+{
+    struct page_block *block;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x4000),
+    );
+
+    block = alloc_block(0, ALLOC_GENERIC);
+    ASSERT(block != nullptr);
+    ASSERT_EQ(page_to_pfn(block_to_page(block)), 0);
+
+    ASSERT_ORDER_FREE(0, 1);
+    ASSERT_ORDER_FREE(1, 1);
+    ASSERT_ORDER_FREE(2, 0);
+}
+
+// Freeing a block whose buddy is also free coalesces all the way back up.
+TEST_CASE(buddy_free_coalesces_up)
+{
+    struct page_block *block;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x4000),
+    );
+
+    block = alloc_block(0, ALLOC_GENERIC);
+    ASSERT_ORDER_FREE(2, 0);
+
+    // Drops the single reference from alloc_block(), freeing the block.
+    block_unref(block);
+
+    ASSERT_ORDER_FREE(0, 0);
+    ASSERT_ORDER_FREE(1, 0);
+    ASSERT_ORDER_FREE(2, 1);
+}
+
+/*
+ * A block must not coalesce while its buddy is still allocated. Only once both
+ * halves are free may they merge back into the parent order.
+ */
+TEST_CASE(buddy_free_no_coalesce_busy_buddy)
+{
+    struct page_block *first, *second;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x2000),
+    );
+
+    first = alloc_block(0, ALLOC_GENERIC);
+    second = alloc_block(0, ALLOC_GENERIC);
+    ASSERT(first != nullptr && second != nullptr);
+    ASSERT_NE(page_to_pfn(block_to_page(first)),
+              page_to_pfn(block_to_page(second)));
+
+    // Buddy of 'first' is still allocated, so this stays an order-0 block.
+    block_unref(first);
+    ASSERT_ORDER_FREE(0, 1);
+    ASSERT_ORDER_FREE(1, 0);
+
+    // Now both halves are free and must merge.
+    block_unref(second);
+    ASSERT_ORDER_FREE(0, 0);
+    ASSERT_ORDER_FREE(1, 1);
+}
+
+// Requesting an order beyond what the allocator supports fails cleanly.
+TEST_CASE(buddy_alloc_order_too_large)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    ASSERT_EQ(alloc_block(BUDDY_MAX_ORDER + 1, ALLOC_GENERIC), NULL);
+
+    // The valid memory is untouched.
+    ASSERT_ORDER_FREE(0, 1);
+}
+
+// Once every page is handed out, further allocations return null.
+TEST_CASE(buddy_alloc_exhaustion)
+{
+    struct page_block *blocks[4];
+    size_t i, j;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x4000),
+    );
+
+    for (i = 0; i < ARRAY_SIZE(blocks); i++) {
+        blocks[i] = alloc_block(0, ALLOC_GENERIC);
+        ASSERT(blocks[i] != nullptr);
+
+        for (j = 0; j < i; j++)
+            ASSERT_NE(page_to_pfn(block_to_page(blocks[i])),
+                      page_to_pfn(block_to_page(blocks[j])));
+    }
+
+    ASSERT_EQ(alloc_block(0, ALLOC_GENERIC), NULL);
+}
+
+/*
+ * A higher-order request cannot be satisfied from only lower-order free blocks
+ * even when enough total pages exist.
+ */
+TEST_CASE(buddy_alloc_no_merge_for_higher_order)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    ASSERT_ORDER_FREE(0, 1);
+    ASSERT_EQ(alloc_block(1, ALLOC_GENERIC), NULL);
+    ASSERT_ORDER_FREE(0, 1);
 }
