@@ -123,6 +123,12 @@ KERNEL_FILE(
     INCLUDE_PATH "common" INCLUDE_FILE "bit.h"
 )
 KERNEL_FILE(
+    SOURCE_PATH "common" SOURCE_FILE "rb_tree.c"
+    INCLUDE_PATH "common" INCLUDE_FILE "rb_tree.h"
+)
+KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "rb_tree.h")
+KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "rb_tree_aggregated.h")
+KERNEL_FILE(
     SOURCE_PATH "memory" SOURCE_FILE "alloc.c"
     INCLUDE_PATH "memory" INCLUDE_FILE "alloc.h"
 )
