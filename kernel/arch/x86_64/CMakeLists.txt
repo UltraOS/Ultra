@@ -1,6 +1,7 @@
 include(CheckCompilerFlag)
 
 ultra_sources(
+    string.c
     apic.c
     xapic.c
     x2apic.c
