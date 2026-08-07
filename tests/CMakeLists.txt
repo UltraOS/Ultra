@@ -138,6 +138,10 @@ KERNEL_FILE(
     INCLUDE_PATH "memory" INCLUDE_FILE "buddy.h"
 )
 KERNEL_FILE(
+    SOURCE_PATH "memory" SOURCE_FILE "valloc.c"
+    INCLUDE_PATH "memory" INCLUDE_FILE "valloc.h"
+)
+KERNEL_FILE(
     SOURCE_PATH "time" SOURCE_FILE "counter_device.c"
     INCLUDE_PATH "time" INCLUDE_FILE "counter_device.h"
 )
@@ -151,7 +155,10 @@ KERNEL_FILE(INCLUDE_PATH "time" INCLUDE_FILE "units.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "alloc_behavior.h")
-KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "units.h")
+KERNEL_FILE(
+    SOURCE_PATH "memory" SOURCE_FILE "units.c"
+    INCLUDE_PATH "memory" INCLUDE_FILE "units.h"
+)
 KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "memory.h")
 KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "buddy.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "boot.h")
@@ -164,6 +171,10 @@ KERNEL_FILE(INCLUDE_FILE "linker.h")
 KERNEL_FILE(INCLUDE_FILE "seq.h")
 KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "init_level.h")
 KERNEL_FILE(INCLUDE_FILE "spinlock.h" SOURCE_FILE "spinlock.c")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "vm_flags.h")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page_table.h")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "address_space.h")
+KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "tlb.h")
 
 get_property(EXTERNAL_KERNEL_FILES_LOCAL GLOBAL PROPERTY EXTERNAL_KERNEL_FILES)
 add_custom_target(external_files DEPENDS ${EXTERNAL_KERNEL_FILES_LOCAL})
@@ -181,7 +192,7 @@ include("test-cases/files.cmake")
 add_executable(
     run_tests
     run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
-    kernel-source/spinlock.c
+    kernel-source/spinlock.c kernel-source/memory/units.c
 )
 set_property(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
