@@ -7,4 +7,5 @@ add_test_cases(
     test_list.c
     test_slist.c
     test_time.c
+    test_rbtree.c
 )
