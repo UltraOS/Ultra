@@ -1,7 +1,7 @@
 #include <kernel-source/memory/boot_alloc.c>
 #include <test_harness.h>
 
-static void allocator_setup(struct memory_range *ranges, size_t count)
+static void boot_allocator_setup(struct memory_range *ranges, size_t count)
 {
     s_buffer = s_initial_buffer;
     s_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
@@ -29,7 +29,7 @@ static void verify_state(struct memory_range *ranges, size_t count)
     struct memory_range base_ranges[] = {      \
         __VA_ARGS__                            \
     };                                         \
-    allocator_setup(base_ranges, ARRAY_SIZE(base_ranges))
+    boot_allocator_setup(base_ranges, ARRAY_SIZE(base_ranges))
 
 #define DO_CHECK_STATE(line, ...)                            \
     struct memory_range CONCAT(expected_state, line)[] = {   \
@@ -58,7 +58,7 @@ static void verify_state(struct memory_range *ranges, size_t count)
         ASSERT_EQ(ret, expect);                  \
 } while (0)
 
-TEST_CASE(middle_split)
+TEST_CASE(boot_alloc_middle_split)
 {
     BASE_STATE(
         RANGE(0x1000, 0x3000, MEMORY_FREE),
@@ -73,7 +73,7 @@ TEST_CASE(middle_split)
     );
 }
 
-TEST_CASE(left_mergeable)
+TEST_CASE(boot_alloc_left_mergeable)
 {
     BASE_STATE(
         RANGE(0x1000, 0x1000, MEMORY_ALLOCATED),
@@ -88,7 +88,7 @@ TEST_CASE(left_mergeable)
     );
 }
 
-TEST_CASE(left_non_mergeable)
+TEST_CASE(boot_alloc_left_non_mergeable)
 {
     BASE_STATE(
         RANGE(0x0000, 0x1000, MEMORY_ALLOCATED),
@@ -104,7 +104,7 @@ TEST_CASE(left_non_mergeable)
     );
 }
 
-TEST_CASE(right_mergeable)
+TEST_CASE(boot_alloc_right_mergeable)
 {
     BASE_STATE(
         RANGE(0x1000, 0x2000, MEMORY_FREE),
@@ -119,7 +119,7 @@ TEST_CASE(right_mergeable)
     );
 }
 
-TEST_CASE(right_non_mergeable)
+TEST_CASE(boot_alloc_right_non_mergeable)
 {
     BASE_STATE(
         RANGE(0x1000, 0x2000, MEMORY_FREE),
@@ -135,7 +135,7 @@ TEST_CASE(right_non_mergeable)
     );
 }
 
-TEST_CASE(entire_non_mergable)
+TEST_CASE(boot_alloc_entire_non_mergable)
 {
     BASE_STATE(
         RANGE(0x0000, 0x1000, MEMORY_ALLOCATED),
@@ -152,7 +152,7 @@ TEST_CASE(entire_non_mergable)
     );
 }
 
-TEST_CASE(entire_mergable)
+TEST_CASE(boot_alloc_entire_mergable)
 {
     BASE_STATE(
         RANGE(0x0000, 0x1000, MEMORY_ALLOCATED),
@@ -167,7 +167,7 @@ TEST_CASE(entire_mergable)
     );
 }
 
-TEST_CASE(entire_left_mergable)
+TEST_CASE(boot_alloc_entire_left_mergable)
 {
     BASE_STATE(
         RANGE(0x0000, 0x1000, MEMORY_ALLOCATED),
@@ -183,7 +183,7 @@ TEST_CASE(entire_left_mergable)
     );
 }
 
-TEST_CASE(entire_right_mergable)
+TEST_CASE(boot_alloc_entire_right_mergable)
 {
     BASE_STATE(
         RANGE(0x0000, 0x1000, MEMORY_ALLOCATED),
@@ -201,7 +201,7 @@ TEST_CASE(entire_right_mergable)
     );
 }
 
-TEST_CASE(alloc_at_oom)
+TEST_CASE(boot_alloc_at_oom)
 {
     BASE_STATE(
         RANGE(0x2000, 0x1000, MEMORY_FREE),
@@ -227,7 +227,7 @@ TEST_CASE(alloc_at_oom)
     );
 }
 
-TEST_CASE(alloc_top_down)
+TEST_CASE(boot_alloc_top_down)
 {
     BASE_STATE(
         RANGE(0x2000, 0x2000, MEMORY_FREE),
@@ -272,7 +272,7 @@ TEST_CASE(alloc_top_down)
     ALLOC_EXPECT(1, encode_error_phys_addr(ENOMEM));
 }
 
-TEST_CASE(buffer_growth)
+TEST_CASE(boot_alloc_buffer_growth)
 {
     BASE_STATE(
         RANGE(0x1000, 0x3000, MEMORY_FREE),
@@ -291,7 +291,7 @@ TEST_CASE(buffer_growth)
     );
 }
 
-TEST_CASE(buffer_growth_multi)
+TEST_CASE(boot_alloc_buffer_growth_multi)
 {
     BASE_STATE(
         RANGE(0x1000, 0x10000, MEMORY_FREE),
@@ -326,7 +326,7 @@ TEST_CASE(buffer_growth_multi)
         ASSERT_EQ(ret, expect);                                     \
     } while (0)
 
-TEST_CASE(alloc_aligned_middle_split)
+TEST_CASE(boot_alloc_aligned_middle_split)
 {
     BASE_STATE(
         RANGE(0x1000, 0x6000, MEMORY_FREE),
@@ -346,7 +346,7 @@ TEST_CASE(alloc_aligned_middle_split)
     );
 }
 
-TEST_CASE(alloc_aligned_bottom_match)
+TEST_CASE(boot_alloc_aligned_bottom_match)
 {
     BASE_STATE(
         RANGE(0x4000, 0x3000, MEMORY_FREE),
@@ -365,7 +365,7 @@ TEST_CASE(alloc_aligned_bottom_match)
     );
 }
 
-TEST_CASE(alloc_aligned_top_match)
+TEST_CASE(boot_alloc_aligned_top_match)
 {
     BASE_STATE(
         RANGE(0x1000, 0x4000, MEMORY_FREE),
@@ -384,7 +384,7 @@ TEST_CASE(alloc_aligned_top_match)
     );
 }
 
-TEST_CASE(alloc_aligned_oom)
+TEST_CASE(boot_alloc_aligned_oom)
 {
     BASE_STATE(
         RANGE(0x1000, 0x2000, MEMORY_FREE),
