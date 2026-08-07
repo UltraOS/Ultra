@@ -26,3 +26,16 @@ enum init_level : u32 {
 
 #define INIT_CALL_PRE(level, func) MAKE_INIT_CALL(func, level, pre)
 #define INIT_CALL_POST(level, func) MAKE_INIT_CALL(func, level, post)
+
+// Tests run with everything considered initialized unless lowered
+UNUSED_DECL static enum init_level s_test_init_level = NUM_INIT_LEVELS;
+
+static inline bool init_level_at_least(enum init_level level)
+{
+    return s_test_init_level >= level;
+}
+
+static inline bool init_level_below(enum init_level level)
+{
+    return s_test_init_level < level;
+}

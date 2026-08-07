@@ -2,6 +2,10 @@
 #undef MSG_FMT
 
 #include <kernel-source/memory/buddy.c>
+#undef MSG_FMT
+
+#define free test_free
+#include <kernel-source/memory/alloc.c>
 
 #include <test_harness.h>
 
@@ -412,6 +416,7 @@ static void allocator_state_setup(struct memory_range *ranges, size_t count)
 
     boot_allocator_setup(ranges, count);
     buddy_setup();
+    kernel_heap_init();
 }
 
 #define FREE_RANGE(start, length) { start, MR_ENCODE(length, MEMORY_FREE) }
@@ -642,5 +647,512 @@ TEST_CASE(buddy_alloc_no_merge_for_higher_order)
 
     ASSERT_ORDER_FREE(0, 1);
     ASSERT_EQ(alloc_block(1, ALLOC_GENERIC), NULL);
+    ASSERT_ORDER_FREE(0, 1);
+}
+
+// The size of a small-object allocation that yields a 2-object slab.
+#define SLAB_2K 2048
+
+TEST_CASE(slab_size_to_cache_index)
+{
+    // Everything up to the minimum cache size lands in the first cache.
+    ASSERT_EQ(size_to_cache_index(1), 0);
+    ASSERT_EQ(size_to_cache_index(MIN_CACHE_SIZE), 0);
+
+    // Just past a power of two bumps up to the next cache.
+    ASSERT_EQ(size_to_cache_index(MIN_CACHE_SIZE + 1), 1);
+    ASSERT_EQ(size_to_cache_index(16), 1);
+    ASSERT_EQ(size_to_cache_index(17), 2);
+    ASSERT_EQ(size_to_cache_index(32), 2);
+
+    // The largest builtin cache is exactly 8K.
+    ASSERT_EQ(size_to_cache_index(8192), NUM_BUILTIN_CACHES - 1);
+
+    // Anything bigger spills past the builtin range (served by the buddy).
+    ASSERT(size_to_cache_index(8193) >= NUM_BUILTIN_CACHES);
+}
+
+TEST_CASE(slab_size_to_order)
+{
+    size_t allocation_size = 0;
+
+    ASSERT_EQ(size_to_order(1, &allocation_size), 0);
+    ASSERT_EQ(allocation_size, PAGE_SIZE);
+
+    ASSERT_EQ(size_to_order(PAGE_SIZE, &allocation_size), 0);
+    ASSERT_EQ(allocation_size, PAGE_SIZE);
+
+    ASSERT_EQ(size_to_order(PAGE_SIZE + 1, &allocation_size), 1);
+    ASSERT_EQ(allocation_size, PAGE_SIZE * 2);
+
+    ASSERT_EQ(size_to_order(PAGE_SIZE * 2, &allocation_size), 1);
+    ASSERT_EQ(allocation_size, PAGE_SIZE * 2);
+
+    // The out-parameter is optional.
+    ASSERT_EQ(size_to_order(PAGE_SIZE * 2 + 1, nullptr), 2);
+}
+
+/*
+ * A first allocation lazily provisions a slab from the buddy allocator, marks
+ * the backing page as heap-owned, and parks it on the partial list.
+ */
+TEST_CASE(slab_alloc_provisions_slab)
+{
+    struct alloc_cache *cache;
+    struct page *page;
+    void *obj;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    obj = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+
+    cache = &s_builtin_caches[size_to_cache_index(SLAB_2K)];
+    page = virt_to_page(obj);
+
+    ASSERT_EQ(page_type(page), PAGE_TYPE_KHEAP);
+    ASSERT_EQ((uintptr_t)page->kheap.cache, (uintptr_t)cache);
+    ASSERT_EQ(page->kheap.num_allocated_objects, 1);
+
+    // The object lives inside its backing page and is properly aligned.
+    ASSERT_EQ((uintptr_t)obj % cache->object_size, 0);
+    ASSERT(obj >= page_to_virt(page));
+
+    ASSERT_EQ(list_len(&cache->partial_slabs), 1);
+    ASSERT_EQ(list_len(&cache->full_slabs), 0);
+
+    // The slab consumed the only buddy page.
+    ASSERT_ORDER_FREE(0, 0);
+}
+
+// A zero-sized allocation is rejected.
+TEST_CASE(slab_alloc_zero_size)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    ASSERT_EQ(alloc(0, ALLOC_GENERIC), NULL);
+}
+
+// Sizes beyond the largest buddy block are refused up front.
+TEST_CASE(slab_alloc_too_large)
+{
+    size_t size;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    size = BUDDY_MAX_SIZE + 1;
+    ASSERT_EQ(alloc(size, ALLOC_GENERIC), NULL);
+    ASSERT_EQ(alloc((size_t)-1, ALLOC_GENERIC), NULL);
+}
+
+// Allocations are refused before the heap has been brought online.
+TEST_CASE(slab_alloc_offline)
+{
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    s_test_init_level = INIT_LEVEL_BUDDY_AVAILABLE;
+    ASSERT_EQ(alloc(SLAB_2K, ALLOC_GENERIC), NULL);
+    s_test_init_level = NUM_INIT_LEVELS;
+}
+
+// ALLOC_ZEROED must clear the object even when reusing dirty freed memory.
+TEST_CASE(slab_alloc_zeroed)
+{
+    struct alloc_cache *cache;
+    unsigned char *obj;
+    size_t i;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    cache = &s_builtin_caches[size_to_cache_index(SLAB_2K)];
+
+    // Dirty the backing storage, then release it back to the freelist.
+    obj = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+    memset(obj, 0xFF, cache->object_size);
+    free(obj);
+
+    obj = alloc(SLAB_2K, ALLOC_ZEROED);
+    ASSERT(obj != nullptr);
+
+    for (i = 0; i < cache->object_size; i++)
+        ASSERT_EQ(obj[i], 0);
+}
+
+// The freelist link of a neighboring free object must not leak.
+TEST_CASE(slab_alloc_wipes_freelist_pointer)
+{
+    void *a, *b;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    a = alloc(SLAB_2K, ALLOC_GENERIC);
+    b = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+
+    free(b);
+    free(a);
+
+    a = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT_EQ(*(uintptr_t*)a, 0);
+}
+
+// Objects handed out from one slab are distinct and accounted for.
+TEST_CASE(slab_alloc_distinct_objects)
+{
+    void *a, *b;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    a = alloc(SLAB_2K, ALLOC_GENERIC);
+    b = alloc(SLAB_2K, ALLOC_GENERIC);
+
+    ASSERT(a != nullptr && b != nullptr);
+    ASSERT_NE((uintptr_t)a, (uintptr_t)b);
+    ASSERT_EQ(virt_to_page(a)->kheap.num_allocated_objects, 2);
+}
+
+// The per-slab freelist is LIFO: a freed object is the next one handed back.
+TEST_CASE(slab_freelist_is_lifo)
+{
+    void *a, *b, *c;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    a = alloc(SLAB_2K, ALLOC_GENERIC);
+    b = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+
+    free(a);
+    c = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT_EQ((uintptr_t)c, (uintptr_t)a);
+}
+
+/*
+ * Once a slab is fully consumed it migrates to the full list, and a subsequent
+ * allocation provisions a brand new slab.
+ */
+TEST_CASE(slab_full_slab_spawns_new)
+{
+    struct alloc_cache *cache;
+    void *a, *b, *c;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x2000),
+    );
+
+    cache = &s_builtin_caches[size_to_cache_index(SLAB_2K)];
+
+    // Two objects exactly fill a 2K slab backed by a single 4K page.
+    a = alloc(SLAB_2K, ALLOC_GENERIC);
+    b = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+
+    ASSERT_EQ(list_len(&cache->full_slabs), 1);
+    ASSERT_EQ(list_len(&cache->partial_slabs), 0);
+
+    c = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(c != nullptr);
+    ASSERT_EQ(list_len(&cache->full_slabs), 1);
+    ASSERT_EQ(list_len(&cache->partial_slabs), 1);
+
+    // The two slabs are backed by different pages.
+    ASSERT_NE(page_to_pfn(virt_to_page(a)), page_to_pfn(virt_to_page(c)));
+}
+
+// Freeing from a full slab returns it to the partial list.
+TEST_CASE(slab_free_full_to_partial)
+{
+    struct alloc_cache *cache;
+    void *a, *b;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    cache = &s_builtin_caches[size_to_cache_index(SLAB_2K)];
+
+    a = alloc(SLAB_2K, ALLOC_GENERIC);
+    b = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+    ASSERT_EQ(list_len(&cache->full_slabs), 1);
+
+    free(a);
+    ASSERT_EQ(list_len(&cache->full_slabs), 0);
+    ASSERT_EQ(list_len(&cache->partial_slabs), 1);
+    ASSERT_EQ(virt_to_page(b)->kheap.num_allocated_objects, 1);
+}
+
+/*
+ * Emptying a slab keeps it cached (rather than freed) while the cache is below
+ * its empty-slab watermark, and the cached slab is reused on the next alloc
+ * without touching the buddy allocator.
+ */
+TEST_CASE(slab_empty_slab_is_retained_and_reused)
+{
+    struct alloc_cache *cache;
+    void *obj;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    cache = &s_builtin_caches[size_to_cache_index(SLAB_2K)];
+
+    obj = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+    ASSERT_ORDER_FREE(0, 0);
+
+    free(obj);
+    ASSERT_EQ(cache->num_empty_slabs, 1);
+    ASSERT_EQ(list_len(&cache->empty_slabs), 1);
+    ASSERT_EQ(list_len(&cache->partial_slabs), 0);
+    // Page was retained by the cache, not returned to the buddy.
+    ASSERT_ORDER_FREE(0, 0);
+
+    obj = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+    ASSERT_EQ(cache->num_empty_slabs, 0);
+    ASSERT_EQ(list_len(&cache->empty_slabs), 0);
+    ASSERT_EQ(list_len(&cache->partial_slabs), 1);
+    ASSERT_ORDER_FREE(0, 0);
+}
+
+/*
+ * Past the empty-slab watermark, an emptied slab is released back to the buddy
+ * allocator instead of being cached.
+ */
+TEST_CASE(slab_empty_slab_eviction)
+{
+    struct alloc_cache cache;
+    struct page *evicted;
+    void *a, *b, *c, *d;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x2000),
+    );
+
+    /*
+     * Builtin caches retain at least 8 empty slabs, which is awkward to drive.
+     * Use a private cache and force the watermark down to a single slab so the
+     * eviction path is reached after just two emptied slabs.
+     */
+    alloc_cache_init(&cache, "test_evict", SLAB_2K, 0);
+    cache.max_empty_slabs = 1;
+
+    // Fill two separate slabs (two objects each).
+    a = alloc_from_cache(&cache, ALLOC_GENERIC);
+    b = alloc_from_cache(&cache, ALLOC_GENERIC);
+    c = alloc_from_cache(&cache, ALLOC_GENERIC);
+    d = alloc_from_cache(&cache, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr && c != nullptr && d != nullptr);
+
+    evicted = virt_to_page(c);
+
+    free(a);
+    free(b);
+    // First emptied slab fits under the watermark and is retained.
+    ASSERT_EQ(cache.num_empty_slabs, 1);
+
+    free(c);
+    free(d);
+    // Second emptied slab exceeds the watermark and goes back to the buddy.
+    ASSERT_EQ(cache.num_empty_slabs, 1);
+    ASSERT_EQ(list_len(&cache.empty_slabs), 1);
+    ASSERT_EQ(list_len(&cache.partial_slabs), 0);
+    ASSERT_EQ(list_len(&cache.full_slabs), 0);
+    ASSERT_EQ(page_type(evicted), PAGE_TYPE_BUDDY);
+    ASSERT_ORDER_FREE(0, 1);
+}
+
+/*
+ * Allocations larger than the biggest builtin cache bypass the slabs entirely
+ * and are served as raw buddy pages, then returned on free.
+ */
+TEST_CASE(slab_large_alloc_via_buddy)
+{
+    struct page *page;
+    void *obj;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x4000),
+    );
+
+    // 0x4000 bytes -> order 2 (4 pages), past the 8K builtin ceiling.
+    obj = alloc(0x4000, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+
+    page = virt_to_page(obj);
+    ASSERT_EQ(page_type(page), PAGE_TYPE_KHEAP_LARGE);
+    ASSERT_EQ(page_to_pfn(page), 0);
+    ASSERT_ORDER_FREE(2, 0);
+
+    free(obj);
+    ASSERT_ORDER_FREE(2, 1);
+}
+
+/*
+ * A large allocation that has to split a bigger buddy block must, on free,
+ * return exactly the pages that were allocated and coalesce back to the
+ * original block. This exercises whether the allocated order is tracked
+ * correctly across a split.
+ */
+TEST_CASE(slab_large_alloc_split_roundtrip)
+{
+    void *obj;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x8000),
+    );
+
+    ASSERT_ORDER_FREE(3, 1);
+
+    // order-2 request carved out of the order-3 block.
+    obj = alloc(0x4000, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+    ASSERT_ORDER_FREE(3, 0);
+    ASSERT_ORDER_FREE(2, 1);
+
+    free(obj);
+
+    // Everything should coalesce back into the single order-3 block.
+    ASSERT_ORDER_FREE(2, 0);
+    ASSERT_ORDER_FREE(3, 1);
+}
+
+// When the buddy allocator is empty, slab allocation fails gracefully.
+TEST_CASE(slab_alloc_out_of_memory)
+{
+    void *obj;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    // Drain the only page through the buddy directly.
+    ASSERT(alloc_page(0) != nullptr);
+    ASSERT_ORDER_FREE(0, 0);
+
+    obj = alloc(SLAB_2K, ALLOC_GENERIC);
+    ASSERT_EQ(obj, NULL);
+}
+
+/*
+ * The object stride is padded up to the requested alignment, and every
+ * object handed out honors it (slabs are naturally aligned, so a
+ * multiple-of-align stride is all it takes).
+ */
+TEST_CASE(alloc_cache_alignment)
+{
+    struct alloc_cache cache;
+    void *a, *b;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    alloc_cache_init(&cache, "test_align", 40, 64);
+    ASSERT_EQ(cache.object_size, 64);
+
+    a = alloc_from_cache(&cache, ALLOC_GENERIC);
+    b = alloc_from_cache(&cache, ALLOC_GENERIC);
+    ASSERT(a != nullptr && b != nullptr);
+    ASSERT_NE((uintptr_t)a, (uintptr_t)b);
+    ASSERT_EQ((uintptr_t)a % 64, 0);
+    ASSERT_EQ((uintptr_t)b % 64, 0);
+
+    free(a);
+    free(b);
+}
+
+/*
+ * The slab order is picked by bounding tail waste, not by the smallest
+ * fit: a 1.5K object wastes a quarter of an order-0 slab but only 1/16
+ * of an order-1 one.
+ */
+TEST_CASE(alloc_cache_order_bounds_waste)
+{
+    struct alloc_cache cache;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    alloc_cache_init(&cache, "test_waste", 1536, 0);
+    ASSERT_EQ(cache.order, 1);
+
+    // Power-of-two sizes pack exactly and keep the smallest fit.
+    alloc_cache_init(&cache, "test_exact", SLAB_2K, 0);
+    ASSERT_EQ(cache.order, 0);
+}
+
+// ALLOC_ZEROED through a dedicated cache clears recycled objects too.
+TEST_CASE(alloc_cache_alloc_zeroed)
+{
+    struct alloc_cache cache;
+    unsigned char *obj;
+    size_t i;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    alloc_cache_init(&cache, "test_zeroed", SLAB_2K, 0);
+
+    obj = alloc_from_cache(&cache, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+    memset(obj, 0xFF, cache.object_size);
+    free(obj);
+
+    obj = alloc_from_cache(&cache, ALLOC_ZEROED);
+    ASSERT(obj != nullptr);
+
+    for (i = 0; i < cache.object_size; i++)
+        ASSERT_EQ(obj[i], 0);
+
+    free(obj);
+}
+
+// Destroying a cache hands its retained empty slabs back to the buddy.
+TEST_CASE(alloc_cache_destroy_releases_slabs)
+{
+    struct alloc_cache cache;
+    struct page *slab_page;
+    void *obj;
+
+    BASE_ALLOCATOR_STATE(
+        FREE_RANGE(0x0000, 0x1000),
+    );
+
+    alloc_cache_init(&cache, "test_destroy", SLAB_2K, 0);
+
+    obj = alloc_from_cache(&cache, ALLOC_GENERIC);
+    ASSERT(obj != nullptr);
+    slab_page = virt_to_page(obj);
+
+    free(obj);
+    ASSERT_EQ(cache.num_empty_slabs, 1);
+    ASSERT_ORDER_FREE(0, 0);
+
+    alloc_cache_destroy(&cache);
+    ASSERT_EQ(cache.num_empty_slabs, 0);
+    ASSERT_EQ(list_len(&cache.empty_slabs), 0);
+    ASSERT_EQ(page_type(slab_page), PAGE_TYPE_BUDDY);
     ASSERT_ORDER_FREE(0, 1);
 }
