@@ -14,6 +14,16 @@ add_executable(${ULTRA_KERNEL_BASE})
 set(ULTRA_KERNEL_OBJECTS "kernel-objects")
 add_library(${ULTRA_KERNEL_OBJECTS} OBJECT)
 
+# Accumulates all kernel-wide compile/link flags, definitions and
+# include directories as usage requirements
+set(ULTRA_KERNEL_IFACE "kernel-interface")
+add_library(${ULTRA_KERNEL_IFACE} INTERFACE)
+target_link_libraries(
+    ${ULTRA_KERNEL_OBJECTS}
+    PRIVATE
+    ${ULTRA_KERNEL_IFACE}
+)
+
 # Kernel "stages" used to embed the symbol table in a stable way
 set(
     ULTRA_KERNEL_TARGETS
@@ -55,7 +65,7 @@ endif ()
 
 setup_symbol_table_link_steps(${ULTRA_NUM_RELINKS})
 
-ultra_link_libraries(${ULTRA_KERNEL_OBJECTS})
+ultra_link_libraries(${ULTRA_KERNEL_OBJECTS} ${ULTRA_KERNEL_IFACE})
 
 ultra_properties(
     RUNTIME_OUTPUT_DIRECTORY

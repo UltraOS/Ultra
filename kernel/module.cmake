@@ -24,20 +24,30 @@ function(add_ultra_module)
     )
 
     ultra_compile_options(${MODULE_PUBLIC_CFLAGS})
-    get_target_property(ULTRA_CFLAGS ${ULTRA_KERNEL_OBJECTS} COMPILE_OPTIONS)
+    ultra_compile_definitions(${MODULE_PUBLIC_DEFINITIONS})
+    ultra_include_directories(${MODULE_PUBLIC_INCLUDE_DIRS})
+
+    # Consume kernel-wide flags via generator expressions instead of
+    # linking ${ULTRA_KERNEL_IFACE}: this picks up the final values no
+    # matter when this module was added, and keeps the kernel-wide
+    # flags in front so that private flags may override them (linking
+    # would order the target's own flags first)
     ultra_target_compile_options(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
-        ${ULTRA_CFLAGS}
+        $<TARGET_PROPERTY:${ULTRA_KERNEL_IFACE},INTERFACE_COMPILE_OPTIONS>
         ${MODULE_PRIVATE_CFLAGS}
     )
-
-    ultra_include_directories(${MODULE_PUBLIC_INCLUDE_DIRS})
-    get_target_property(ULTRA_INCLUDES ${ULTRA_KERNEL_OBJECTS} INCLUDE_DIRECTORIES)
+    target_compile_definitions(
+        ${MODULE_OBJECT_TARGET}
+        PRIVATE
+        $<TARGET_PROPERTY:${ULTRA_KERNEL_IFACE},INTERFACE_COMPILE_DEFINITIONS>
+        ${MODULE_PRIVATE_DEFINITIONS}
+    )
     target_include_directories(
         ${MODULE_OBJECT_TARGET}
         PRIVATE
-        ${ULTRA_INCLUDES}
+        $<TARGET_PROPERTY:${ULTRA_KERNEL_IFACE},INTERFACE_INCLUDE_DIRECTORIES>
         ${MODULE_PRIVATE_INCLUDE_DIRS}
     )
 
@@ -69,6 +79,19 @@ function(add_ultra_module)
             PRIVATE
             ULTRA_RUNTIME_MODULE
         )
+
+        # Runtime modules are dynamically linked against the kernel
+        # once loaded, so they must contain final machine code: there
+        # is nothing for LTO to optimize against, and the relocatable
+        # link would embed compiler IR instead of machine code (GNU
+        # ld), or codegen behind our back with default flags (lld).
+        # This comes after the kernel-wide flags, so it overrides
+        # -flto if it's enabled.
+        target_compile_options(
+            ${MODULE_OBJECT_TARGET}
+            PRIVATE
+            -fno-lto
+        )
     else ()
         set_property(
             GLOBAL APPEND PROPERTY
@@ -77,13 +100,4 @@ function(add_ultra_module)
         )
         ultra_link_libraries(${MODULE_OBJECT_TARGET})
     endif ()
-
-    ultra_compile_definitions(${MODULE_PUBLIC_DEFINITIONS})
-    get_target_property(ULTRA_DEFINITIONS ${ULTRA_KERNEL_OBJECTS} COMPILE_DEFINITIONS)
-    target_compile_definitions(
-        ${MODULE_OBJECT_TARGET}
-        PRIVATE
-        ${ULTRA_DEFINITIONS}
-        ${MODULE_PRIVATE_DEFINITIONS}
-    )
 endfunction()

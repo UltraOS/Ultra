@@ -4,36 +4,30 @@ macro(ultra_kernel_targets_apply FN)
     endforeach()
 endmacro()
 
+# All kernel-wide flags accumulate on ${ULTRA_KERNEL_IFACE} as usage
+# requirements. Consumers either link against it or extract the final
+# values with $<TARGET_PROPERTY:...>, which is evaluated at generate
+# time, so the results don't depend on configure order.
 function(ultra_compile_options)
-    ultra_kernel_targets_apply(
-        ultra_target_compile_options
-        PRIVATE
-        ${ARGN}
-    )
     ultra_target_compile_options(
-        ${ULTRA_KERNEL_OBJECTS}
-        PRIVATE
+        ${ULTRA_KERNEL_IFACE}
+        INTERFACE
         ${ARGN}
     )
 endfunction()
 
 function(ultra_compile_definitions)
-    ultra_kernel_targets_apply(
-        target_compile_definitions
-        PRIVATE
-        ${ARGN}
-    )
     target_compile_definitions(
-        ${ULTRA_KERNEL_OBJECTS}
-        PRIVATE
+        ${ULTRA_KERNEL_IFACE}
+        INTERFACE
         ${ARGN}
     )
 endfunction()
 
 function(ultra_link_options)
-    ultra_kernel_targets_apply(
-        ultra_target_link_options
-        PRIVATE
+    ultra_target_link_options(
+        ${ULTRA_KERNEL_IFACE}
+        INTERFACE
         ${ARGN}
     )
 endfunction()
@@ -71,14 +65,9 @@ function(ultra_sources_if CONFIG)
 endfunction()
 
 function(ultra_include_directories)
-    ultra_kernel_targets_apply(
-        target_include_directories
-        PRIVATE
-        ${ARGN}
-    )
     target_include_directories(
-        ${ULTRA_KERNEL_OBJECTS}
-        PRIVATE
+        ${ULTRA_KERNEL_IFACE}
+        INTERFACE
         ${ARGN}
     )
 endfunction()
