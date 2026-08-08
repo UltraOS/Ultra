@@ -18,22 +18,25 @@ function(add_ultra_ld_template)
         message(FATAL_ERROR "TEMPLATE_PATH & OUT_PATH must be specified if PATH is omitted")
     endif ()
 
-    # We assume all dependants have the same compile flags/definitions
-    list(GET SCRIPT_DEPENDANT 0 FIRST_DEPENDANT)
-
-    get_target_property(
+    # Extracted at generate time so that the final kernel-wide values
+    # are used regardless of when this function was called
+    set(
+        IFACE_INCS
+        "$<TARGET_PROPERTY:${ULTRA_KERNEL_IFACE},INTERFACE_INCLUDE_DIRECTORIES>"
+    )
+    set(
         DEPENDANT_INCLUDES
-        ${FIRST_DEPENDANT}
-        INCLUDE_DIRECTORIES
+        "$<$<BOOL:${IFACE_INCS}>:-I$<JOIN:${IFACE_INCS},$<SEMICOLON>-I>>"
     )
-    list(TRANSFORM DEPENDANT_INCLUDES PREPEND "-I")
 
-    get_target_property(
-        DEPENDANT_DEFINITIONS
-        ${FIRST_DEPENDANT}
-        COMPILE_DEFINITIONS
+    set(
+        IFACE_DEFS
+        "$<TARGET_PROPERTY:${ULTRA_KERNEL_IFACE},INTERFACE_COMPILE_DEFINITIONS>"
     )
-    list(TRANSFORM DEPENDANT_DEFINITIONS PREPEND "-D")
+    set(
+        DEPENDANT_DEFINITIONS
+        "$<$<BOOL:${IFACE_DEFS}>:-D$<JOIN:${IFACE_DEFS},$<SEMICOLON>-D>>"
+    )
 
     set(SCRIPT_DEP_FILE "${SCRIPT_NAME}.d")
 
