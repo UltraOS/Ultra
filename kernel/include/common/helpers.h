@@ -19,8 +19,8 @@
 #define IS_CONSTEXPR(expr) __builtin_constant_p((expr))
 #define CHOOSE_EXPR(cond, if_true, if_false) \
     __builtin_choose_expr((cond), (if_true), (if_false))
-#define IS_POWER_OF_TWO(x) (__builtin_popcountll(x) == 1)
-#define IS_POWER_OF_TWO_OR_ZERO(x) (__builtin_popcountll(x) <= 1)
+#define IS_POWER_OF_TWO_OR_ZERO(x) (((x) & ((x) - 1)) == 0)
+#define IS_POWER_OF_TWO(x) ((x) != 0 && IS_POWER_OF_TWO_OR_ZERO(x))
 
 #define DO_CONTAINER_OF(ptr, ptr_name, type, member) ({                    \
     char *ptr_name = (char*)(ptr);                                         \
