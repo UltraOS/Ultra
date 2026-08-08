@@ -86,7 +86,7 @@
  */
 #define BIT_FIELD_MAKE(mask, value) ((typeof(mask))( \
     BIT_FIELD_VALIDATE_INPUT(mask, value) +          \
-    (((value) << BIT_FIELD_SHIFT(mask)) & (mask))))
+    ((((typeof(mask))(value)) << BIT_FIELD_SHIFT(mask)) & (mask))))
 
 /*
  * Set a bit field in 'dst' defined by 'mask' to 'value'
