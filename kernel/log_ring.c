@@ -893,7 +893,7 @@ static char *log_data_alloc_extend(
          */
         memcpy(
             rec->data, old_rec->data,
-            in_out_position->end - in_out_position->begin
+            (in_out_position->end - in_out_position->begin) - sizeof(*rec)
         );
     } else {
         rec = log_data_record_from_position(
