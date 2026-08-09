@@ -1,4 +1,5 @@
 set(ULTRA_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+set(ULTRA_CONFIG_STAMPS_DIR "${ULTRA_GENERATED_DIR}/config-stamps")
 set(ULTRA_OLDDEFCONFIG "${ULTRA_SCRIPTS_DIR}/kconfiglib/olddefconfig.py")
 
 if (NOT EXISTS ${ULTRA_OLDDEFCONFIG})
@@ -97,4 +98,23 @@ function(kconfig_load KCONFIG_FILE)
         "${CMAKE_BINARY_DIR}/config.h.tmp"
         "${ULTRA_GENERATED_DIR}/config.h"
     )
+endfunction ()
+
+function(kconfig_sync_dependencies CONFIG_FILE)
+    set(ENV{KCONFIG_CONFIG} "${CONFIG_FILE}")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE}
+        "${ULTRA_SCRIPTS_DIR}/sync_config_dependencies.py"
+        "${ULTRA_CONFIG_STAMPS_DIR}"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE SYNC_STATUS
+    )
+    unset(ENV{KCONFIG_CONFIG})
+
+    if (NOT SYNC_STATUS EQUAL 0)
+        message(
+            FATAL_ERROR
+            "Unable to synchronize per-symbol config dependencies"
+        )
+    endif ()
 endfunction ()

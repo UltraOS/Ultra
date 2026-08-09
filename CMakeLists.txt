@@ -41,6 +41,25 @@ endif ()
 
 kconfig_sanitize(${CONFIG_FILE})
 kconfig_load(${CONFIG_FILE})
+kconfig_sync_dependencies(${CONFIG_FILE})
+
+# Rewrite compiler-generated depfiles to track the per-symbol stamp
+# files instead of the monolithic config.h, so that config changes
+# only rebuild translation units that use the changed symbols
+set(
+    ULTRA_FIXUP_DEPENDENCIES_LAUNCHER
+    ${Python3_EXECUTABLE}
+    "${ULTRA_SCRIPTS_DIR}/fixup_dependencies.py"
+    --config-h "${ULTRA_GENERATED_DIR}/config.h"
+    --stamps "${ULTRA_CONFIG_STAMPS_DIR}"
+    --srctree "${CMAKE_SOURCE_DIR}"
+    # Skip config_helpers.h since it mentions CONFIG_ tokens that aren't real
+    # symbols as part of the helper macro machinery
+    --skip-scan "${CMAKE_SOURCE_DIR}/kernel/include/config_helpers.h"
+    --
+)
+set(CMAKE_C_COMPILER_LAUNCHER ${ULTRA_FIXUP_DEPENDENCIES_LAUNCHER})
+set(CMAKE_ASM_COMPILER_LAUNCHER ${ULTRA_FIXUP_DEPENDENCIES_LAUNCHER})
 
 set(ULTRA_ARCH ${CONFIG_ARCH_STRING})
 set(ULTRA_TOOLCHAIN ${CONFIG_TOOLCHAIN_STRING})
