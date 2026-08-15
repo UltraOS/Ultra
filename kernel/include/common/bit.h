@@ -12,6 +12,7 @@
 #define BIT_U16(x) BIT_OF_TYPE(u16, (x))
 #define BIT_U32(x) BIT_OF_TYPE(u32, (x))
 #define BIT_U64(x) BIT_OF_TYPE(u64, (x))
+#define BIT_PHYS(x) BIT_OF_TYPE(phys_addr_t, (x))
 #define BIT(x) BIT_OF_TYPE(reg_t, (x))
 
 /*
