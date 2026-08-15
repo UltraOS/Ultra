@@ -4,4 +4,5 @@ ultra_sources(
     alloc.c
     boot_alloc.c
     io.c
+    page_table.c
 )

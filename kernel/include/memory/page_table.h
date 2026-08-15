@@ -30,8 +30,27 @@
  * Writing an entry
  * ================
  *
- * Three groups, one per kind of exclusion. Each name says what
- * exclusion its caller must already hold.
+ * Four groups, one per kind of exclusion. The plain name is the safe
+ * one and the weaker variants say in their name what they give up.
+ *
+ *   ptN_populate               Takes the ptdesc lock of the table the
+ *   ptN_make_leaf              entry lives in, rechecks that the entry
+ *                              is still empty and publishes it.
+ *                              Returns false if another CPU won the
+ *                              race, in which case the caller releases
+ *                              whatever it had prepared. This is the
+ *                              form userspace mappings use: two
+ *                              threads faulting the same page race to
+ *                              install the same entry, and that is a
+ *                              legal race exactly one of them must
+ *                              lose gracefully. Both live in
+ *                              page_table.c.
+ *
+ *                              There is deliberately no locked clear
+ *                              counterpart: removal of an entry has
+ *                              exactly one legitimate owner (see
+ *                              "Teardown"), so a clear that finds the
+ *                              entry gone is a serialization bug.
  *
  *   ptN_cmpxchg_populate       Lockless install of a table into an
  *                              empty entry. Returns false if another
@@ -77,7 +96,7 @@
  * ========
  *
  * Removal is asymmetric to installation on purpose. Installs race
- * legally, so ptN_cmpxchg_populate returns bool. Removal of a given
+ * legally, so the locked family returns bool. Removal of a given
  * entry has a single owner: the path that detached the covering
  * virtual range from its lookup structure first (a released
  * reservation, an unmapped region). Nothing else may touch the entry
@@ -102,7 +121,11 @@
  *   helper asserts on it.
  *
  *   This holds only as long as neither clear helper is called on a
- *   kernel table above pt1.
+ *   kernel table above pt1. Userspace teardown does clear intermediates,
+ *   which is why userspace installs go through the ptN_populate
+ *   family instead: those take the parent's ptdesc lock and recheck
+ *   with ptN_none, which tolerates a cleared entry that hardware has
+ *   since written an accessed or dirty bit into.
  *
  *   Leaf entries are written and cleared with no lock at all. The
  *   exclusion comes from the virtual range being reserved by its
@@ -228,8 +251,8 @@ MAKE_PT_TYPE(5)
  *
  * The acquire in pt_entry_read_table pairs with the release in
  * pt_entry_publish and pt_entry_cmpxchg_populate. That pairing is
- * what guarantees a walker sees a table's zeroed entries before it
- * can see the pointer to them.
+ * what guarantees a walker sees a table's zeroed entries and its
+ * initialized ptdesc payload before it can see the pointer to them.
  * C has no usable dependency ordering, since consume is deprecated
  * to acquire, so the load is spelled acquire even though the
  * hardware would order it through the address dependency alone.
@@ -366,7 +389,11 @@ static inline pt_entry_word pt_entry_get_and_clear(pt_entry_word *entry)
         /* Anything but a table here means corrupted page tables */    \
         MM_BUG_ON(!pt##lvl##_entry_is_table(observed));                \
         return false;                                                  \
-    }
+    }                                                                  \
+                                                                       \
+    bool pt##lvl##_populate(                                           \
+        struct pt##lvl *parent, struct pt##child_lvl *child            \
+    );
 
 #define MAKE_GENERIC_PTN_IS_LEAF(lvl)                                  \
     static inline bool pt##lvl##_is_leaf(struct pt##lvl *pt)           \
@@ -394,7 +421,11 @@ static inline pt_entry_word pt_entry_get_and_clear(pt_entry_word *entry)
     {                                                                  \
         MM_BUG_ON(pt##lvl##_is_folded());                              \
         return pt_entry_get_and_clear(&pt->value);                     \
-    }
+    }                                                                  \
+                                                                       \
+    bool pt##lvl##_make_leaf(                                          \
+        struct pt##lvl *pt, phys_addr_t phys_addr, pt_prot prot        \
+    );
 
 #define DO_MAKE_GENERIC_PTN_INDEX(lvl, shift, num_entries) \
     static inline size_t pt##lvl##_index(virt_addr_t addr) \
@@ -430,6 +461,18 @@ static inline pt_entry_word pt_entry_get_and_clear(pt_entry_word *entry)
         UNREFERENCED_PARAMETER(prot);                        \
                                                              \
         MM_BUG_ON(true);                                     \
+    }                                                        \
+                                                             \
+    static inline bool pt##lvl##_make_leaf(                  \
+        struct pt##lvl *pt, phys_addr_t addr, pt_prot prot   \
+    )                                                        \
+    {                                                        \
+        UNREFERENCED_PARAMETER(pt);                          \
+        UNREFERENCED_PARAMETER(addr);                        \
+        UNREFERENCED_PARAMETER(prot);                        \
+                                                             \
+        MM_BUG_ON(true);                                     \
+        return false;                                        \
     }                                                        \
                                                              \
     static inline pt_entry_word pt##lvl##_get_and_clear(     \
