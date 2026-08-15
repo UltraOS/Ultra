@@ -334,15 +334,21 @@ static MAYBE_NERR(int) do_vsnprintf(
 
         if (consume(&fmt, STR("s"))) {
             const char *string = va_arg(vlist, char*);
-            size_t i;
+            size_t len = 0;
 
             if (unlikely(string == NULL))
                 string = "<null>";
 
-            for (i = 0; (!fm.has_precision || i < fm.precision) && string[i]; i++)
-                write_one(fb_state, string[i]);
-            while (i++ < fm.min_width)
-                write_one(fb_state, ' ');
+            while ((!fm.has_precision || len < fm.precision) && string[len])
+                len++;
+
+            if (fm.left_justify) {
+                write_many(fb_state, string, len);
+                write_padding(fb_state, &fm, len);
+            } else {
+                write_padding(fb_state, &fm, len);
+                write_many(fb_state, string, len);
+            }
             continue;
         }
 
