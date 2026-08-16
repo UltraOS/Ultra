@@ -134,7 +134,7 @@ static size_t INIT_DATA s_bytes_left;
 
 static INIT_CODE void smbios_save_string(
     enum smbios_id_type type, const struct smbios_structure_hdr *hdr,
-    struct smbios_string_value *str_value
+    const struct smbios_string_value *str_value
 )
 {
     const char *str;
@@ -200,7 +200,7 @@ static INIT_CODE error_t smbios_parse(
 
     switch (hdr->type) {
     case SMBIOS_STRUCTURE_TYPE_BIOS_INFORMATION: {
-        struct smbios_bios_information *bios_info;
+        const struct smbios_bios_information *bios_info;
 
         bios_info = container_of(hdr, struct smbios_bios_information, hdr);
         smbios_save_string(SMBIOS_ID_BIOS_VENDOR, hdr, &bios_info->vendor);
@@ -211,7 +211,7 @@ static INIT_CODE error_t smbios_parse(
         break;
     }
     case SMBIOS_STRUCTURE_TYPE_SYSTEM_INFORMATION: {
-        struct smbios_system_information *system_info;
+        const struct smbios_system_information *system_info;
 
         system_info = container_of(hdr, struct smbios_system_information, hdr);
         smbios_save_string(
@@ -235,7 +235,7 @@ static INIT_CODE error_t smbios_parse(
         break;
     }
     case SMBIOS_STRUCTURE_TYPE_BOARD_INFORMATION: {
-        struct smbios_board_information *board_info;
+        const struct smbios_board_information *board_info;
 
         board_info = container_of(hdr, struct smbios_board_information, hdr);
         smbios_save_string(
@@ -256,7 +256,7 @@ static INIT_CODE error_t smbios_parse(
         break;
     }
     case SMBIOS_STRUCTURE_TYPE_CHASSIS_INFORMATION: {
-        struct smbios_chassis_information *chassis_info;
+        const struct smbios_chassis_information *chassis_info;
 
         chassis_info = container_of(hdr, struct smbios_chassis_information, hdr);
         smbios_save_string(
@@ -518,7 +518,8 @@ out_unmap:
 }
 
 const char *smbios_get_string(
-    const struct smbios_structure_hdr *hdr, struct smbios_string_value *value
+    const struct smbios_structure_hdr *hdr,
+    const struct smbios_string_value *value
 )
 {
     char *tmp_cursor, *cursor = (char*)hdr + hdr->size;
