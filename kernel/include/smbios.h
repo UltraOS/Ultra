@@ -157,7 +157,8 @@ error_t smbios_for_each(smbios_callback cb, void *user);
  * the string is out-of-bounds, doesn't exist, or is simply empty.
  */
 const char *smbios_get_string(
-    const struct smbios_structure_hdr *hdr, struct smbios_string_value *value
+    const struct smbios_structure_hdr *hdr,
+    const struct smbios_string_value *value
 );
 
 // Check if an SMBIOS entry is large enough to include 'field'
