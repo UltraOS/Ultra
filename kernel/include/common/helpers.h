@@ -28,8 +28,13 @@
                  !ARE_SAME_TYPE(*(ptr), void));                            \
     ((type*)(ptr_name - offsetof(type, member))); })
 
-#define container_of(ptr, type, member) \
+#define container_of_raw(ptr, type, member) \
     DO_CONTAINER_OF(ptr, UNIQUE(uptr), type, member)
+
+// Preserves the constness of 'ptr' in the result
+#define container_of(ptr, type, member) (_Generic((ptr),                     \
+    const typeof(*(ptr))*: (const type*)container_of_raw(ptr, type, member), \
+    default:               (type*)container_of_raw(ptr, type, member)))
 
 #define likely(expr)   __builtin_expect(!!(expr), 1)
 #define unlikely(expr) __builtin_expect(!!(expr), 0)
