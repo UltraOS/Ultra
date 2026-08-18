@@ -755,7 +755,7 @@ static void INIT_CODE kernel_memory_setup_one(
 
 struct page *g_memory_map;
 
-void INIT_CODE kernel_memory_map_setup(void)
+static error_t INIT_CODE kernel_memory_map_setup(void)
 {
     s_kernel_memory_map_pt_prot = pt_prot_from_vm_prot(
         VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE
@@ -763,7 +763,9 @@ void INIT_CODE kernel_memory_map_setup(void)
 
     for_each_ram_range(kernel_memory_setup_one, nullptr);
     g_memory_map = (struct page*)MEMORY_MAP_BASE;
+    return EOK;
 }
+INIT_CALL_AT(MEMORY_MAP_AVAILABLE, kernel_memory_map_setup);
 
 /*
  * Register all permanent virtual areas of the kernel half of the address
