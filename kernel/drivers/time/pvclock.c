@@ -4,7 +4,7 @@
 #include <time/pvclock.h>
 #include <time/counter_device.h>
 
-#include <init_level.h>
+#include <free_after_init.h>
 
 /*
  * From Documentation/virt/kvm/x86/msr.rst
@@ -129,11 +129,8 @@ static struct counter_device s_pvclock_cd = {
     .rating = TSC_PRECISE_RATING + 1,
 };
 
-static error_t pvclock_time_counter_register(void)
+error_t INIT_CODE pvclock_counter_register(void)
 {
-    if (!this_cpu_read(g_this_cpu_time_info))
-        return EOK;
-
     /*
      * By default, we rate ourselves higher than TSC, so that we're used
      * unconditionally in VMs. However, if the host has explicitly enabled
@@ -148,4 +145,3 @@ static error_t pvclock_time_counter_register(void)
 
     return counter_device_register(&s_pvclock_cd, PVCLOCK_HZ);
 }
-INIT_CALL_PRE(X86_EARLY_TIME_SETUP, pvclock_time_counter_register);

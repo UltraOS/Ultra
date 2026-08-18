@@ -76,6 +76,7 @@ static INIT_CODE error_t kvm_setup_pvclock(void)
     size_t bytes_to_allocate;
     phys_addr_or_error_t time_info_base;
     void *this_info;
+    error_t ret;
 
     if (!s_ctx.has_pvclock)
         return EOK;
@@ -100,6 +101,16 @@ static INIT_CODE error_t kvm_setup_pvclock(void)
     s_ctx.time_info_base = time_info_base;
 
     kvm_start_pvclock();
+
+    /*
+     * Register the pvclock counter before the TSC so that the raw TSC
+     * never becomes the selected counter on hosts where its frequency
+     * is not migration-invariant
+     */
+    ret = pvclock_counter_register();
+    if (is_error(ret))
+        pr_warn("unable to register the pvclock counter: %d\n", ret);
+
     tsc_set_known_frequency(pvclock_calculate_tsc_hz(this_info), "pvclock");
     return EOK;
 }
