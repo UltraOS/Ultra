@@ -12,6 +12,7 @@
 
 #include <free_after_init.h>
 #include <log.h>
+#include <init_level.h>
 
 static struct kvm_ctx {
     u32 features;
@@ -70,11 +71,14 @@ static void kvm_start_pvclock(void)
     pr_info("pvclock started for CPU%u\n", unstable_cpu_id());
 }
 
-static INIT_CODE void kvm_setup_pvclock(void)
+static INIT_CODE error_t kvm_setup_pvclock(void)
 {
     size_t bytes_to_allocate;
     phys_addr_or_error_t time_info_base;
     void *this_info;
+
+    if (!s_ctx.has_pvclock)
+        return EOK;
 
     pr_info(
         "pvclock at 0x%08X/0x%08X\n",
@@ -85,13 +89,8 @@ static INIT_CODE void kvm_setup_pvclock(void)
     bytes_to_allocate = PAGE_ROUND_UP(CACHE_LINE_SIZE * g_num_present_cpus);
 
     time_info_base = boot_alloc(bytes_to_allocate >> PAGE_SHIFT);
-    if (error_phys_addr(time_info_base)) {
-        pr_warn(
-            "unable to set up pvclock: %d\n",
-            decode_error_phys_addr(time_info_base)
-        );
-        return;
-    }
+    if (error_phys_addr(time_info_base))
+        return decode_error_phys_addr(time_info_base);
 
     if (kvm_has_feature(KVM_FEATURE_CLOCKSOURCE_STABLE_BIT))
         pvclock_enable_stable_bit();
@@ -102,14 +101,14 @@ static INIT_CODE void kvm_setup_pvclock(void)
 
     kvm_start_pvclock();
     tsc_set_known_frequency(pvclock_calculate_tsc_hz(this_info), "pvclock");
+    return EOK;
 }
+// The pvclock area is sized by the number of vCPUs that will be onlined
+INIT_CALL_POST(X86_PLATFORM_INFO_AVAILABLE, kvm_setup_pvclock);
 
 static INIT_CODE void kvm_setup(struct active_hypervisor *hv)
 {
     kvm_features_detect(hv);
-
-    if (s_ctx.has_pvclock)
-        kvm_setup_pvclock();
 }
 
 HYPERVISOR s_kvm = {

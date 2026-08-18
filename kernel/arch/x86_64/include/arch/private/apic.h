@@ -54,6 +54,7 @@ extern enum apic_mode g_apic_mode;
 
 extern u32 g_bsp_apic_id;
 extern u32 g_boot_cpu_apic_id;
+extern u32 g_max_apic_id;
 
 struct apic {
     void (*setup)(void);

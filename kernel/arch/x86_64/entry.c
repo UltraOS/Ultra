@@ -54,15 +54,21 @@ bool g_can_skip_pio_delay = false;
 static error_t INIT_CODE x86_platform_init(void)
 {
     apic_detect();
-    setup_smp_topology();
 
     x86_detect_hypervisor();
     if (hypervisor_supports(HYPERVISOR_FEATURE_SKIP_PORT_IO_DELAY))
         g_can_skip_pio_delay = true;
 
+    // The MSI extended destination id gives 15 bits, x2APIC mode only
+    if (g_apic_mode == APIC_MODE_X2 &&
+        hypervisor_supports(HYPERVISOR_FEATURE_MSI_EXT_DEST_ID))
+        g_max_apic_id = MAKE_BIT_MASK(14, 0);
+
+    setup_smp_topology();
+
     return EOK;
 }
-INIT_CALL_POST(PLATFORM_INFO_AVAILABLE, x86_platform_init);
+INIT_CALL_AT(X86_PLATFORM_INFO_AVAILABLE, x86_platform_init);
 
 ULTRA_ENTRYPOINT(x86)
 {
