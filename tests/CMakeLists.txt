@@ -97,7 +97,6 @@ KERNEL_FILE(
     SOURCE_FILE "drivers/smbios.c" INCLUDE_FILE "smbios.h"
 )
 KERNEL_FILE(INCLUDE_FILE "private/log_ring.h")
-KERNEL_FILE(INCLUDE_FILE "private/smbios.h")
 KERNEL_FILE(INCLUDE_FILE "smbios_structures.h")
 KERNEL_FILE(SOURCE_FILE "param.c"  INCLUDE_FILE "param.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "helpers.h")
