@@ -137,7 +137,7 @@ void alloc_cache_init(
     spin_lock_init(&cache->lock);
 }
 
-void INIT_CODE kernel_heap_init(void)
+static error_t INIT_CODE kernel_heap_init(void)
 {
     struct alloc_cache *cache;
     size_t i, size = MIN_CACHE_SIZE;
@@ -162,7 +162,10 @@ void INIT_CODE kernel_heap_init(void)
             cache->max_empty_slabs
         );
     }
+
+    return EOK;
 }
+INIT_CALL_AT(HEAP_AVAILABLE, kernel_heap_init);
 
 static struct kheap_page *slab_create(
     struct alloc_cache *cache, enum alloc_behavior behavior
