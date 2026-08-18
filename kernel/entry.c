@@ -17,7 +17,6 @@
 
 #include <private/unwind.h>
 #include <private/param.h>
-#include <private/per_cpu.h>
 #include <private/memory.h>
 
 struct boot_context g_boot_ctx;
@@ -140,8 +139,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     init_level_raise(INIT_LEVEL_KERNEL_ADDRESS_SPACE_AVAILABLE);
     init_level_raise(INIT_LEVEL_EARLY_IO_AVAILABLE);
     init_level_raise(INIT_LEVEL_PLATFORM_INFO_AVAILABLE);
-
-    per_cpu_setup();
     init_level_raise(INIT_LEVEL_PER_CPU_AVAILABLE);
 
     kernel_memory_map_setup();
