@@ -138,8 +138,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     init_level_raise(INIT_LEVEL_PRE_BOOT);
     init_level_raise(INIT_LEVEL_BOOT_INFO_AVAILABLE);
-
-    boot_alloc_init();
     init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
 
     kernel_address_space_setup();

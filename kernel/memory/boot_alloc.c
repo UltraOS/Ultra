@@ -10,6 +10,7 @@
 #include <boot/alloc.h>
 
 #include <log.h>
+#include <init_level.h>
 #include <bug.h>
 #include <free_after_init.h>
 
@@ -595,10 +596,12 @@ static void INIT_CODE boot_alloc_add_one(
     WARN_ON(range_append(&range));
 }
 
-void INIT_CODE boot_alloc_init(void)
+static error_t INIT_CODE boot_alloc_init(void)
 {
     for_each_memory_map_range(boot_alloc_add_one, ultra_mme_is_ram, nullptr);
+    return EOK;
 }
+INIT_CALL_AT(BOOT_ALLOC_AVAILABLE, boot_alloc_init);
 
 void INIT_CODE boot_alloc_for_each_range(memory_range_cb_t cb)
 {
