@@ -44,7 +44,6 @@ static const struct init_calls INIT_RODATA s_init_calls[] = {
 };
 
 static enum init_level s_init_level = INIT_LEVEL_NONE;
-static bool s_deferred_init_level_raise_pending = false;
 static bool s_in_progress = false;
 
 enum init_call_type {
@@ -100,21 +99,17 @@ static void INIT_CODE trace_callback_start(
 }
 
 static void INIT_CODE trace_callback_finish(
-    const init_call_t *cb, enum init_call_type type, error_t ret,
-    bool was_pending
+    const init_call_t *cb, enum init_call_type type, error_t ret
 )
 {
-    const char *raise_msg = "";
     enum log_level lvl = LOG_LEVEL_DEBUG;
 
-    if (!was_pending && s_deferred_init_level_raise_pending)
-        raise_msg = ", queued init level raise";
     if (is_error(ret))
         lvl = LOG_LEVEL_WARN;
 
     pr_lvl(
-        lvl, "    < leaving %s init call %pSM (ret=%d%s)\n",
-        s_init_call_type_to_string[type], cb, ret, raise_msg
+        lvl, "    < leaving %s init call %pSM (ret=%d)\n",
+        s_init_call_type_to_string[type], cb, ret
     );
 }
 
@@ -146,14 +141,12 @@ static void INIT_CODE trace_callback_start(
 }
 
 static void INIT_CODE trace_callback_finish(
-    const init_call_t *cb, enum init_call_type type, error_t ret,
-    bool was_pending
+    const init_call_t *cb, enum init_call_type type, error_t ret
 )
 {
     UNREFERENCED_PARAMETER(cb);
     UNREFERENCED_PARAMETER(type);
     UNREFERENCED_PARAMETER(ret);
-    UNREFERENCED_PARAMETER(was_pending);
 }
 
 #endif
@@ -178,11 +171,10 @@ static void INIT_CODE run_one_callback(
 )
 {
     error_t ret;
-    bool was_pending = s_deferred_init_level_raise_pending;
 
     trace_callback_start(cb, type);
     ret = (*cb)();
-    trace_callback_finish(cb, type, ret, was_pending);
+    trace_callback_finish(cb, type, ret);
 
     if (!is_error(ret))
         return;
@@ -214,7 +206,7 @@ void INIT_CODE init_level_raise(enum init_level lvl)
 
     BUG_ON(lvl <= init_level());
     BUG_ON(lvl >= NUM_INIT_LEVELS);
-    BUG_ON(s_in_progress || s_deferred_init_level_raise_pending);
+    BUG_ON(s_in_progress);
 
     s_in_progress = true;
 
@@ -237,20 +229,7 @@ void INIT_CODE init_level_raise(enum init_level lvl)
 
         for (cb = cbs->post_begin; cb < cbs->post_end; cb++)
             run_one_callback(cb, INIT_CALL_TYPE_POST);
-
-        if (s_deferred_init_level_raise_pending) {
-            // The callback we have just invoked queued an init level raise
-            s_deferred_init_level_raise_pending = false;
-            if (lvl <= cur)
-                lvl = cur + 1;
-        }
     }
 
     s_in_progress = false;
-}
-
-void INIT_CODE init_level_raise_deferred(enum init_level next_level)
-{
-    BUG_ON(next_level != init_level() + 1);
-    s_deferred_init_level_raise_pending = true;
 }
