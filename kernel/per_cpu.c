@@ -15,7 +15,7 @@
 
 #include <memory/io.h>
 
-#include <private/per_cpu.h>
+#include <init_level.h>
 
 ptr_t g_per_cpu_offset[ULTRA_MAX_CPUS];
 virt_addr_t g_per_cpu_base;
@@ -23,7 +23,7 @@ virt_addr_t g_per_cpu_base;
 extern u8 SECTION_MARKER_BEGIN(PER_CPU_SECTION)[];
 extern u8 SECTION_MARKER_END(PER_CPU_SECTION)[];
 
-void INIT_CODE per_cpu_setup(void)
+static error_t INIT_CODE per_cpu_setup(void)
 {
     size_t static_size, per_cpu_size, alloc_size, i;
     ptr_t this_cpu_offset;
@@ -70,4 +70,7 @@ void INIT_CODE per_cpu_setup(void)
         this_cpu_offset += per_cpu_size;
         this_cpu_ptr += per_cpu_size;
     }
+
+    return EOK;
 }
+INIT_CALL_AT(PER_CPU_AVAILABLE, per_cpu_setup);

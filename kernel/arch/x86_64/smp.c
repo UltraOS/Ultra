@@ -7,8 +7,6 @@
 #include <arch/private/descriptors.h>
 #include <arch/private/cpu.h>
 
-#include <private/per_cpu.h>
-
 #include <uacpi/tables.h>
 #include <uacpi/acpi.h>
 
