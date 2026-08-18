@@ -7,7 +7,6 @@
 #include <boot/boot.h>
 #include <boot/ultra_protocol.h>
 
-#include <acpi.h>
 #include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
@@ -19,7 +18,6 @@
 #include <private/unwind.h>
 #include <private/param.h>
 #include <private/per_cpu.h>
-#include <private/smbios.h>
 #include <private/memory.h>
 
 struct boot_context g_boot_ctx;
@@ -141,9 +139,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
     init_level_raise(INIT_LEVEL_KERNEL_ADDRESS_SPACE_AVAILABLE);
     init_level_raise(INIT_LEVEL_EARLY_IO_AVAILABLE);
-
-    smbios_setup();
-    acpi_setup_tables();
     init_level_raise(INIT_LEVEL_PLATFORM_INFO_AVAILABLE);
 
     per_cpu_setup();

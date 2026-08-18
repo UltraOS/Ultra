@@ -1,6 +1,5 @@
 #define MSG_FMT(msg) "smbios: " msg
 
-#include <private/smbios.h>
 #include <smbios.h>
 
 #include <boot/boot.h>
@@ -8,6 +7,7 @@
 
 #include <memory/io.h>
 #include <free_after_init.h>
+#include <init_level.h>
 
 #include <common/byte_order.h>
 #include <common/string.h>
@@ -360,7 +360,7 @@ done:
     pr_info("%s\n", ident_str);
 }
 
-void INIT_CODE smbios_setup(void)
+static error_t INIT_CODE smbios_setup(void)
 {
     phys_addr_t anchor_phys = g_boot_ctx.platform_info->smbios_address;
     void *smbios_base;
@@ -368,13 +368,13 @@ void INIT_CODE smbios_setup(void)
 
     if (!anchor_phys) {
         pr_info("not supported on this platform\n");
-        return;
+        return EOK;
     }
 
     smbios_base = io_window_map_cached(anchor_phys, PAGE_SIZE);
     if (unlikely(smbios_base == nullptr)) {
         pr_err("unable to map\n");
-        return;
+        return ENXIO;
     }
 
     if (CHECK_SIGNATURE(smbios_base, SMBIOS3_SIGNATURE))
@@ -389,7 +389,7 @@ void INIT_CODE smbios_setup(void)
     io_window_unmap_ptr(smbios_base, PAGE_SIZE);
 
     if (!smbios_available())
-        return;
+        return ENXIO;
 
     pr_info("version %d.%d.%d\n", s_ctx.major, s_ctx.minor, s_ctx.docrev);
 
@@ -400,15 +400,17 @@ void INIT_CODE smbios_setup(void)
          * in that case don't print anything nor disable it.
          */
         if (ret == ENOMEM)
-            return;
+            return EOK;
 
         pr_err("disabled due to parsing errors\n");
         s_ctx.present = false;
-        return;
+        return ENXIO;
     }
 
     smbios_setup_hardware_identity_string();
+    return EOK;
 }
+INIT_CALL_PRE(PLATFORM_INFO_AVAILABLE, smbios_setup);
 
 error_t smbios_for_each(smbios_callback cb, void *user)
 {
