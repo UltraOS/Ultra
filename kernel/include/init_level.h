@@ -55,9 +55,3 @@ bool init_level_at_least(enum init_level);
 bool init_level_below(enum init_level);
 
 void init_level_raise(enum init_level next_level);
-
-/*
- * Queue an init level raise from an init call. This may only
- * be done in an INIT_CALL_POST type of callback.
- */
-void init_level_raise_deferred(enum init_level next_level);
