@@ -141,8 +141,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     init_level_raise(INIT_LEVEL_PLATFORM_INFO_AVAILABLE);
     init_level_raise(INIT_LEVEL_PER_CPU_AVAILABLE);
     init_level_raise(INIT_LEVEL_MEMORY_MAP_AVAILABLE);
-
-    buddy_setup();
     init_level_raise(INIT_LEVEL_BUDDY_AVAILABLE);
 
     kernel_heap_init();

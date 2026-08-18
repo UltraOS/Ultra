@@ -19,6 +19,7 @@
 #include <free_after_init.h>
 #include <bug.h>
 #include <spinlock.h>
+#include <init_level.h>
 
 #define BUDDY_NUM_ORDERS (BUDDY_MAX_ORDER + 1)
 
@@ -525,7 +526,7 @@ static void INIT_CODE buddy_dump_info(void)
     pr_cont("\n");
 }
 
-void INIT_CODE buddy_setup(void)
+static error_t INIT_CODE buddy_setup(void)
 {
     size_t i;
 
@@ -548,4 +549,6 @@ void INIT_CODE buddy_setup(void)
     }
 
     buddy_dump_info();
+    return EOK;
 }
+INIT_CALL_AT(BUDDY_AVAILABLE, buddy_setup);
