@@ -9,6 +9,8 @@
 #define MODULE_INIT(func) error_t module_init(void) ALIAS_OF(func)
 #define MODULE_FINI(func) error_t module_fini(void) ALIAS_OF(func)
 
+#define INIT_CALL_AT(level, func) \
+    STATIC_ASSERT(false, "A runtime module cannot be an init level establisher")
 #define INIT_CALL_PRE(level, func) MODULE_INIT(func)
 #define INIT_CALL_POST(level, func) MODULE_INIT(func)
 
