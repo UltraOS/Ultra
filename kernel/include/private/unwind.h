@@ -35,8 +35,6 @@ struct unwind_state {
     struct eh_data fde_code;
 };
 
-error_t unwind_init(void);
-
 error_t unwind_begin(struct unwind_state*, struct registers*, ptr_t starting_pc);
 
 bool unwind_is_done(const struct unwind_state*);

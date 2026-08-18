@@ -25,6 +25,8 @@
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
 
+static struct ultra_boot_context* INIT_DATA s_loader_ctx;
+
 #define UATTR_EXTRACT(ctx_field, hdr) do {                     \
     WARN_ON(ctx_field != NULL);                                \
     ctx_field = container_of(hdr, typeof(*ctx_field), header); \
@@ -93,22 +95,14 @@ static INIT_CODE const char *platform_type_to_string(u32 type)
     }
 }
 
-void INIT_CODE entry(struct ultra_boot_context *ctx)
+static error_t INIT_CODE boot_info_init(void)
 {
     struct ultra_platform_info_attribute *pi;
-    error_t ret;
 
-    print(
-        "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
-        ULTRA_ARCH, ULTRA_GIT_SHA, __DATE__, __TIME__
-    );
-
-    init_level_raise(INIT_LEVEL_PRE_BOOT);
-    boot_context_init(ctx);
+    boot_context_init(s_loader_ctx);
 
     pi = g_boot_ctx.platform_info;
     g_direct_map_base = pi->higher_half_base;
-    init_level_raise(INIT_LEVEL_BOOT_INFO_AVAILABLE);
 
     cmdline_parse(
         g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(EARLY_PARAMETERS_SECTION), NULL
@@ -129,9 +123,21 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
         str_empty(g_boot_ctx.cmdline) ? "<empty>" : g_boot_ctx.cmdline.text
     );
 
-    ret = unwind_init();
-    if (is_error(ret))
-        pr_warn("unwind_init() error %d, stack traces won't be available\n", ret);
+    return EOK;
+}
+INIT_CALL_AT(BOOT_INFO_AVAILABLE, boot_info_init);
+
+void INIT_CODE entry(struct ultra_boot_context *ctx)
+{
+    print(
+        "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
+        ULTRA_ARCH, ULTRA_GIT_SHA, __DATE__, __TIME__
+    );
+
+    s_loader_ctx = ctx;
+
+    init_level_raise(INIT_LEVEL_PRE_BOOT);
+    init_level_raise(INIT_LEVEL_BOOT_INFO_AVAILABLE);
 
     boot_alloc_init();
     init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
