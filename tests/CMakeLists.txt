@@ -158,7 +158,6 @@ KERNEL_FILE(
     SOURCE_PATH "memory" SOURCE_FILE "units.c"
     INCLUDE_PATH "memory" INCLUDE_FILE "units.h"
 )
-KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "memory.h")
 KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "buddy.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "boot.h")
 KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "ultra_protocol.h")

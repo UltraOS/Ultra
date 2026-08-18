@@ -18,7 +18,6 @@
 #include <init_level.h>
 #include <log.h>
 
-#include <private/memory.h>
 #include <private/arch/io.h>
 #include <arch/private/io.h>
 

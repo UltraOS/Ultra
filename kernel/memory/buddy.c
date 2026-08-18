@@ -14,7 +14,6 @@
 #include <memory/page.h>
 #include <memory/units.h>
 #include <private/buddy.h>
-#include <private/memory.h>
 
 #include <free_after_init.h>
 #include <bug.h>
