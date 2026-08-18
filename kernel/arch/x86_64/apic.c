@@ -14,6 +14,7 @@ enum apic_mode g_apic_mode = APIC_MODE_NONE;
 
 u32 g_bsp_apic_id = APIC_ID_NONE;
 u32 g_boot_cpu_apic_id = APIC_ID_NONE;
+u32 g_max_apic_id = 0xFF - 1;
 
 extern struct apic g_xapic;
 extern struct apic g_x2apic;

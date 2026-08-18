@@ -83,6 +83,17 @@ static INIT_CODE void register_apic_id(u32 apic_id)
             return;
     }
 
+    if (unlikely(apic_id > g_max_apic_id)) {
+        if (unlikely(apic_id == g_boot_cpu_apic_id))
+            panic("Boot CPU 0x%08X APIC id is not addressable", apic_id);
+
+        pr_warn(
+            "skipping CPU 0x%08X, APIC id is too large (maximum is 0x%08X)\n",
+            apic_id, g_max_apic_id
+        );
+        return;
+    }
+
     s_early_cpu_to_apic_id[g_num_present_cpus] = apic_id;
     pr_info(
         "registered CPU%u/0x%08X%s%s\n", g_num_present_cpus, apic_id,
