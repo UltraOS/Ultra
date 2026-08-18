@@ -568,7 +568,7 @@ static void INIT_CODE build_kernel_mappings(struct direct_mapping_ctx *ctx)
     );
 }
 
-void INIT_CODE kernel_address_space_setup(void)
+static error_t INIT_CODE kernel_address_space_setup(void)
 {
     struct direct_mapping_ctx ctx = { 0 };
 
@@ -594,7 +594,9 @@ void INIT_CODE kernel_address_space_setup(void)
         "max RAM address: %llX, max supported: %llX",
         s_max_ram_addr, MAX_PHYS_ADDR
     );
+    return EOK;
 }
+INIT_CALL_AT(KERNEL_ADDRESS_SPACE_AVAILABLE, kernel_address_space_setup);
 
 static pt_prot s_kernel_memory_map_pt_prot;
 
