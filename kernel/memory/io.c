@@ -100,7 +100,7 @@ static void* INIT_CODE io_pt_early_page_alloc(void)
 
 static pt_prot s_default_pt_prot;
 
-void INIT_CODE early_io_map_init(void)
+static error_t INIT_CODE early_io_map_init(void)
 {
     struct pt5 *pt5;
     struct pt4 *pt4;
@@ -139,7 +139,9 @@ void INIT_CODE early_io_map_init(void)
         EARLY_IO_MAP_BASE, NUM_EARLY_SMALL_SLOTS, PT1_SIZE / 1024,
         NUM_EARLY_LARGE_SLOTS, NUM_BYTES_PER_LARGE_EARLY_SLOT / 1024
     );
+    return EOK;
 }
+INIT_CALL_AT(EARLY_IO_AVAILABLE, early_io_map_init);
 
 static void INIT_CODE do_io_window_early_map(
     virt_addr_t va, phys_addr_t pa, size_t length, pt_prot prot
