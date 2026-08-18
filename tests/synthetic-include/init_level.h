@@ -24,6 +24,7 @@ enum init_level : u32 {
     );                                                     \
     static const init_call_t init_call_hook_##func = func
 
+#define INIT_CALL_AT(level, func) MAKE_INIT_CALL(func, level, at)
 #define INIT_CALL_PRE(level, func) MAKE_INIT_CALL(func, level, pre)
 #define INIT_CALL_POST(level, func) MAKE_INIT_CALL(func, level, post)
 

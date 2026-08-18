@@ -12,6 +12,8 @@
     LINKER_SYMBOL(CONCAT(INIT_LEVEL_CB_SECTION(lvl, type), _##kind))
 
 #define INIT_LEVEL(x)                                                      \
+    extern const init_call_t INIT_LEVEL_CB_ARRAY_MARKER(x, at, begin)[];   \
+    extern const init_call_t INIT_LEVEL_CB_ARRAY_MARKER(x, at, end)[];     \
     extern const init_call_t INIT_LEVEL_CB_ARRAY_MARKER(x, pre, begin)[];  \
     extern const init_call_t INIT_LEVEL_CB_ARRAY_MARKER(x, pre, end)[];    \
     extern const init_call_t INIT_LEVEL_CB_ARRAY_MARKER(x, post, begin)[]; \
@@ -21,12 +23,15 @@ INIT_LEVELS
 #undef INIT_LEVEL
 
 struct init_calls {
+    const init_call_t *at_begin, *at_end;
     const init_call_t *pre_begin, *pre_end;
     const init_call_t *post_begin, *post_end;
 };
 
 #define INIT_LEVEL(x)                             \
     [INIT_LEVEL_##x] = {                          \
+      INIT_LEVEL_CB_ARRAY_MARKER(x, at, begin),   \
+      INIT_LEVEL_CB_ARRAY_MARKER(x, at, end),     \
       INIT_LEVEL_CB_ARRAY_MARKER(x, pre, begin),  \
       INIT_LEVEL_CB_ARRAY_MARKER(x, pre, end),    \
       INIT_LEVEL_CB_ARRAY_MARKER(x, post, begin), \
@@ -42,6 +47,18 @@ static enum init_level s_init_level = INIT_LEVEL_NONE;
 static bool s_deferred_init_level_raise_pending = false;
 static bool s_in_progress = false;
 
+enum init_call_type {
+    INIT_CALL_TYPE_AT,
+    INIT_CALL_TYPE_PRE,
+    INIT_CALL_TYPE_POST,
+};
+
+static const char *const INIT_RODATA s_init_call_type_to_string[] = {
+    [INIT_CALL_TYPE_AT] = "at",
+    [INIT_CALL_TYPE_PRE] = "pre",
+    [INIT_CALL_TYPE_POST] = "post",
+};
+
 #if IS_ENABLED(VERBOSE_INIT_LEVELS)
 
 static const char *const INIT_RODATA s_init_level_to_string[NUM_INIT_LEVELS] = {
@@ -51,14 +68,13 @@ static const char *const INIT_RODATA s_init_level_to_string[NUM_INIT_LEVELS] = {
 };
 
 static void INIT_CODE trace_init_level_raise_begin(
-    enum init_level level, size_t num_callbacks
+    enum init_level level, size_t num_at, size_t num_pre
 )
 {
     pr_debug(
-        "raising %s => %s (%zu callback%s to reach)\n",
+        "raising %s => %s (%zu at + %zu pre callbacks to reach)\n",
         s_init_level_to_string[level - 1],
-        s_init_level_to_string[level], num_callbacks,
-        num_callbacks == 1 ? "" : "s"
+        s_init_level_to_string[level], num_at, num_pre
     );
 }
 
@@ -73,13 +89,19 @@ static void INIT_CODE trace_init_level_raise_end(
     );
 }
 
-static void INIT_CODE trace_callback_start(const init_call_t *cb)
+static void INIT_CODE trace_callback_start(
+    const init_call_t *cb, enum init_call_type type
+)
 {
-    pr_debug("    > entering init call %pSM\n", cb);
+    pr_debug(
+        "    > entering %s init call %pSM\n",
+        s_init_call_type_to_string[type], cb
+    );
 }
 
 static void INIT_CODE trace_callback_finish(
-    const init_call_t *cb, error_t ret, bool was_pending
+    const init_call_t *cb, enum init_call_type type, error_t ret,
+    bool was_pending
 )
 {
     const char *raise_msg = "";
@@ -91,19 +113,20 @@ static void INIT_CODE trace_callback_finish(
         lvl = LOG_LEVEL_WARN;
 
     pr_lvl(
-        lvl, "    < leaving init call %pSM (ret=%d%s)\n",
-        cb, ret, raise_msg
+        lvl, "    < leaving %s init call %pSM (ret=%d%s)\n",
+        s_init_call_type_to_string[type], cb, ret, raise_msg
     );
 }
 
 #else
 
 static void trace_init_level_raise_begin(
-    enum init_level level, size_t num_callbacks
+    enum init_level level, size_t num_at, size_t num_pre
 )
 {
     UNREFERENCED_PARAMETER(level);
-    UNREFERENCED_PARAMETER(num_callbacks);
+    UNREFERENCED_PARAMETER(num_at);
+    UNREFERENCED_PARAMETER(num_pre);
 }
 
 static void trace_init_level_raise_end(
@@ -114,16 +137,21 @@ static void trace_init_level_raise_end(
     UNREFERENCED_PARAMETER(num_callbacks);
 }
 
-static void INIT_CODE trace_callback_start(const init_call_t *cb)
-{
-    UNREFERENCED_PARAMETER(cb);
-}
-
-static void INIT_CODE trace_callback_finish(
-    const init_call_t *cb, error_t ret, bool was_pending
+static void INIT_CODE trace_callback_start(
+    const init_call_t *cb, enum init_call_type type
 )
 {
     UNREFERENCED_PARAMETER(cb);
+    UNREFERENCED_PARAMETER(type);
+}
+
+static void INIT_CODE trace_callback_finish(
+    const init_call_t *cb, enum init_call_type type, error_t ret,
+    bool was_pending
+)
+{
+    UNREFERENCED_PARAMETER(cb);
+    UNREFERENCED_PARAMETER(type);
     UNREFERENCED_PARAMETER(ret);
     UNREFERENCED_PARAMETER(was_pending);
 }
@@ -145,22 +173,36 @@ bool init_level_below(enum init_level level)
     return init_level() < level;
 }
 
-static void INIT_CODE run_one_callback(const init_call_t *cb)
+static void INIT_CODE run_one_callback(
+    const init_call_t *cb, enum init_call_type type
+)
 {
     error_t ret;
     bool was_pending = s_deferred_init_level_raise_pending;
 
-    trace_callback_start(cb);
+    trace_callback_start(cb, type);
     ret = (*cb)();
-    trace_callback_finish(cb, ret, was_pending);
+    trace_callback_finish(cb, type, ret, was_pending);
+
+    if (!is_error(ret))
+        return;
+
+    /*
+     * A failed establisher means every later callback would run with
+     * this level's promise broken
+     */
+    if (type == INIT_CALL_TYPE_AT)
+        panic("establisher %pSM failed: %d\n", cb, ret);
 
     /*
      * This information is already logged in trace_callback_finish if it's
      * enabled, don't duplicate for no reason
      */
 #if !IS_ENABLED(VERBOSE_INIT_LEVELS)
-    if (is_error(ret))
-        pr_warn("callback %pSM failed: %d\n", cb, ret);
+    pr_warn(
+        "%s callback %pSM failed: %d\n",
+        s_init_call_type_to_string[type], cb, ret
+    );
 #endif
 }
 
@@ -179,17 +221,22 @@ void INIT_CODE init_level_raise(enum init_level lvl)
     for (cur = init_level() + 1; cur <= lvl; cur++) {
         cbs = &s_init_calls[cur];
 
-        trace_init_level_raise_begin(cur, cbs->pre_end - cbs->pre_begin);
+        trace_init_level_raise_begin(
+            cur, cbs->at_end - cbs->at_begin, cbs->pre_end - cbs->pre_begin
+        );
+
+        for (cb = cbs->at_begin; cb < cbs->at_end; cb++)
+            run_one_callback(cb, INIT_CALL_TYPE_AT);
 
         for (cb = cbs->pre_begin; cb < cbs->pre_end; cb++)
-            run_one_callback(cb);
+            run_one_callback(cb, INIT_CALL_TYPE_PRE);
 
         atomic_store_relaxed(&s_init_level, cur);
 
         trace_init_level_raise_end(cur, cbs->post_end - cbs->post_begin);
 
         for (cb = cbs->post_begin; cb < cbs->post_end; cb++)
-            run_one_callback(cb);
+            run_one_callback(cb, INIT_CALL_TYPE_POST);
 
         if (s_deferred_init_level_raise_pending) {
             // The callback we have just invoked queued an init level raise

@@ -61,8 +61,13 @@
         TEXT_END                         \
     } :text
 
-#define INIT_LEVEL(x)                                               \
-    NATURALLY_ALIGNED_MARKED_SECTION(INIT_LEVEL_CB_SECTION(x, pre)) \
+#define INIT_LEVEL(x)                                                   \
+    NATURALLY_ALIGNED_MARKED_SECTION(INIT_LEVEL_CB_SECTION(x, at))      \
+    ASSERT(                                                             \
+        SECTION_SIZE(INIT_LEVEL_CB_SECTION(x, at)) <= ULTRA_ARCH_WIDTH, \
+        TO_STR(Multiple INIT_CALL_AT establishers for init level x)     \
+    );                                                                  \
+    NATURALLY_ALIGNED_MARKED_SECTION(INIT_LEVEL_CB_SECTION(x, pre))     \
     NATURALLY_ALIGNED_MARKED_SECTION(INIT_LEVEL_CB_SECTION(x, post))
 
 #define INIT_LEVEL_CB_SECTIONS INIT_LEVELS

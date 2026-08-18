@@ -22,6 +22,22 @@ typedef error_t (*init_call_t)(void);
     )                                                      \
     init_call_hook_##func = func
 
+/*
+ * Every init level names a promise about kernel state (e.g. the heap
+ * being usable). Three kinds of callbacks can be attached to a level:
+ *
+ * - INIT_CALL_AT: the unique callback that establishes the level's
+ *   promise. At most one may exist per level, and a level without one
+ *   is established by the raise itself. A failure here is fatal.
+ * - INIT_CALL_PRE: runs after the AT callback, before the level is
+ *   observable via init_level().
+ * - INIT_CALL_POST: runs once the level is observable.
+ *
+ * Callbacks of the same kind are not ordered relative to each other
+ * and must not depend on one another. A required sequence is either an
+ * explicit call chain in code or a reason to split the level in two.
+ */
+#define INIT_CALL_AT(level, func) MAKE_INIT_CALL(func, level, at)
 #define INIT_CALL_PRE(level, func) MAKE_INIT_CALL(func, level, pre)
 #define INIT_CALL_POST(level, func) MAKE_INIT_CALL(func, level, post)
 
