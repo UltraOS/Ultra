@@ -168,34 +168,35 @@ void INIT_CODE init_level_raise(enum init_level lvl)
 {
     const struct init_calls *cbs;
     const init_call_t *cb;
+    enum init_level cur;
 
-    BUG_ON(lvl != init_level() + 1);
+    BUG_ON(lvl <= init_level());
     BUG_ON(lvl >= NUM_INIT_LEVELS);
     BUG_ON(s_in_progress || s_deferred_init_level_raise_pending);
 
     s_in_progress = true;
 
-    for (;;) {
-        cbs = &s_init_calls[lvl];
+    for (cur = init_level() + 1; cur <= lvl; cur++) {
+        cbs = &s_init_calls[cur];
 
-        trace_init_level_raise_begin(lvl, cbs->pre_end - cbs->pre_begin);
+        trace_init_level_raise_begin(cur, cbs->pre_end - cbs->pre_begin);
 
         for (cb = cbs->pre_begin; cb < cbs->pre_end; cb++)
             run_one_callback(cb);
 
-        atomic_store_relaxed(&s_init_level, lvl);
+        atomic_store_relaxed(&s_init_level, cur);
 
-        trace_init_level_raise_end(lvl, cbs->post_end - cbs->post_begin);
+        trace_init_level_raise_end(cur, cbs->post_end - cbs->post_begin);
 
         for (cb = cbs->post_begin; cb < cbs->post_end; cb++)
             run_one_callback(cb);
 
-        if (!s_deferred_init_level_raise_pending)
-            break;
-
-        // The callback we have just invoked queued an init level raise
-        s_deferred_init_level_raise_pending = false;
-        lvl++;
+        if (s_deferred_init_level_raise_pending) {
+            // The callback we have just invoked queued an init level raise
+            s_deferred_init_level_raise_pending = false;
+            if (lvl <= cur)
+                lvl = cur + 1;
+        }
     }
 
     s_in_progress = false;
