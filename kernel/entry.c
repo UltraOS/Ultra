@@ -140,8 +140,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     init_level_raise(INIT_LEVEL_BOOT_INFO_AVAILABLE);
     init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
     init_level_raise(INIT_LEVEL_KERNEL_ADDRESS_SPACE_AVAILABLE);
-
-    early_io_map_init();
     init_level_raise(INIT_LEVEL_EARLY_IO_AVAILABLE);
 
     smbios_setup();
