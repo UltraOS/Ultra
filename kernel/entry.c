@@ -10,12 +10,10 @@
 #include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
-#include <boot/alloc.h>
 #include <param.h>
 #include <config.h>
 #include <init_level.h>
 
-#include <private/unwind.h>
 #include <private/param.h>
 
 struct boot_context g_boot_ctx;
@@ -132,16 +130,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     s_loader_ctx = ctx;
 
-    init_level_raise(INIT_LEVEL_PRE_BOOT);
-    init_level_raise(INIT_LEVEL_BOOT_INFO_AVAILABLE);
-    init_level_raise(INIT_LEVEL_BOOT_ALLOC_AVAILABLE);
-    init_level_raise(INIT_LEVEL_KERNEL_ADDRESS_SPACE_AVAILABLE);
-    init_level_raise(INIT_LEVEL_EARLY_IO_AVAILABLE);
-    init_level_raise(INIT_LEVEL_PLATFORM_INFO_AVAILABLE);
-    init_level_raise(INIT_LEVEL_PER_CPU_AVAILABLE);
-    init_level_raise(INIT_LEVEL_MEMORY_MAP_AVAILABLE);
-    init_level_raise(INIT_LEVEL_BUDDY_AVAILABLE);
-    init_level_raise(INIT_LEVEL_HEAP_AVAILABLE);
     init_level_raise(INIT_LEVEL_VALLOC_AVAILABLE);
 
     for (;;);
