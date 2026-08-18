@@ -11,6 +11,7 @@
 #include <leb128.h>
 #include <free_after_init.h>
 #include <unsafe_access.h>
+#include <init_level.h>
 
 #include <common/bit.h>
 #include <common/string.h>
@@ -209,7 +210,7 @@ static ptr_t get_reliable_pc(struct unwind_state *state)
     return pc;
 }
 
-error_t INIT_CODE unwind_init(void)
+static error_t INIT_CODE unwind_init(void)
 {
     error_t ret;
     struct eh_data data = {
@@ -282,6 +283,7 @@ error_t INIT_CODE unwind_init(void)
     g_unwinder_available = true;
     return EOK;
 }
+INIT_CALL_POST(BOOT_INFO_AVAILABLE, unwind_init);
 
 static ptr_or_error_t find_fde(ptr_t pc)
 {
