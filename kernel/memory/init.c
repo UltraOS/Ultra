@@ -10,7 +10,6 @@
 #include <boot/boot.h>
 #include <boot/alloc.h>
 #include <private/buddy.h>
-#include <private/memory.h>
 #include <memory/units.h>
 #include <memory/page_table.h>
 #include <memory/address_space.h>

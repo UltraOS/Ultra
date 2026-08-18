@@ -21,7 +21,6 @@
 #include <memory/units.h>
 
 #include <private/buddy.h>
-#include <private/memory.h>
 
 #include <arch/memory.h>
 
@@ -1336,7 +1335,7 @@ static void INIT_CODE valloc_prealloc_root(void)
     }
 }
 
-void INIT_CODE valloc_setup(void)
+static error_t INIT_CODE valloc_setup(void)
 {
     struct varea *whole;
 
@@ -1368,7 +1367,9 @@ void INIT_CODE valloc_setup(void)
 
     free_tree_insert(whole);
     list_insert_next(&s_free_areas, &whole->link);
+    return EOK;
 }
+INIT_CALL_AT(VALLOC_AVAILABLE, valloc_setup);
 
 /*
  * Sizes that land on a whole number of units are printed as one, everything

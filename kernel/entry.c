@@ -17,7 +17,6 @@
 
 #include <private/unwind.h>
 #include <private/param.h>
-#include <private/memory.h>
 
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
@@ -143,8 +142,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
     init_level_raise(INIT_LEVEL_MEMORY_MAP_AVAILABLE);
     init_level_raise(INIT_LEVEL_BUDDY_AVAILABLE);
     init_level_raise(INIT_LEVEL_HEAP_AVAILABLE);
-
-    valloc_setup();
     init_level_raise(INIT_LEVEL_VALLOC_AVAILABLE);
 
     for (;;);
