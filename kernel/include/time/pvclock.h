@@ -3,6 +3,7 @@
 #include <common/attributes.h>
 #include <common/types.h>
 #include <common/bit.h>
+#include <common/error.h>
 
 #include <per_cpu_decls.h>
 
@@ -32,6 +33,7 @@ EXPECT_SIZEOF(struct pvclock_wall_clock, 12);
 DECLARE_PER_CPU(struct pvclock_vcpu_time_info*, g_this_cpu_time_info);
 
 void pvclock_enable_stable_bit(void);
+error_t pvclock_counter_register(void);
 
 u64 pvclock_read_from(struct pvclock_vcpu_time_info*);
 #define pvclock_read() pvclock_read_from(this_cpu_read(g_this_cpu_time_info))

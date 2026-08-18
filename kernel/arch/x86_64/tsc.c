@@ -224,4 +224,4 @@ static error_t INIT_CODE x86_early_tsc_setup(void)
 
     return EOK;
 }
-INIT_CALL_PRE(X86_EARLY_TIME_SETUP, x86_early_tsc_setup);
+INIT_CALL_AT(X86_EARLY_TSC_SETUP, x86_early_tsc_setup);
