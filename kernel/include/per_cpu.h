@@ -67,3 +67,9 @@
 
 #define this_cpu_read(var) DISPATCH_CPU_READ_OP(var, read)
 #define this_cpu_write(var, x) DISPATCH_CPU_WRITE_OP(var, write, x)
+
+#define this_cpu_add(var, x) DISPATCH_CPU_WRITE_OP(var, add, x)
+#define this_cpu_sub(var, x) DISPATCH_CPU_WRITE_OP(var, sub, x)
+
+#define this_cpu_inc(var) this_cpu_add(var, 1)
+#define this_cpu_dec(var) this_cpu_sub(var, 1)

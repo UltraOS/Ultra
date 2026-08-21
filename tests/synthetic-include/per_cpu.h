@@ -20,5 +20,11 @@ extern ptr_t g_per_cpu_offset[];
 #define this_cpu_read(var) (var)
 #define this_cpu_write(var, x) ((void)((var) = (x)))
 
+#define this_cpu_add(var, x) ((void)((var) += (x)))
+#define this_cpu_sub(var, x) ((void)((var) -= (x)))
+
+#define this_cpu_inc(var) this_cpu_add(var, 1)
+#define this_cpu_dec(var) this_cpu_sub(var, 1)
+
 #define per_cpu_ptr(ptr, cpu_number) \
     PTR_ADD_HIDE_UB(ptr, g_per_cpu_offset[cpu_number])
