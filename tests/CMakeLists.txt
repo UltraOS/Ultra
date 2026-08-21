@@ -24,6 +24,7 @@ file(MAKE_DIRECTORY ${COPIED_KERNEL_INCLUDES})
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${COPIED_KERNEL_INCLUDES}
+    ${COPIED_KERNEL_SOURCES}/arch/x86_64/include
     ${CMAKE_CURRENT_SOURCE_DIR}/synthetic-include
 )
 
@@ -124,6 +125,17 @@ KERNEL_FILE(
 KERNEL_FILE(
     SOURCE_FILE "cpu_mask.c"
     INCLUDE_FILE "cpu_mask.h"
+)
+KERNEL_FILE(SOURCE_PATH "arch/x86_64" SOURCE_FILE "vector_alloc.c")
+KERNEL_FILE(
+    SOURCE_PATH "arch/x86_64/include/arch/private" SOURCE_FILE "idt.h"
+)
+KERNEL_FILE(
+    SOURCE_PATH "arch/x86_64/include/arch/private" SOURCE_FILE "vectors.h"
+)
+KERNEL_FILE(
+    SOURCE_PATH "arch/x86_64/include/arch/private"
+    SOURCE_FILE "vector_alloc.h"
 )
 KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "rb_tree.c"
