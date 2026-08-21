@@ -34,8 +34,11 @@
 #define X86_EXCEPTION_RSVD reserved_exception
 
 #define X86_IRQ_DISPATCH irq_dispatch
+#define X86_FIXED_UNEXPECTED fixed_unexpected
 
 #define X86_IRQ_DISPATCH_ASM CONCAT(X86_IRQ_DISPATCH, _asm)
+#define X86_FIXED_UNEXPECTED_ASM \
+    CONCAT(handle_, CONCAT(X86_FIXED_UNEXPECTED, _asm))
 #define X86_EXCEPTION_RSVD_ASM CONCAT(handle_, CONCAT(X86_EXCEPTION_RSVD, _asm))
 
 #ifndef __ASSEMBLER__
@@ -51,6 +54,17 @@
 #define IRQ_HANDLER \
     void X86_IRQ_DISPATCH(struct registers *regs); \
     void X86_IRQ_DISPATCH(struct registers *regs)
+
+#define FIXED_VECTOR_HANDLER(x, vector)                 \
+    static void CONCAT(do_, x)(struct registers *regs); \
+    void CONCAT(handle_, x)(struct registers *regs);    \
+    void CONCAT(handle_, x)(struct registers *regs)     \
+    {                                                   \
+        fixed_vector_enter(vector);                     \
+        CONCAT(do_, x)(regs);                           \
+        fixed_vector_exit();                            \
+    }                                                   \
+    static void CONCAT(do_, x)(struct registers *regs)
 
 void idt_init(void);
 

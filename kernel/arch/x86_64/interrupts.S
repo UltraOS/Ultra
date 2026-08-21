@@ -2,6 +2,7 @@
 #include <arch/private/unwind_hints.h>
 #include <arch/private/asm_helpers.h>
 #include <arch/private/idt.h>
+#include <arch/private/vectors.h>
 #include <arch/private/linker.h>
 
 ASM_PRELUDE
@@ -176,8 +177,8 @@ ASM_FUNCTION_END handle_\name\()_asm
 .endm
 
 .macro MAKE_IRQ_THUNK irq_num:req
-     MAKE_IDT_THUNK irq_\irq_num\()_thunk, X86_IRQ_DISPATCH_ASM, \irq_num, \
-                    needs_aux=1
+     MAKE_IDT_THUNK irq_\irq_num\()_thunk, X86_IRQ_DISPATCH_ASM, \
+                    \irq_num + NUM_X86_EXCEPTIONS, needs_aux=1
 .endm
 
 .macro MAKE_RESERVED_EXCEPTION_THUNK number:req
@@ -185,7 +186,29 @@ ASM_FUNCTION_END handle_\name\()_asm
                    needs_aux=1
 .endm
 
+.set fixed_thunk_count, 0
+
+/*
+ * Fixed vector thunks are spelled out one by one in vector order, the
+ * assembler checks that each lands in its own slot and that none is
+ * missing.
+ */
+.macro MAKE_FIXED_VECTOR_THUNK name:req, func:req, vector:req
+    .if \vector != VECTOR_FIXED_FIRST + fixed_thunk_count
+        .error "fixed vector thunk out of order"
+    .endif
+
+    MAKE_IDT_THUNK \name\()_thunk, \func, \vector, needs_aux=1
+    .set fixed_thunk_count, fixed_thunk_count + 1
+.endm
+
+.macro MAKE_FIXED_UNEXPECTED_THUNK num:req
+    MAKE_FIXED_VECTOR_THUNK fixed_unexpected_\num, X86_FIXED_UNEXPECTED_ASM, \
+                            \num + VECTOR_FIXED_FIRST
+.endm
+
 MAKE_EXCEPTION_TRAMPOLINE X86_EXCEPTION_RSVD
+MAKE_EXCEPTION_TRAMPOLINE X86_FIXED_UNEXPECTED
 
 MAKE_EXCEPTION_HANDLER X86_EXCEPTION_DE
 MAKE_EXCEPTION_HANDLER X86_EXCEPTION_DB
@@ -224,15 +247,38 @@ MAKE_RESERVED_EXCEPTION_THUNK 31
 .altmacro
 
 .set irq_number, 0
-.rept NUM_IDT_ENTRIES - NUM_X86_EXCEPTIONS
+.rept NUM_DYNAMIC_VECTORS
     MAKE_IRQ_THUNK %irq_number
     .set irq_number, irq_number + 1
 .endr
 
+.noaltmacro
+
 #else
 
-.rept NUM_IDT_ENTRIES - NUM_X86_EXCEPTIONS
+.rept NUM_DYNAMIC_VECTORS
     MAKE_IRQ_THUNK \+
 .endr
 
 #endif
+
+MAKE_FIXED_UNEXPECTED_THUNK 0
+MAKE_FIXED_UNEXPECTED_THUNK 1
+MAKE_FIXED_UNEXPECTED_THUNK 2
+MAKE_FIXED_UNEXPECTED_THUNK 3
+MAKE_FIXED_UNEXPECTED_THUNK 4
+MAKE_FIXED_UNEXPECTED_THUNK 5
+MAKE_FIXED_UNEXPECTED_THUNK 6
+MAKE_FIXED_UNEXPECTED_THUNK 7
+MAKE_FIXED_UNEXPECTED_THUNK 8
+MAKE_FIXED_UNEXPECTED_THUNK 9
+MAKE_FIXED_UNEXPECTED_THUNK 10
+MAKE_FIXED_UNEXPECTED_THUNK 11
+MAKE_FIXED_UNEXPECTED_THUNK 12
+MAKE_FIXED_UNEXPECTED_THUNK 13
+MAKE_FIXED_UNEXPECTED_THUNK 14
+MAKE_FIXED_UNEXPECTED_THUNK 15
+
+.if fixed_thunk_count != NUM_FIXED_VECTORS
+    .error "the fixed vector thunk list is incomplete"
+.endif
