@@ -1,7 +1,10 @@
 #pragma once
 
 #include <common/atomic.h>
-#include <arch/private/io.h>
+#include <common/helpers.h>
+#include <common/error.h>
+
+#include <memory/io.h>
 
 #define X86_PORT_IO_WINDOW_OFFSET 0x10000
 #define X86_PORT_IO_WINDOW_LEN 0xFFFF
