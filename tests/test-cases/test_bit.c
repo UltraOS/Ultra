@@ -240,3 +240,61 @@ TEST_CASE(bit_find_first_and_next)
                                  BITS_PER_UNIT * 2 + 18),
               BITS_PER_UNIT * 3);
 }
+
+TEST_CASE(bit_array_count_set_basic)
+{
+    MAKE_BITMAP(bits, BITS_PER_UNIT * 3) = { 0 };
+
+    ASSERT_EQ(bit_array_count_set(bits, BITS_PER_UNIT * 3), 0);
+
+    bit_set(bits, 0);
+    bit_set(bits, 7);
+    bit_set(bits, BITS_PER_UNIT + 1);
+    bit_set(bits, BITS_PER_UNIT * 2 + 33);
+    ASSERT_EQ(bit_array_count_set(bits, BITS_PER_UNIT * 3), 4);
+
+    bits[0] = UNSIGNED_MAX(bits[0]);
+    bits[1] = UNSIGNED_MAX(bits[1]);
+    bits[2] = UNSIGNED_MAX(bits[2]);
+    ASSERT_EQ(bit_array_count_set(bits, BITS_PER_UNIT * 3),
+              BITS_PER_UNIT * 3);
+}
+
+TEST_CASE(bit_array_count_set_partial_tail)
+{
+    MAKE_BITMAP(bits, BITS_PER_UNIT + 5) = { 0 };
+
+    /*
+     * Set bits beyond num_bits in the last unit, they must not be
+     * counted.
+     */
+    bits[1] = UNSIGNED_MAX(bits[1]);
+    ASSERT_EQ(bit_array_count_set(bits, BITS_PER_UNIT + 5), 5);
+
+    bits[0] = UNSIGNED_MAX(bits[0]);
+    ASSERT_EQ(bit_array_count_set(bits, BITS_PER_UNIT + 5),
+              BITS_PER_UNIT + 5);
+}
+
+TEST_CASE(bit_array_and_basic)
+{
+    MAKE_BITMAP(lhs, BITS_PER_UNIT * 2) = { 0 };
+    MAKE_BITMAP(rhs, BITS_PER_UNIT * 2) = { 0 };
+    MAKE_BITMAP(dst, BITS_PER_UNIT * 2) = { 0 };
+
+    bit_set(lhs, 3);
+    bit_set(lhs, 10);
+    bit_set(lhs, BITS_PER_UNIT + 4);
+
+    bit_set(rhs, 10);
+    bit_set(rhs, BITS_PER_UNIT + 4);
+    bit_set(rhs, BITS_PER_UNIT + 9);
+
+    bit_array_and(dst, lhs, rhs, BITS_PER_UNIT * 2);
+
+    ASSERT(!bit_test(dst, 3));
+    ASSERT(bit_test(dst, 10));
+    ASSERT(bit_test(dst, BITS_PER_UNIT + 4));
+    ASSERT(!bit_test(dst, BITS_PER_UNIT + 9));
+    ASSERT_EQ(bit_array_count_set(dst, BITS_PER_UNIT * 2), 2);
+}
