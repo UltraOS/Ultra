@@ -40,6 +40,17 @@ config LTO
 
 endmenu
 
+config CPU_MASK_OUT_OF_LINE
+    bool
+    help
+        Store the contents of a cpu_mask_handle on the heap instead
+        of inline within the handle itself. Out-of-line masks are
+        sized by the number of CPUs detected at boot rather than the
+        compile-time maximum, and every mask operation is bounded by
+        that count. Intended to be selected by configurations with a
+        MAX_CPUS large enough that inline masks are too big to live
+        on the stack.
+
 menu "Debug options"
 
 config VERBOSE_INIT_LEVELS

@@ -81,6 +81,7 @@ ultra_sources(
     unwind.c
     param.c
     log_ring.c
+    cpu_mask.c
     per_cpu.c
     smp.c
     abortable_instructions.c

@@ -8,4 +8,6 @@ add_test_cases(
     test_slist.c
     test_time.c
     test_rbtree.c
+    test_cpu_mask.c
+    test_cpu_mask_out_of_line.c
 )
