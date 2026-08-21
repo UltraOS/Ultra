@@ -45,3 +45,42 @@ reg_t find_next_bit_base(
 
     return num_bits;
 }
+
+/*
+ * Baseline x86_64 has no popcount instruction, and GCC lowers
+ * __builtin_popcountl to a libgcc call we cannot link against in debug
+ * builds, so count by hand.
+ */
+static reg_t bit_unit_count_set(reg_t unit)
+{
+    reg_t count = 0;
+
+    while (unit != 0) {
+        unit &= unit - 1;
+        count++;
+    }
+
+    return count;
+}
+
+reg_t bit_array_count_set(const reg_t *bit_array, reg_t num_bits)
+{
+    reg_t num_units, extra_bits, count = 0, i;
+
+    num_units = NUM_UNITS_FOR_BITS(num_bits);
+    extra_bits = num_bits % BITS_PER_UNIT;
+
+    for (i = 0; i < num_units; i++) {
+        reg_t unit;
+
+        unit = bit_array[i];
+
+        // Mask out bits beyond 'num_bits' in the last unit
+        if (i == num_units - 1 && extra_bits != 0)
+            unit &= MAKE_BIT_MASK(extra_bits - 1, 0);
+
+        count += bit_unit_count_set(unit);
+    }
+
+    return count;
+}

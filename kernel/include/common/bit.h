@@ -178,6 +178,18 @@ reg_t find_next_bit_base(
     const reg_t *bit_array, reg_t num_bits, reg_t start, bool inverted
 );
 
+reg_t bit_array_count_set(const reg_t *bit_array, reg_t num_bits);
+
+static inline void bit_array_and(
+    reg_t *dst, const reg_t *lhs, const reg_t *rhs, reg_t num_bits
+)
+{
+    reg_t i;
+
+    for (i = 0; i < NUM_UNITS_FOR_BITS(num_bits); i++)
+        dst[i] = lhs[i] & rhs[i];
+}
+
 static inline reg_t find_first_set_bit(const reg_t *bit_array, reg_t num_bits)
 {
     return find_next_bit_base(bit_array, num_bits, 0, false);
