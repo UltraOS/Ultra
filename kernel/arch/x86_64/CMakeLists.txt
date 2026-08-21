@@ -6,6 +6,7 @@ ultra_sources(
     vector_alloc.c
     xapic.c
     x2apic.c
+    i8259a.c
     ioapic.c
     entry.c
     entry.S
