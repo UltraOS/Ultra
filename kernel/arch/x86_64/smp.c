@@ -101,8 +101,11 @@ static INIT_CODE void register_apic_id(u32 apic_id)
         apic_id == g_bsp_apic_id ? " [BSP]" : ""
     );
 
-    if (apic_id == g_boot_cpu_apic_id)
+    // register_cpu() guarantees the boot CPU is always CPU0
+    if (apic_id == g_boot_cpu_apic_id) {
         g_num_online_cpus = 1;
+        cpu_mask_set(&g_online_cpus, 0);
+    }
     g_num_present_cpus++;
 }
 
