@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/types.h>
+#include <common/bit.h>
 
 enum apic_reg {
     APIC_REG_ID = 0x20,
@@ -13,6 +14,7 @@ enum apic_reg {
     APIC_REG_LDR = 0xD0,
     APIC_REG_DFR = 0xE0,
     APIC_REG_SVR = 0xF0,
+        #define APIC_SVR_ENABLE BIT_U32(8)
 
     APIC_REG_ISR = 0x100,
     APIC_REG_TMR = 0x180,
@@ -28,6 +30,13 @@ enum apic_reg {
     APIC_REG_LVT_LINT0 = 0x350,
     APIC_REG_LVT_LINT1 = 0x360,
     APIC_REG_LVT_ERROR = 0x370,
+        // The layout shared by every LVT register
+        #define APIC_LVT_DELIVERY_MASK MAKE_BIT_MASK_U32(10, 8)
+        #define APIC_LVT_DELIVERY_NMI \
+            BIT_FIELD_MAKE(APIC_LVT_DELIVERY_MASK, 0x4)
+        #define APIC_LVT_DELIVERY_EXTINT \
+            BIT_FIELD_MAKE(APIC_LVT_DELIVERY_MASK, 0x7)
+        #define APIC_LVT_MASKED BIT_U32(16)
 
     APIC_REG_TIMER_INITIAL_COUNT = 0x380,
     APIC_REG_TIMER_CURRENT_COUNT = 0x390,
@@ -64,4 +73,10 @@ struct apic {
 
 void apic_detect(void);
 
-void apic_set_known_frequency(u64 khz);
+// The per-CPU bring-up ritual, run by the BSP and later by every AP
+void apic_cpu_init(void);
+
+void apic_eoi(void);
+bool apic_vector_in_isr(u8 vector);
+
+void apic_set_known_frequency(u64 hz);

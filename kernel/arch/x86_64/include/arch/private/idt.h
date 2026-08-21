@@ -35,13 +35,21 @@
 
 #define X86_IRQ_DISPATCH irq_dispatch
 #define X86_FIXED_UNEXPECTED fixed_unexpected
+#define X86_APIC_ERROR apic_error
+#define X86_APIC_SPURIOUS apic_spurious
 
 #define X86_IRQ_DISPATCH_ASM CONCAT(X86_IRQ_DISPATCH, _asm)
 #define X86_FIXED_UNEXPECTED_ASM \
     CONCAT(handle_, CONCAT(X86_FIXED_UNEXPECTED, _asm))
+#define X86_APIC_ERROR_ASM \
+    CONCAT(handle_, CONCAT(X86_APIC_ERROR, _asm))
+#define X86_APIC_SPURIOUS_ASM \
+    CONCAT(handle_, CONCAT(X86_APIC_SPURIOUS, _asm))
 #define X86_EXCEPTION_RSVD_ASM CONCAT(handle_, CONCAT(X86_EXCEPTION_RSVD, _asm))
 
 #ifndef __ASSEMBLER__
+
+#include <common/types.h>
 
 #define MAKE_EXCEPTION_HANDLER(x) \
     void CONCAT(handle_, x)(struct registers *regs)
@@ -54,6 +62,9 @@
 #define IRQ_HANDLER \
     void X86_IRQ_DISPATCH(struct registers *regs); \
     void X86_IRQ_DISPATCH(struct registers *regs)
+
+void fixed_vector_enter(u8 vector);
+void fixed_vector_exit(void);
 
 #define FIXED_VECTOR_HANDLER(x, vector)                 \
     static void CONCAT(do_, x)(struct registers *regs); \

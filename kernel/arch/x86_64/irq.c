@@ -2,6 +2,7 @@
 
 #include <arch/private/idt.h>
 #include <arch/private/vectors.h>
+#include <arch/private/apic.h>
 #include <arch/registers.h>
 
 #include <per_cpu.h>
@@ -34,13 +35,13 @@ static void hard_irq_exit(void)
     this_cpu_write(s_in_hard_irq, false);
 }
 
-static void fixed_vector_enter(u8 vector)
+void fixed_vector_enter(u8 vector)
 {
     hard_irq_enter();
     this_cpu_inc(s_num_fixed_invocations[vector - VECTOR_FIXED_FIRST]);
 }
 
-static void fixed_vector_exit(void)
+void fixed_vector_exit(void)
 {
     hard_irq_exit();
 }
@@ -56,13 +57,19 @@ FIXED_VECTOR_HANDLER(X86_FIXED_UNEXPECTED, regs->interrupt_idx)
 
 // Dynamic vectors have no consumer yet, every one of them is unexpected
 IRQ_HANDLER {
+    u8 vector = regs->interrupt_idx;
+
     hard_irq_enter();
 
     this_cpu_inc(s_num_unexpected);
-    pr_warn(
-        "unexpected vector 0x%02X on CPU%u\n",
-        regs->interrupt_idx, unstable_cpu_id()
-    );
+    pr_warn("unexpected vector 0x%02X on CPU%u\n", vector, unstable_cpu_id());
+
+    /*
+     * A set in-service bit that never gets an EOI blocks its
+     * entire priority class forever.
+     */
+    if (apic_vector_in_isr(vector))
+        apic_eoi();
 
     hard_irq_exit();
 }
