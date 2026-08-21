@@ -4,8 +4,10 @@
 #include <common/bit.h>
 #include <arch/private/vectors.h>
 
+#include <arch/private/i8259a.h>
+
+#include <bug.h>
 #include <free_after_init.h>
-#include <init_level.h>
 #include <log.h>
 
 #define I8259A_MASTER 0x20
@@ -54,20 +56,12 @@ static void INIT_CODE i8259a_program_one(
     i8259a_set_imr(iow, 0xFF);
 }
 
-static error_t INIT_CODE i8259a_quiesce(void)
+void INIT_CODE i8259a_quiesce(void)
 {
-    error_t ret;
     io_window master, slave;
 
-    ret = io_window_map_pio(&master, I8259A_MASTER, 2);
-    if (is_error(ret))
-        return ret;
-
-    ret = io_window_map_pio(&slave, I8259A_SLAVE, 2);
-    if (is_error(ret)) {
-        io_window_unmap(&master);
-        return ret;
-    }
+    BUG_ON(is_error(io_window_map_pio(&master, I8259A_MASTER, 2)));
+    BUG_ON(is_error(io_window_map_pio(&slave, I8259A_SLAVE, 2)));
 
     i8259a_program_one(
         &master, VECTOR_DYNAMIC_FIRST,
@@ -84,6 +78,4 @@ static error_t INIT_CODE i8259a_quiesce(void)
     io_window_unmap(&slave);
 
     pr_info("remapped & masked\n");
-    return EOK;
 }
-INIT_CALL_POST(X86_PLATFORM_INFO_AVAILABLE, i8259a_quiesce);
