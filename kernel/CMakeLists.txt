@@ -78,6 +78,7 @@ ultra_sources(
     log.c
     symbols.c
     spinlock.c
+    mutex.c
     unwind.c
     param.c
     log_ring.c
