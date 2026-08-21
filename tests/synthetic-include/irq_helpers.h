@@ -19,3 +19,8 @@ static inline void irq_state_restore(irq_state_t state)
 {
     g_enabled = state;
 }
+
+static inline bool in_hard_irq(void)
+{
+    return false;
+}

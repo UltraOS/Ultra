@@ -1,4 +1,5 @@
 #include <mutex.h>
+#include <irq_helpers.h>
 #include <bug.h>
 
 void mutex_init(struct mutex *mutex)
@@ -8,6 +9,8 @@ void mutex_init(struct mutex *mutex)
 
 void mutex_lock(struct mutex *mutex)
 {
+    BUG_ON(in_hard_irq());
+
     /*
      * With a single CPU and no way to sleep, a busy lock can only be
      * held by the caller itself, so spinning on it would hang forever.
@@ -17,6 +20,7 @@ void mutex_lock(struct mutex *mutex)
 
 bool mutex_try_lock(struct mutex *mutex)
 {
+    BUG_ON(in_hard_irq());
     return spin_try_lock(&mutex->lock);
 }
 

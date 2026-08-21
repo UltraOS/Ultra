@@ -10,6 +10,9 @@ static ALWAYS_INLINE bool irq_enabled(void)
     return arch_irq_is_enabled_state(arch_irq_state());
 }
 
+// True while executing in hardware interrupt context on this CPU
+bool in_hard_irq(void);
+
 /*
  * Save the arch-specific IRQ state and disable IRQs if they were previously
  * enabled.
