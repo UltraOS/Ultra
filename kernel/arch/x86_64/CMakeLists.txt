@@ -3,6 +3,7 @@ include(CheckCompilerFlag)
 ultra_sources(
     string.c
     apic.c
+    vector_alloc.c
     xapic.c
     x2apic.c
     ioapic.c
