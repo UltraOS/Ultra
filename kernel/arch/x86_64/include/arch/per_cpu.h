@@ -18,3 +18,13 @@
 #define this_cpu_write_16(val, x) (X86_APPLY_SEG_GS(val) = (x))
 #define this_cpu_write_32(val, x) (X86_APPLY_SEG_GS(val) = (x))
 #define this_cpu_write_64(val, x) (X86_APPLY_SEG_GS(val) = (x))
+
+#define this_cpu_add_8(val, x) (X86_APPLY_SEG_GS(val) += (x))
+#define this_cpu_add_16(val, x) (X86_APPLY_SEG_GS(val) += (x))
+#define this_cpu_add_32(val, x) (X86_APPLY_SEG_GS(val) += (x))
+#define this_cpu_add_64(val, x) (X86_APPLY_SEG_GS(val) += (x))
+
+#define this_cpu_sub_8(val, x) (X86_APPLY_SEG_GS(val) -= (x))
+#define this_cpu_sub_16(val, x) (X86_APPLY_SEG_GS(val) -= (x))
+#define this_cpu_sub_32(val, x) (X86_APPLY_SEG_GS(val) -= (x))
+#define this_cpu_sub_64(val, x) (X86_APPLY_SEG_GS(val) -= (x))
