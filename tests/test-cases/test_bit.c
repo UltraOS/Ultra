@@ -1,5 +1,4 @@
 #include <common/bit.h>
-#include <kernel-source/common/bit.c>
 
 #include <test_harness.h>
 

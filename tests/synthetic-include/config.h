@@ -2,3 +2,6 @@
 #include <config_helpers.h>
 
 #define CONFIG_SMBIOS 1
+
+// Multiple bitmap units wide to give cpu_mask tests real coverage
+#define ULTRA_MAX_CPUS 130

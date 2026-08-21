@@ -122,6 +122,10 @@ KERNEL_FILE(
     INCLUDE_PATH "common" INCLUDE_FILE "bit.h"
 )
 KERNEL_FILE(
+    SOURCE_FILE "cpu_mask.c"
+    INCLUDE_FILE "cpu_mask.h"
+)
+KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "rb_tree.c"
     INCLUDE_PATH "common" INCLUDE_FILE "rb_tree.h"
 )
@@ -191,6 +195,7 @@ add_executable(
     run_tests
     run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
     kernel-source/spinlock.c kernel-source/memory/units.c
+    kernel-source/common/bit.c
 )
 set_property(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
