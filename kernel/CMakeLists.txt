@@ -129,6 +129,7 @@ ultra_compile_definitions(ULTRA_GIT_SHA="${ULTRA_GIT_SHA}")
 
 add_subdirectory(arch/${ULTRA_ARCH})
 add_subdirectory(common)
+add_subdirectory(irq)
 add_subdirectory(memory)
 add_subdirectory(time)
 add_subdirectory(drivers)

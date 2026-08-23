@@ -1,0 +1,16 @@
+# Declared here so the symbol always exists as an int. An architecture
+# that needs a deeper hierarchy redefines it with a default of its own.
+config ARCH_MAX_NESTED_IRQ_DOMAINS
+    int
+
+config MAX_NESTED_IRQ_DOMAINS
+    int
+    range 1 8
+    default ARCH_MAX_NESTED_IRQ_DOMAINS if ARCH_MAX_NESTED_IRQ_DOMAINS > 0
+    default 3
+    help
+        The maximum supported depth of the interrupt domain hierarchy,
+        as in the number of interrupt controllers an interrupt travels
+        through on its way to a CPU. Architectures override the
+        default by giving ARCH_MAX_NESTED_IRQ_DOMAINS a positive
+        default of their own.
