@@ -50,6 +50,34 @@ error_t irq_hw_retrigger(struct irq *irq)
     return ENOTSUP;
 }
 
+void irq_hw_ack(struct irq *irq)
+{
+    u32 i;
+
+    for (i = 0; i < irq->num_levels; i++) {
+        const struct irq_chip *chip = irq->levels[i].chip;
+
+        if (chip->ack == NULL)
+            continue;
+
+        chip->ack(&irq->levels[i]);
+    }
+}
+
+void irq_hw_eoi(struct irq *irq)
+{
+    u32 i;
+
+    for (i = 0; i < irq->num_levels; i++) {
+        const struct irq_chip *chip = irq->levels[i].chip;
+
+        if (chip->eoi == NULL)
+            continue;
+
+        chip->eoi(&irq->levels[i]);
+    }
+}
+
 bool irq_hw_is_outstanding(struct irq *irq)
 {
     u32 i;

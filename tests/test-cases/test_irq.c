@@ -32,6 +32,7 @@ void irq_test_free(void *ptr)
 #include <kernel-source/irq/chip.c>
 #include <kernel-source/irq/domain.c>
 #include <kernel-source/irq/request.c>
+#include <kernel-source/irq/flow.c>
 
 #include <cpu_mask.h>
 #include <test_harness.h>
@@ -65,6 +66,7 @@ static struct irq_domain s_leaf_domain;
 
 static bool s_fail_leaf_alloc;
 static bool s_fail_leaf_activate;
+static bool s_leaf_latches;
 
 static void fake_mask(struct irq_level *level)
 {
@@ -85,6 +87,30 @@ static error_t fake_retrigger(struct irq_level *level)
     return EOK;
 }
 
+static void fake_ack(struct irq_level *level)
+{
+    UNREFERENCED_PARAMETER(level);
+    log_op("ack");
+}
+
+static void fake_eoi(struct irq_level *level)
+{
+    UNREFERENCED_PARAMETER(level);
+    log_op("eoi");
+}
+
+static void fake_leaf_ack(struct irq_level *level)
+{
+    UNREFERENCED_PARAMETER(level);
+    log_op("leaf-ack");
+}
+
+static void fake_leaf_eoi(struct irq_level *level)
+{
+    UNREFERENCED_PARAMETER(level);
+    log_op("leaf-eoi");
+}
+
 // Reports outstanding this many more times, silent once drained
 static u32 s_num_outstanding_polls;
 
@@ -101,8 +127,8 @@ static bool fake_is_outstanding(struct irq_level *level)
 }
 
 /*
- * The leaf chip deliberately lacks retrigger so the walk is forced to
- * delegate it to the parent level.
+ * The leaf chip deliberately lacks ack/eoi/retrigger so the walks
+ * are forced to delegate them to the parent level.
  */
 static const struct irq_chip s_leaf_chip = {
     .name = "fake-leaf",
@@ -111,8 +137,19 @@ static const struct irq_chip s_leaf_chip = {
     .is_outstanding = fake_is_outstanding,
 };
 
+// A leaf with a latch of its own, on top of the same parent
+static const struct irq_chip s_latching_leaf_chip = {
+    .name = "fake-latching-leaf",
+    .mask = fake_mask,
+    .unmask = fake_unmask,
+    .ack = fake_leaf_ack,
+    .eoi = fake_leaf_eoi,
+};
+
 static const struct irq_chip s_parent_chip = {
     .name = "fake-parent",
+    .ack = fake_ack,
+    .eoi = fake_eoi,
     .retrigger = fake_retrigger,
 };
 
@@ -128,7 +165,7 @@ static error_t fake_alloc(
         if (s_fail_leaf_alloc)
             return EIO;
 
-        level->chip = &s_leaf_chip;
+        level->chip = s_leaf_latches ? &s_latching_leaf_chip : &s_leaf_chip;
         level->line = desc->spec.line;
         return EOK;
     }
@@ -199,6 +236,7 @@ static void reset_state(void)
     s_fail_leaf_alloc = false;
     s_fail_leaf_activate = false;
     s_num_outstanding_polls = 0;
+    s_leaf_latches = false;
 
     list_init(&s_requested_irqs);
 
@@ -214,6 +252,14 @@ static enum irq_result count_handler(void *user)
 
     (*counter)++;
     return IRQ_RESULT_HANDLED;
+}
+
+static enum irq_result none_handler(void *user)
+{
+    u32 *counter = user;
+
+    (*counter)++;
+    return IRQ_RESULT_UNHANDLED;
 }
 
 static struct irq_spec make_spec(irq_line_t line, enum irq_trigger trigger)
@@ -574,4 +620,213 @@ TEST_CASE(irq_activate_failure_unwinds)
         "parent-alloc", "leaf-alloc", "parent-activate", "leaf-activate",
         "parent-deactivate", "leaf-free", "parent-free"
     );
+}
+
+TEST_CASE(irq_flow_edge_delivery)
+{
+    struct irq_spec spec;
+    struct irq *irq;
+    u32 counter = 0;
+
+    reset_state();
+    spec = make_spec(8, IRQ_TRIGGER_EDGE_ACTIVE_HIGH);
+
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+    ASSERT(irq->flow == irq_handle_edge);
+
+    // The latch is released before the handlers run
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("ack");
+    ASSERT_EQ(counter, 1);
+    ASSERT_EQ(irq->state, 0);
+    ASSERT_FALSE(irq->in_progress);
+
+    ASSERT_EQ(irq->num_unhandled, 0);
+
+    irq_free(irq, &counter);
+}
+
+TEST_CASE(irq_flow_edge_lazy_disable)
+{
+    struct irq_spec spec;
+    struct irq *irq;
+    u32 counter = 0;
+
+    reset_state();
+    spec = make_spec(9, IRQ_TRIGGER_EDGE_ACTIVE_HIGH);
+
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+
+    irq_disable(irq);
+
+    /*
+     * Delivery while disabled must not run the handlers: the
+     * occurrence moves into the software latch and the line is
+     * masked so it stays quiet.
+     */
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("mask", "ack");
+    ASSERT_EQ(counter, 0);
+    ASSERT_EQ(irq->state, IRQ_STATE_MASKED | IRQ_STATE_PENDING);
+
+    s_num_ops = 0;
+    irq_enable(irq);
+    ASSERT_OPS("unmask", "retrigger");
+    ASSERT_EQ(irq->state, 0);
+
+    // The retrigger's re-delivery is an ordinary occurrence
+    irq_deliver(irq);
+    ASSERT_EQ(counter, 1);
+
+    irq_free(irq, &counter);
+}
+
+TEST_CASE(irq_flow_level_delivery)
+{
+    struct irq_spec spec;
+    struct irq *irq;
+    u32 counter = 0;
+
+    reset_state();
+    spec = make_spec(10, IRQ_TRIGGER_LEVEL_ACTIVE_HIGH);
+
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+    ASSERT(irq->flow == irq_handle_level);
+
+    // No masking on the happy path, EOI after the handlers
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("eoi");
+    ASSERT_EQ(counter, 1);
+    ASSERT_EQ(irq->state, 0);
+    ASSERT_EQ(irq->num_unhandled, 0);
+
+    irq_free(irq, &counter);
+}
+
+TEST_CASE(irq_flow_ack_eoi_reach_every_level)
+{
+    struct irq_spec spec;
+    struct irq *irq;
+    u32 counter = 0;
+
+    reset_state();
+    s_leaf_latches = true;
+
+    // Leaf latch first, then the parent releases
+    spec = make_spec(14, IRQ_TRIGGER_EDGE_ACTIVE_HIGH);
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("leaf-ack", "ack");
+    ASSERT_EQ(counter, 1);
+
+    // Masking stays with the closest implementer, ack still walks
+    irq_disable(irq);
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("mask", "leaf-ack", "ack");
+    ASSERT_EQ(counter, 1);
+    irq_enable(irq);
+    irq_free(irq, &counter);
+
+    spec = make_spec(15, IRQ_TRIGGER_LEVEL_ACTIVE_HIGH);
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("leaf-eoi", "eoi");
+    irq_free(irq, &counter);
+}
+
+TEST_CASE(irq_flow_level_lazy_disable)
+{
+    struct irq_spec spec;
+    struct irq *irq;
+    u32 counter = 0;
+
+    reset_state();
+    spec = make_spec(11, IRQ_TRIGGER_LEVEL_ACTIVE_HIGH);
+
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+
+    irq_disable(irq);
+
+    /*
+     * No software latch for level: the still-asserted line re-fires
+     * by itself once unmasked, so enable must not retrigger either.
+     */
+    s_num_ops = 0;
+    irq_deliver(irq);
+    ASSERT_OPS("mask", "eoi");
+    ASSERT_EQ(counter, 0);
+    ASSERT_EQ(irq->state, IRQ_STATE_MASKED);
+
+    s_num_ops = 0;
+    irq_enable(irq);
+    ASSERT_OPS("unmask");
+    ASSERT_EQ(irq->state, 0);
+
+    irq_deliver(irq);
+    ASSERT_EQ(counter, 1);
+
+    irq_free(irq, &counter);
+}
+
+TEST_CASE(irq_flow_shared_walk_accounting)
+{
+    struct irq_spec spec;
+    struct irq *irq, *other;
+    u32 c1 = 0, c2 = 0;
+
+    reset_state();
+    spec = make_spec(12, IRQ_TRIGGER_LEVEL_ACTIVE_LOW);
+
+    ASSERT_EQ(
+        irq_request(&spec, none_handler, &c1, IRQ_FLAG_SHARED, "a", &irq),
+        EOK
+    );
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &c2, IRQ_FLAG_SHARED, "b", &other),
+        EOK
+    );
+
+    // Every sharer is invoked, one claiming the occurrence is enough
+    irq_deliver(irq);
+    ASSERT_EQ(c1, 1);
+    ASSERT_EQ(c2, 1);
+    ASSERT_EQ(irq->num_unhandled, 0);
+
+    // With the claiming handler gone the occurrence goes unclaimed
+    irq_free(irq, &c2);
+    irq_deliver(irq);
+    ASSERT_EQ(c1, 2);
+    ASSERT_EQ(irq->num_unhandled, 1);
+
+    irq_free(irq, &c1);
 }
