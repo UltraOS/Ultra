@@ -62,4 +62,5 @@ config DEBUG_MM
 endmenu
 
 rsource "arch/Kconfig"
+rsource "irq/Kconfig"
 rsource "drivers/Kconfig"
