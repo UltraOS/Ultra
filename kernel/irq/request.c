@@ -176,6 +176,11 @@ static error_t irq_object_create(
     list_init(&irq->actions);
     list_init(&irq->node);
 
+    if (irq_trigger_is_level(desc->spec.trigger))
+        irq->flow = irq_handle_level;
+    else
+        irq->flow = irq_handle_edge;
+
     domain = desc->spec.domain;
     for (i = 0; i < depth; i++) {
         irq->levels[i].domain = domain;

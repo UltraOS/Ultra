@@ -153,8 +153,18 @@ struct irq_action {
     struct list_link node;
 };
 
+typedef void (*irq_flow_t)(struct irq*);
+
 struct irq {
     struct irq_spec spec;
+
+    /*
+     * The delivery discipline matching the line's trigger type,
+     * invoked by the arch dispatch for every occurrence. The set of
+     * flows is closed and core-owned, picked from the spec at
+     * request time.
+     */
+    irq_flow_t flow;
 
     // Only the line-wide flags every requester must agree on
     enum irq_flags flags;
@@ -177,6 +187,9 @@ struct irq {
     struct list_link actions;
     u32 num_actions;
 
+    // Occurrences no handler claimed
+    u32 num_unhandled;
+
     // Linkage in the global list of requested interrupts
     struct list_link node;
 
@@ -190,12 +203,17 @@ static inline bool irq_disabled(struct irq *irq)
 }
 
 /*
- * Hardware operations act on the entire line: the level closest to
- * the requested one whose chip implements the operation performs it.
+ * Hardware operations act on the entire line. Most are performed by
+ * the level closest to the requested one whose chip implements them.
+ * Ack and eoi are owed by every level that implements them, walked
+ * from the requested level toward the CPU, so a leaf latch is
+ * cleared before its parent releases the line.
  */
 void irq_hw_mask(struct irq*);
 void irq_hw_unmask(struct irq*);
 error_t irq_hw_retrigger(struct irq*);
+void irq_hw_ack(struct irq*);
+void irq_hw_eoi(struct irq*);
 
 /*
  * Whether any level still holds an occurrence of the line, and the
@@ -205,3 +223,9 @@ error_t irq_hw_retrigger(struct irq*);
  */
 bool irq_hw_is_outstanding(struct irq*);
 void irq_hw_drain(struct irq*);
+
+void irq_handle_edge(struct irq*);
+void irq_handle_level(struct irq*);
+
+// The arch entry point for a resolved interrupt occurrence
+void irq_deliver(struct irq*);
