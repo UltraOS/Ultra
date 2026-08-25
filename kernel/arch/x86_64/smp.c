@@ -277,7 +277,7 @@ static INIT_CODE uacpi_iteration_decision detect_isos(
         return UACPI_ITERATION_DECISION_CONTINUE;
     }
 
-    if (unlikely(iso->source > NUM_ISA_IRQS)) {
+    if (unlikely(iso->source >= NUM_ISA_IRQS)) {
         pr_warn(
             "MADT IRQ %d override outside of ISA range, ignored\n",
             iso->source
