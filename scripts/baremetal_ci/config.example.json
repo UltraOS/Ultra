@@ -1,0 +1,47 @@
+{
+  "listen": "0.0.0.0:8090",
+  "data_dir": "/srv/ultra-ci/data",
+  "tftp_root": "/srv/ultra-ci/tftp",
+  "kernel_filename": "kernel-x86_64",
+  "default_machine": "laptop-a",
+  "max_parallel": 5,
+  "max_runs_kept": 200,
+  "auth_token": null,
+  "defaults": {
+    "timeout": 600,
+    "first_output_timeout": 60,
+    "boot_retries": 2,
+    "stall_timeout": 0
+  },
+  "machines": [
+    {
+      "name": "laptop-a",
+      "description": "HP EliteBook 840 G6, i5-8365U, 16G",
+      "host": "192.168.1.20",
+      "mac": "00-11-22-33-44-01",
+      "console_cmdline": "earlycon=ns16550,pci=0:16.3",
+      "password": "CHANGE-ME",
+      "boot_method": "meshcmd"
+    },
+    {
+      "name": "desktop-old",
+      "description": "ICH9 era box: ME serial at 00:03.3, boot source writes rejected, classic amtterm",
+      "host": "192.168.1.21",
+      "mac": "00-11-22-33-44-02",
+      "console_cmdline": "earlycon=ns16550,pci=0:3.3",
+      "password": "CHANGE-ME",
+      "boot_method": "wsman",
+      "sol_tool": "amtterm",
+      "skip_boot_source": true
+    },
+    {
+      "name": "mock",
+      "driver": "mock",
+      "mock_lines": [
+        "Booted via network (PXE)",
+        "Starting ultra kernel",
+        "Nothing left to do, halting!"
+      ]
+    }
+  ]
+}
