@@ -10,7 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 EXIT_CODES = {
     "pass": 0,
@@ -177,6 +177,10 @@ def add_build_args(group: argparse._ActionsContainer) -> None:
     group.add_argument("--baremetal-machines", action="store_true",
                        help="List the machines the server offers, then "
                             "exit")
+    group.add_argument("--baremetal-deploy", nargs=2,
+                       metavar=("HOST", "CONFIG"),
+                       help="Install or update the CI server on HOST "
+                            "with the server CONFIG")
     add_run_args(group, prefix="baremetal-", run_for=False, log_dir=False)
 
 
@@ -188,9 +192,14 @@ def require_server(args: argparse.Namespace,
     return server
 
 
-# The Baremetal actions that need no build: an exit code when
-# one was requested, else None.
-def early_action(args: argparse.Namespace) -> Optional[int]:
+def early_action(
+    args: argparse.Namespace, loaders: Callable[[], Tuple[str, str]]
+) -> Optional[int]:
+    if args.baremetal_deploy:
+        from . import deploy
+        bootx64, pxe = loaders()
+        host, config = args.baremetal_deploy
+        return deploy.deploy(host, config, bootx64=bootx64, pxe=pxe)
     if args.baremetal_machines:
         return list_machines(require_server(args))
     return None

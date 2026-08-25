@@ -1,0 +1,16 @@
+[Unit]
+Description=Ultra baremetal CI server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@CI_USER@
+WorkingDirectory=/srv/ultra-ci
+ExecStart=/usr/bin/python3 -m baremetal_ci.server \
+    --config /srv/ultra-ci/config.json
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

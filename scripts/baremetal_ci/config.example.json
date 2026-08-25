@@ -2,6 +2,7 @@
   "listen": "0.0.0.0:8090",
   "data_dir": "/srv/ultra-ci/data",
   "tftp_root": "/srv/ultra-ci/tftp",
+  "pxe_subnet": "192.168.1.0",
   "kernel_filename": "kernel-x86_64",
   "default_machine": "laptop-a",
   "max_parallel": 5,

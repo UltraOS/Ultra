@@ -1,0 +1,13 @@
+[Unit]
+Description=Ultra baremetal CI PXE proxy-DHCP + TFTP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/dnsmasq -k -C /srv/ultra-ci/dnsmasq.conf
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

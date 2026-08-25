@@ -11,7 +11,7 @@ import urllib.request
 import signal
 import sys
 from contextlib import contextmanager
-from typing import Optional, List, Callable, Iterator
+from typing import Optional, List, Callable, Iterator, Tuple
 
 try:
     import scripts.kconfiglib.kconfiglib as kc
@@ -415,6 +415,16 @@ def run_qemu(
     return qp
 
 
+def hyper_pxe_loaders() -> Tuple[str, str]:
+    bootx64 = hyper_get_binary("BOOTX64.EFI")
+    # The upstream release ships the BIOS PXE binary as hyper_pxe,
+    # the deployment installs it under its proper hyper.pxe name
+    pxe = hyper_get_binary("hyper_pxe")
+    if bootx64 is None or pxe is None:
+        sys.exit("failed to fetch the hyper boot binaries")
+    return bootx64, pxe
+
+
 def run_unit_tests(args: argparse.Namespace, this_os: str) -> int:
     dir = get_tests_build_dir(this_os)
 
@@ -550,7 +560,7 @@ def main() -> None:
     if args.unit_tests:
         sys.exit(run_unit_tests(args, this_os.lower()))
 
-    rc = bmc.early_action(args)
+    rc = bmc.early_action(args, hyper_pxe_loaders)
     if rc is not None:
         sys.exit(rc)
 
