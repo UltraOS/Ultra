@@ -4,7 +4,9 @@ import subprocess
 import os
 import platform
 import re
+import selectors
 import shutil
+import time
 import urllib.request
 import signal
 import sys
@@ -24,6 +26,7 @@ try:
     import scripts.image_utils.ultra as ultr
     import scripts.image_utils.uefi as uefi
     import scripts.image_utils.path_guesser as pg
+    import scripts.baremetal_ci.client as bmc
 except ImportError:
     print("Unable to import one of submodule libraries!")
     print("Please run 'git submodule update --init' to initialize submodules")
@@ -313,9 +316,35 @@ def hyper_get_iso_br() -> str:
     return ret
 
 
+def qemu_watch_run_for(qp: subprocess.Popen, run_for: float) -> None:
+    assert qp.stdout is not None
+    sel = selectors.DefaultSelector()
+    sel.register(qp.stdout, selectors.EVENT_READ)
+    deadline = None
+
+    while qp.poll() is None:
+        timeout = None
+        if deadline is not None:
+            timeout = deadline - time.monotonic()
+            if timeout <= 0:
+                qp.terminate()
+                break
+        if not sel.select(timeout):
+            continue
+        data = os.read(qp.stdout.fileno(), 65536)
+        if not data:
+            break
+        sys.stdout.buffer.write(data)
+        sys.stdout.buffer.flush()
+        if deadline is None:
+            deadline = time.monotonic() + run_for
+    qp.wait()
+
+
 def run_qemu(
     arch: str, image_path: str, image_type: str, debug: bool, uefi_boot: bool,
-    uefi_firmware: str, kvm: bool, la57: bool, dry: bool
+    uefi_firmware: str, kvm: bool, la57: bool, dry: bool,
+    run_for: Optional[float] = None
 ) -> Optional[subprocess.Popen]:
     extra_args = []
     force_uefi = False
@@ -366,6 +395,15 @@ def run_qemu(
     if dry:
         print(" ".join(args))
         return None
+
+    if run_for is not None and not debug:
+        qp = subprocess.Popen(args, stdout=subprocess.PIPE)
+        try:
+            qemu_watch_run_for(qp, run_for)
+        except KeyboardInterrupt:
+            qp.terminate()
+            qp.wait()
+        return qp
 
     qp = subprocess.Popen(args, start_new_session=debug)
     if not debug:
@@ -488,6 +526,15 @@ def main() -> None:
                            "a debugger")
     qemu.add_argument("--dry", action="store_true",
                       help="Dump the QEMU command line instead of running")
+    qemu.add_argument("--run-for", type=float, metavar="SECONDS",
+                      help="Stop this many seconds after boot, also works for"
+                           " --baremetal")
+
+    baremetal = parser.add_argument_group(
+        "Baremetal",
+        "Boot the kernel on real hardware through the baremetal CI server"
+    )
+    bmc.add_build_args(baremetal)
 
     tests = parser.add_argument_group("Tests")
     tests.add_argument("--unit-tests", action="store_true",
@@ -502,6 +549,10 @@ def main() -> None:
 
     if args.unit_tests:
         sys.exit(run_unit_tests(args, this_os.lower()))
+
+    rc = bmc.early_action(args)
+    if rc is not None:
+        sys.exit(rc)
 
     if args.config:
         if not os.path.isfile(args.config):
@@ -552,8 +603,17 @@ def main() -> None:
     if not args.no_build:
         build_ultra(args, build_dir)
 
+    rc = bmc.run_from_args(args, args.arch,
+                           get_kernel_path(args.arch, build_dir), build_dir)
+    if rc is not None:
+        sys.exit(rc)
+
     is_debug = args.debug or args.ide_debug
-    should_run = args.run or args.kvm or args.la57 or is_debug
+    should_run = (args.run or args.kvm or args.la57 or is_debug or
+                  args.run_for is not None)
+
+    if args.run_for is not None and is_debug:
+        sys.exit("--run-for cannot be combined with a debug run")
 
     if should_run or args.make_image:
         hyper_installer = args.hyper_installer
@@ -599,7 +659,7 @@ def main() -> None:
 
         qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
                       uefi_boot, args.uefi_firmware_path, args.kvm, args.la57,
-                      args.dry)
+                      args.dry, args.run_for)
 
     if args.debug:
         assert qp
