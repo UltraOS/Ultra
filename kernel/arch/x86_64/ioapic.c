@@ -185,7 +185,7 @@ void INIT_CODE ioapic_register_isa_irq_override(
 {
     struct ioapic *owner;
 
-    if (WARN_ON(irq > NUM_ISA_IRQS))
+    if (WARN_ON(irq >= NUM_ISA_IRQS))
         return;
 
     owner = find_ioapic_for_gsi(gsi);
