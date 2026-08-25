@@ -1,0 +1,9 @@
+{
+  "success": "Nothing left to do, halting!",
+  "failures": [
+    "Kernel panic:",
+    "BUG!",
+    "Oops!"
+  ],
+  "kernel_start": "Starting ultra kernel"
+}
