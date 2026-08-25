@@ -3,6 +3,7 @@
 #include <arch/private/ioapic.h>
 #include <arch/private/irq.h>
 #include <arch/private/apic.h>
+#include <arch/irq.h>
 #include <arch/constants.h>
 
 #include <private/irq.h>
@@ -583,6 +584,42 @@ static const struct irq_domain_ops s_ioapic_domain_ops = {
     .activate = ioapic_domain_activate,
     .deactivate = ioapic_domain_deactivate,
 };
+
+static enum irq_trigger isa_source_trigger(struct isa_irq_source *source)
+{
+    bool low;
+
+    low = source->polarity == ACPI_MADT_POLARITY_ACTIVE_LOW;
+
+    if (source->triggering == ACPI_MADT_TRIGGERING_LEVEL) {
+        return low ? IRQ_TRIGGER_LEVEL_ACTIVE_LOW :
+                     IRQ_TRIGGER_LEVEL_ACTIVE_HIGH;
+    }
+
+    return low ? IRQ_TRIGGER_EDGE_ACTIVE_LOW : IRQ_TRIGGER_EDGE_ACTIVE_HIGH;
+}
+
+error_t isa_irq_get(u8 isa_irq, struct irq_spec *out)
+{
+    struct isa_irq_source *source;
+    error_t ret;
+
+    if (WARN_ON(isa_irq >= NUM_ISA_IRQS))
+        return EINVAL;
+
+    // Unmapped lines were already reported by the finalize pass
+    source = &s_isa_irq_sources[isa_irq];
+    if (!source->present)
+        return ENOENT;
+
+    // A present source is guaranteed to be covered by an IOAPIC
+    ret = ioapic_gsi_to_pin(source->gsi, &out->domain, &out->line);
+    if (WARN_ON(is_error(ret)))
+        return ret;
+
+    out->trigger = isa_source_trigger(source);
+    return EOK;
+}
 
 error_t ioapic_gsi_to_pin(
     u32 gsi, struct irq_domain **out_domain, irq_line_t *out_pin
