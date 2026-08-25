@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultra baremetal CI</title>
+<style>
+  :root {
+    --bg: #101418; --panel: #171d24; --line: #262f3a;
+    --fg: #cdd6e0; --dim: #78858f; --accent: #4fb3ff;
+    --pass: #4fd47a; --fail: #ff5d5d; --timeout: #ffb84f;
+    --infra: #c58fff; --neutral: #8a97a3; --active: #4fd4c8;
+  }
+  * {
+    box-sizing: border-box;
+    scrollbar-color: var(--line) transparent;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line); border-radius: 5px;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 "SF Mono", "DejaVu Sans Mono", Menlo, monospace;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--dim); font-size: 12px; }
+  header .sub.stale { color: var(--timeout); }
+  main { padding: 16px 20px; max-width: 1200px; margin: 0 auto; }
+  h2 {
+    font-size: 12px; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--dim); margin: 18px 0 8px;
+  }
+  .sechead {
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .sechead h2 { flex: 1; }
+  .machines { display: flex; flex-wrap: wrap; gap: 8px; }
+  .machine {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; font-size: 13px;
+    max-width: 260px;
+  }
+  .machine .sub { color: var(--dim); font-size: 11px; }
+  .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 6px; background: currentColor;
+  }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    text-align: left; padding: 6px 10px; font-size: 13px;
+    border-bottom: 1px solid var(--line); vertical-align: top;
+  }
+  th { color: var(--dim); font-weight: 500; font-size: 11px;
+       text-transform: uppercase; letter-spacing: .06em; }
+  tr.job { cursor: pointer; }
+  tr.job:hover td { background: var(--panel); }
+  tr.selected td { background: var(--panel); border-bottom: none; }
+  tr.expand td { background: var(--panel); padding: 4px 10px 12px; }
+  td.when { white-space: nowrap; }
+  .v { font-weight: 600; }
+  .v-pass { color: var(--pass); } .v-fail { color: var(--fail); }
+  .v-timeout { color: var(--timeout); } .v-infra { color: var(--infra); }
+  .v-done { color: var(--accent); }
+  .v-canceled, .v-interrupted { color: var(--neutral); }
+  .v-active, .v-booting, .v-running, .v-queued { color: var(--active); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button {
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 3px 10px; font: inherit; font-size: 12px;
+    cursor: pointer;
+  }
+  tr.expand button { background: var(--bg); }
+  button:hover { border-color: var(--accent); }
+  button:disabled { color: var(--dim); cursor: default; }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  .runbtns { display: flex; gap: 6px; margin: 4px 0 8px; flex-wrap: wrap; }
+  .runbtns button.sel { border-color: var(--accent);
+                        color: var(--accent); }
+  .logbar {
+    display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap;
+    margin: 6px 0;
+  }
+  .logbar .reason { flex: 1; font-size: 12.5px; min-width: 0; }
+  pre.log {
+    background: #0b0e11; border: 1px solid var(--line);
+    border-radius: 6px; padding: 12px;
+    height: clamp(240px, 50vh, 600px);
+    overflow: auto; white-space: pre-wrap; word-break: break-all;
+    font-size: 12.5px; margin: 0; resize: vertical;
+  }
+  pre.log.nowrap { white-space: pre; word-break: normal; }
+  .events { color: var(--dim); font-size: 12px; margin-top: 8px;
+            white-space: pre-wrap; }
+  .meta { color: var(--dim); font-size: 12px; }
+  .meta .file { color: var(--fg); }
+  .dur { color: var(--dim); font-weight: 400; }
+  dialog {
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; width: min(720px, 95vw);
+    font: inherit;
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog h2 { margin: 0 0 12px; }
+  .form {
+    display: grid; gap: 8px; grid-template-columns: 130px 1fr;
+    align-items: center;
+  }
+  .form label { color: var(--dim); font-size: 12px; }
+  .form input[type=text], .form input[type=number],
+  .form select, .form textarea {
+    background: #0b0e11; color: var(--fg);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 5px 8px; font: inherit; font-size: 12.5px;
+    width: 100%; min-width: 0;
+  }
+  .form textarea { height: 56px; resize: vertical; }
+  #f-machines { display: flex; flex-wrap: wrap; gap: 4px 14px;
+                align-items: baseline; }
+  #f-machines label { color: var(--fg); font-size: 12.5px;
+                      white-space: nowrap; }
+  #f-machines .pick { font-size: 11px; }
+  .runfor { display: flex; gap: 4px 8px; align-items: center;
+            flex-wrap: wrap; }
+  .runfor span { color: var(--dim); font-size: 12px;
+                 white-space: nowrap; }
+  .runfor .hint { flex-basis: 100%; font-size: 11px; }
+  .runfor input[type=number] { width: 8em; flex: none; }
+  .runfor input[type=text] { flex: 1; width: auto; }
+  .span2 { grid-column: 1 / -1; display: flex; gap: 8px;
+           align-items: baseline; flex-wrap: wrap; }
+  #f-status { color: var(--accent); font-size: 12px; }
+  @media (max-width: 700px) {
+    header, main { padding-left: 10px; padding-right: 10px; }
+    .form { grid-template-columns: 1fr; gap: 4px; }
+    .form label { margin-top: 6px; }
+    th, td { padding: 5px 6px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ultra baremetal CI</h1>
+  <span class="sub" id="status">connecting...</span>
+</header>
+<main>
+  <h2>Machines</h2>
+  <div class="machines" id="machines"></div>
+
+  <div class="sechead">
+    <h2>Jobs</h2>
+    <button onclick="openForm()">new job</button>
+  </div>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr>
+      <th>id</th><th>created</th><th>state</th><th>machines</th>
+      <th>build</th><th></th>
+    </tr></thead>
+    <tbody id="jobs"></tbody>
+  </table>
+  </div>
+</main>
+
+<dialog id="newjob">
+  <h2>New job</h2>
+  <div class="form">
+    <label>kernel binary</label>
+    <input type="file" id="kfile">
+    <label>machines</label>
+    <div id="f-machines">(loading...)</div>
+    <label>extra cmdline</label>
+    <input type="text" id="f-cmdline"
+           placeholder="appended after the serial console args">
+    <label>mode</label>
+    <select id="f-mode" onchange="modeChanged()">
+      <option value="collect">collect logs</option>
+      <option value="criteria">judge pass/fail</option>
+    </select>
+    <label id="l-runfor">run for</label>
+    <div class="runfor" id="f-runfor-row">
+      <input type="number" id="f-runfor" min="1" step="any"
+             placeholder="seconds">
+      <span>s after</span>
+      <input type="text" id="f-runafter"
+             placeholder="regex, empty = first output">
+      <span class="hint">no duration: hold until stopped or
+        the timeout</span>
+    </div>
+    <label id="l-success" hidden>success regex</label>
+    <input type="text" id="f-success" hidden>
+    <label id="l-failures" hidden>failure regexes</label>
+    <textarea id="f-failures" hidden
+              placeholder="one per line"></textarea>
+    <label>timeout (s)</label>
+    <input type="number" id="f-timeout" min="1" step="any"
+           placeholder="server default">
+    <div class="span2">
+      <button id="f-submit" onclick="submitJob()">submit</button>
+      <button onclick="closeForm()">cancel</button>
+      <span id="f-status"></span>
+    </div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+let state = null;
+let stateAt = 0;
+let formMachinesReady = false;
+let stateTimer = null;
+let logTimer = null;
+const open = {};
+
+const $ = id => document.getElementById(id);
+
+// Identical markup is not re-rendered, a rewrite every poll wipes
+// the reader's text selection
+const rendered = {};
+function setHTML(id, html) {
+  if (rendered[id] === html) return;
+  rendered[id] = html;
+  $(id).innerHTML = html;
+}
+
+function setElHTML(el, html) {
+  if (el._html === html) return;
+  el._html = html;
+  el.innerHTML = html;
+}
+
+function setElText(el, text) {
+  if (el._html === text) return;
+  el._html = text;
+  el.textContent = text;
+}
+
+function fmtDuration(r) {
+  if (!r.started_at) return "";
+  const end = r.finished_at || Date.now() / 1000;
+  const s = Math.max(0, Math.round(end - r.started_at));
+  return s >= 60 ? `${Math.floor(s / 60)}m${s % 60}s` : `${s}s`;
+}
+
+function fmtAgo(t) {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - t));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function fmtTime(t) {
+  return new Date(t * 1000).toLocaleString();
+}
+
+async function apiFetch(path, opts) {
+  const token = localStorage.getItem("ci-token");
+  if (token) {
+    opts = opts || {};
+    opts.headers = Object.assign(
+      {}, opts.headers || {}, {"X-Auth-Token": token});
+  }
+  let r = await fetch(path, opts);
+  if (r.status === 403) {
+    const entered = prompt("CI auth token");
+    if (entered) {
+      localStorage.setItem("ci-token", entered);
+      return apiFetch(path, opts);
+    }
+  }
+  return r;
+}
+
+function stCls(s) { return "v v-" + s; }
+
+function powerLabel(m) {
+  if (m.busy) return ["busy", "v-active"];
+  if (m.driver !== "amt") return [m.driver, "v-done"];
+  if (m.checked_at === undefined) return ["...", "v-canceled"];
+  if (m.power === 2) return ["on", "v-pass"];
+  if (m.power === null || m.power === undefined)
+    return ["unreachable", "v-fail"];
+  return ["off", "v-canceled"];
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderMachines(machines) {
+  setHTML("machines", machines.map(m => {
+    const [label, cls] = powerLabel(m);
+    const desc = m.description ? esc(m.description) : "";
+    const lr = m.last_run;
+    const last = lr
+      ? `<br><span class="sub">last <span class="${stCls(lr.verdict)}">` +
+        `${lr.verdict}</span> in <a href="#job/${lr.job}">${lr.job}</a>` +
+        (lr.finished_at ? `, ${fmtAgo(lr.finished_at)}` : "") + `</span>`
+      : "";
+    return `<div class="machine"><span class="${cls}">` +
+      `<span class="dot"></span>${esc(m.name)}</span> ` +
+      `<span class="v ${cls}">${label}</span><br>` +
+      `<span class="sub">${esc(m.host || "")}</span>` +
+      (desc ? `<br><span class="sub">${desc}</span>` : "") +
+      last + `</div>`;
+  }).join(""));
+  if (!formMachinesReady) {
+    formMachinesReady = true;
+    const def = state.default_machine || (machines[0] || {}).name;
+    $("f-machines").innerHTML = machines.map(m => {
+      const title = esc(m.description || "");
+      const on = m.name === def ? " checked" : "";
+      return `<label title="${title}">` +
+        `<input type="checkbox" class="mach-cb" ` +
+        `value="${esc(m.name)}"${on}> ${esc(m.name)}</label>`;
+    }).join("") +
+      `<a class="pick" href="#" onclick="pickMachines(true);` +
+      `return false">all</a>` +
+      `<a class="pick" href="#" onclick="pickMachines(false);` +
+      `return false">none</a>`;
+  }
+}
+
+function pickMachines(on) {
+  for (const cb of document.querySelectorAll(".mach-cb"))
+    cb.checked = on;
+}
+
+function jobState(j) {
+  return j.verdict || j.state;
+}
+
+function jobBuild(j) {
+  const m = j.meta || {};
+  const parts = [m.git_describe, m.branch].filter(Boolean).map(esc);
+  if (m.file) parts.push(`<span class="file">${esc(m.file)}</span>`);
+  if (m.rerun_of)
+    parts.push(`rerun of <a href="#job/${esc(m.rerun_of)}">` +
+               `${esc(m.rerun_of)}</a>`);
+  return parts.join(" ");
+}
+
+function jobRowHTML(j) {
+  const runs = Object.entries(j.runs).map(([n, r]) =>
+    `<span class="${stCls(r.verdict || r.state)}">` +
+    `${esc(n)}:${r.verdict || r.state}</span>`
+  ).join(" ");
+  const act = j.state === "done"
+    ? `<button onclick="rerun('${j.id}');event.stopPropagation()">` +
+      `rerun</button>`
+    : `<button onclick="cancel('${j.id}');event.stopPropagation()">` +
+      `cancel</button>`;
+  return `<td>${j.id}</td>` +
+    `<td class="when" title="${esc(fmtTime(j.created_at))}">` +
+    `${fmtAgo(j.created_at)}</td>` +
+    `<td class="${stCls(jobState(j))}">${jobState(j)}</td>` +
+    `<td>${runs}</td><td class="meta">${jobBuild(j)}</td>` +
+    `<td>${act}</td>`;
+}
+
+function rowOf(id, kind) {
+  return $("jobs").querySelector(`tr.${kind}[data-job="${id}"]`);
+}
+
+function makeExpandRow(id) {
+  const tr = document.createElement("tr");
+  tr.className = "expand";
+  tr.dataset.job = id;
+  tr.innerHTML = `<td colspan="6">` +
+    `<div class="runbtns"></div>` +
+    `<div class="logbar"><span class="reason"></span>` +
+    `<button class="followbtn on" onclick="setFollow('${id}', null)">` +
+    `follow</button>` +
+    `<button onclick="setFollow('${id}', true)">bottom</button>` +
+    `<button class="wrapbtn on" onclick="toggleWrap('${id}')">wrap</button>` +
+    `<button onclick="downloadLog('${id}')">download</button>` +
+    `</div><pre class="log"></pre><div class="events"></div></td>`;
+  tr.querySelector(".log").addEventListener("scroll", () => {
+    const el = tr.querySelector(".log");
+    const st = open[id];
+    if (!st) return;
+    const atBottom =
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+    if (st.follow && !atBottom) setFollow(id, false);
+    else if (!st.follow && atBottom) setFollow(id, true);
+  });
+  return tr;
+}
+
+function renderJobs(jobs) {
+  const tbody = $("jobs");
+  const seen = new Set();
+  let cursor = tbody.firstElementChild;
+  for (const j of jobs) {
+    seen.add(j.id);
+    let row = rowOf(j.id, "job");
+    if (!row) {
+      row = document.createElement("tr");
+      row.className = "job";
+      row.dataset.job = j.id;
+      row.onclick = () => toggleJob(j.id);
+      tbody.insertBefore(row, cursor);
+    } else if (row !== cursor) {
+      tbody.insertBefore(row, cursor);
+    }
+    setElHTML(row, jobRowHTML(j));
+    row.classList.toggle("selected", !!open[j.id]);
+    cursor = row.nextElementSibling;
+    if (open[j.id]) {
+      let ex = rowOf(j.id, "expand");
+      if (!ex) {
+        ex = makeExpandRow(j.id);
+        tbody.insertBefore(ex, cursor);
+      } else if (ex !== cursor) {
+        tbody.insertBefore(ex, cursor);
+      }
+      cursor = ex.nextElementSibling;
+      renderDetail(j, ex);
+    }
+  }
+  while (cursor) {
+    const next = cursor.nextElementSibling;
+    cursor.remove();
+    cursor = next;
+  }
+  for (const id of Object.keys(open))
+    if (!seen.has(id)) delete open[id];
+}
+
+function jobById(id) {
+  return state ? state.jobs.find(j => j.id === id) || null : null;
+}
+
+function describeParams(p) {
+  const out = [];
+  if (p.success) out.push(`success /${p.success}/`);
+  if (p.failures && p.failures.length)
+    out.push(`failures ${p.failures.map(f => `/${f}/`).join(" ")}`);
+  if (p.run_for !== null && p.run_for !== undefined)
+    out.push(`run for ${p.run_for}s` +
+             (p.run_for_after ? ` after /${p.run_for_after}/` : ""));
+  if (!p.success && (p.run_for === null || p.run_for === undefined))
+    out.push("hold until stopped");
+  out.push(`timeout ${p.timeout}s`);
+  if (p.cmdline) out.push(`cmdline "${p.cmdline}"`);
+  return out.join(", ");
+}
+
+function renderDetail(j, ex) {
+  const st = open[j.id];
+  setElHTML(ex.querySelector(".runbtns"),
+    Object.entries(j.runs).map(([n, r]) => {
+      const cls = n === st.run ? "sel" : "";
+      const rs = r.verdict || r.state;
+      const dur = fmtDuration(r);
+      return `<button class="${cls}" ` +
+        `onclick="selectRun('${j.id}', '${esc(n)}')">` +
+        `${esc(n)} <span class="${stCls(rs)}">${rs}</span>` +
+        (dur ? ` <span class="dur">${dur}</span>` : "") + `</button>`;
+    }).join(""));
+  const run = st.run && j.runs[st.run];
+  const rs = run ? (run.verdict || run.state) : "";
+  setElHTML(ex.querySelector(".reason"), run
+    ? `<span class="${stCls(rs)}">${esc(st.run)}: ${rs}</span>` +
+      (run.detail ? ` ${esc(run.detail)}` : "")
+    : "");
+  setElText(ex.querySelector(".events"),
+    describeParams(j.params) + "\n" + j.events.slice(-8).join("\n"));
+}
+
+// The run a reader most likely wants first: the worst finished one,
+// else the one in progress
+function pickRun(j) {
+  const rank = ["fail", "timeout", "infra", "running", "booting"];
+  const entries = Object.entries(j.runs);
+  for (const want of rank)
+    for (const [n, r] of entries)
+      if ((r.verdict || r.state) === want) return n;
+  return entries.length ? entries[0][0] : null;
+}
+
+function updateHash() {
+  const ids = Object.keys(open);
+  history.replaceState(null, "",
+    ids.length ? `#job/${ids[ids.length - 1]}` : location.pathname);
+}
+
+function toggleJob(id) {
+  if (open[id]) {
+    delete open[id];
+    const ex = rowOf(id, "expand");
+    if (ex) ex.remove();
+    updateHash();
+    if (state) renderJobs(state.jobs);
+    return;
+  }
+  const j = jobById(id);
+  if (!j) return;
+  open[id] = {run: pickRun(j), offset: 0, gen: 0, done: false,
+              follow: true};
+  updateHash();
+  renderJobs(state.jobs);
+  scheduleLogs(0);
+  const row = rowOf(id, "job");
+  if (row) row.scrollIntoView({block: "nearest", behavior: "smooth"});
+}
+
+function closeAll() {
+  for (const id of Object.keys(open)) toggleJob(id);
+}
+
+function openFromHash() {
+  const m = /^#job\/([0-9]+)$/.exec(location.hash);
+  if (m && state && !open[m[1]]) toggleJob(m[1]);
+}
+
+function selectRun(id, name) {
+  const st = open[id];
+  if (!st) return;
+  st.run = name;
+  resetLog(id);
+  const j = jobById(id);
+  const ex = rowOf(id, "expand");
+  if (j && ex) renderDetail(j, ex);
+  scheduleLogs(0);
+}
+
+function resetLog(id) {
+  const st = open[id];
+  st.offset = 0;
+  st.gen++;
+  st.done = false;
+  const ex = rowOf(id, "expand");
+  if (ex) ex.querySelector(".log").textContent = "";
+  setFollow(id, true);
+}
+
+function setFollow(id, on) {
+  const st = open[id];
+  const ex = rowOf(id, "expand");
+  if (!st || !ex) return;
+  if (on === null) on = !st.follow;
+  st.follow = on;
+  const btn = ex.querySelector(".followbtn");
+  btn.className = "followbtn" + (on ? " on" : "");
+  btn.textContent = on ? "follow" : "follow paused";
+  const el = ex.querySelector(".log");
+  if (on) el.scrollTop = el.scrollHeight;
+}
+
+function toggleWrap(id) {
+  const ex = rowOf(id, "expand");
+  if (!ex) return;
+  const el = ex.querySelector(".log");
+  el.classList.toggle("nowrap");
+  ex.querySelector(".wrapbtn").className =
+    "wrapbtn" + (el.classList.contains("nowrap") ? "" : " on");
+}
+
+async function downloadLog(id) {
+  const st = open[id];
+  if (!st || !st.run) return;
+  try {
+    const r = await apiFetch(`/api/jobs/${id}/log/${st.run}?full=1`);
+    if (!r.ok) return;
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${id}-${st.run}.log`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (e) {}
+}
+
+// Polling is scheduled after each request completes rather than on
+// a fixed interval: state every 2s while a job is live and every 10s
+// when idle, logs every second per open live run, slower while the
+// tab is hidden. The Pi pays for every poll.
+function scheduleState(ms) {
+  clearTimeout(stateTimer);
+  stateTimer = setTimeout(refresh, ms);
+}
+
+function scheduleLogs(ms) {
+  clearTimeout(logTimer);
+  logTimer = setTimeout(pollLogs, ms);
+}
+
+function anyLive() {
+  return !!state && state.jobs.some(j => j.state !== "done");
+}
+
+async function pollOne(id) {
+  const st = open[id];
+  const ex = rowOf(id, "expand");
+  if (!st || !ex || !st.run || st.done) return;
+  const gen = st.gen;
+  const r = await apiFetch(
+    `/api/jobs/${id}/log/${st.run}?offset=${st.offset}`);
+  if (gen !== st.gen || !open[id]) return;
+  if (!r.ok) return;
+  st.offset = parseInt(r.headers.get("X-Next-Offset"));
+  const text = await r.text();
+  if (gen !== st.gen || !open[id]) return;
+  if (text) {
+    const el = ex.querySelector(".log");
+    el.appendChild(document.createTextNode(text));
+    if (st.follow) el.scrollTop = el.scrollHeight;
+  } else {
+    // A finished job's log is complete once a poll comes back empty
+    const j = jobById(id);
+    st.done = !!j && j.state === "done";
+  }
+}
+
+async function pollLogs() {
+  const ids = Object.keys(open).filter(id => !open[id].done);
+  if (!ids.length) return;
+  if (document.hidden) { scheduleLogs(5000); return; }
+  let next = 1000;
+  for (const id of ids) {
+    try {
+      await pollOne(id);
+    } catch (e) {
+      next = 5000;
+    }
+  }
+  if (Object.keys(open).some(id => !open[id].done)) scheduleLogs(next);
+}
+
+async function refresh() {
+  let next = document.hidden ? 30000 : 10000;
+  try {
+    const r = await apiFetch("/api/state");
+    state = await r.json();
+    stateAt = Date.now();
+    const live = state.jobs.filter(j => j.state !== "done").length;
+    $("status").className = "sub";
+    $("status").textContent =
+      `${state.machines.length} machines, ` +
+      (live ? `${live} live, ` : "") +
+      `${state.jobs.length} recent jobs`;
+    renderMachines(state.machines);
+    renderJobs(state.jobs);
+    openFromHash();
+    if (anyLive() && !document.hidden) next = 2000;
+  } catch (e) {
+    $("status").className = "sub stale";
+    $("status").textContent = stateAt
+      ? `server unreachable, showing data from ${fmtAgo(stateAt / 1000)}`
+      : "server unreachable";
+    next = 5000;
+  }
+  scheduleState(next);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) { refresh(); scheduleLogs(0); }
+});
+
+function openForm() {
+  $("f-status").textContent = "";
+  const c = (state && state.criteria) || {};
+  if (!$("f-success").value && c.success)
+    $("f-success").value = c.success;
+  if (!$("f-failures").value && c.failures && c.failures.length)
+    $("f-failures").value = c.failures.join("\n");
+  if (!$("f-runafter").value && c.kernel_start)
+    $("f-runafter").value = c.kernel_start;
+  $("newjob").showModal();
+}
+
+function closeForm() {
+  $("newjob").close();
+}
+
+function modeChanged() {
+  const criteria = $("f-mode").value === "criteria";
+  for (const id of ["l-success", "f-success",
+                    "l-failures", "f-failures"])
+    $(id).hidden = !criteria;
+  for (const id of ["l-runfor", "f-runfor-row"])
+    $(id).hidden = criteria;
+}
+
+function positiveOrNull(id, what) {
+  const raw = $(id).value.trim();
+  if (!raw) return null;
+  const v = parseFloat(raw);
+  if (!(v > 0) || !isFinite(v)) throw new Error(`${what} must be > 0`);
+  return v;
+}
+
+async function checkKernel(file) {
+  const h = new Uint8Array(await file.slice(0, 20).arrayBuffer());
+  if (h.length < 20 || h[0] !== 0x7f || h[1] !== 0x45 ||
+      h[2] !== 0x4c || h[3] !== 0x46)
+    throw new Error(`${file.name} is not an ELF file (an ISO?)`);
+  const machine = h[18] | (h[19] << 8);
+  if (h[4] !== 2 || h[5] !== 1 || machine !== 0x3e)
+    throw new Error(`${file.name} is not an x86-64 ELF binary`);
+}
+
+function formPayload() {
+  const checked = [...document.querySelectorAll(".mach-cb:checked")]
+    .map(c => c.value);
+  if (!checked.length) throw new Error("pick at least one machine");
+  const payload = {machines: checked};
+  const cmdline = $("f-cmdline").value.trim();
+  if (cmdline) payload.cmdline = cmdline;
+  const timeout = positiveOrNull("f-timeout", "timeout");
+  if (timeout) payload.timeout = timeout;
+  if ($("f-mode").value === "criteria") {
+    if (!$("f-success").value.trim())
+      throw new Error("success regex is required");
+    payload.success = $("f-success").value.trim();
+    const fails = $("f-failures").value.split("\n")
+      .map(s => s.trim()).filter(Boolean);
+    if (fails.length) payload.failures = fails;
+  } else {
+    const rf = positiveOrNull("f-runfor", "run for");
+    const anchor = $("f-runafter").value.trim();
+    if (anchor && !rf)
+      throw new Error("an anchor regex needs a run for duration, " +
+                      "it only says when that clock starts");
+    if (rf) payload.run_for = rf;
+    if (rf && anchor) payload.run_for_after = anchor;
+  }
+  return payload;
+}
+
+async function submitJob() {
+  const file = $("kfile").files[0];
+  let payload;
+  try {
+    if (!file) throw new Error("pick a kernel");
+    await checkKernel(file);
+    payload = formPayload();
+  } catch (e) {
+    $("f-status").textContent = e.message;
+    return;
+  }
+  $("f-submit").disabled = true;
+  $("f-status").textContent = "uploading...";
+
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i += 32768)
+      bin += String.fromCharCode.apply(null, buf.subarray(i, i + 32768));
+    payload.kernel_b64 = btoa(bin);
+    payload.meta = {source: "webui", file: file.name};
+
+    const r = await apiFetch("/api/jobs", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    const res = await r.json();
+    if (res.error) {
+      $("f-status").textContent = `error: ${res.error}`;
+      return;
+    }
+    closeForm();
+    await refresh();
+    if (!open[res.id]) toggleJob(res.id);
+  } catch (e) {
+    $("f-status").textContent = "submit failed";
+  } finally {
+    $("f-submit").disabled = false;
+  }
+}
+
+async function cancel(id) {
+  try {
+    await apiFetch(`/api/jobs/${id}/cancel`, {method: "POST"});
+  } catch (e) {}
+  refresh();
+}
+
+async function rerun(id) {
+  try {
+    const r = await apiFetch(`/api/jobs/${id}/rerun`, {method: "POST"});
+    const res = await r.json();
+    await refresh();
+    if (res.id && !open[res.id]) toggleJob(res.id);
+  } catch (e) {
+    refresh();
+  }
+}
+
+$("newjob").addEventListener("click", e => {
+  const r = $("newjob").getBoundingClientRect();
+  const inside = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top && e.clientY <= r.bottom;
+  if (!inside) closeForm();
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("newjob").open) closeAll();
+});
+window.addEventListener("hashchange", openFromHash);
+
+modeChanged();
+refresh();
+</script>
+</body>
+</html>
