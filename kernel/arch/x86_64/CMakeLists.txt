@@ -48,7 +48,6 @@ ultra_compile_options(
     -mno-sse
     -mno-mmx
     -mno-sse2
-    -mno-3dnow
     -mno-avx
     -mskip-rax-setup
 )
