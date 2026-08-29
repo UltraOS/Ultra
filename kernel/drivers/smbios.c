@@ -384,7 +384,7 @@ static error_t INIT_CODE smbios_setup(void)
     else if (CHECK_SIGNATURE(smbios_base, DMI_SIGNATURE))
         dmi_setup(smbios_base);
     else
-        pr_info("bad/unsupported signature\n");
+        pr_err("bad/unsupported signature: '%.5s'\n", (char*)smbios_base);
 
     io_window_unmap_ptr(smbios_base, PAGE_SIZE);
 
