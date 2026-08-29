@@ -472,6 +472,8 @@ static INIT_CODE error_t range_append(struct memory_range *mr)
 
 phys_addr_or_error_t INIT_CODE boot_alloc(size_t num_pages)
 {
+    BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
+
     if (unlikely(!maybe_grow_buffer()))
         return encode_error_phys_addr(ENOMEM);
 
@@ -494,6 +496,8 @@ phys_addr_or_error_t INIT_CODE boot_alloc_aligned(
     size_t num_pages, size_t align
 )
 {
+    BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
+
     if (unlikely(!maybe_grow_buffer()))
         return encode_error_phys_addr(ENOMEM);
 
@@ -540,6 +544,8 @@ phys_addr_or_error_t INIT_CODE boot_alloc_at(
     phys_addr_t address, size_t num_pages
 )
 {
+    BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
+
     if (unlikely(!maybe_grow_buffer()))
         return encode_error_phys_addr(ENOMEM);
 
@@ -550,6 +556,8 @@ phys_addr_or_error_t INIT_CODE boot_alloc_at(
 
 void INIT_CODE boot_free(phys_addr_t address, size_t num_pages)
 {
+    BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
+
     ssize_t mr_idx;
 
     struct memory_range freed_range = {

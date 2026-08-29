@@ -14,6 +14,8 @@
 
 static void boot_allocator_setup(struct memory_range *ranges, size_t count)
 {
+    s_test_init_level = INIT_LEVEL_MEMORY_MAP_AVAILABLE;
+
     s_buffer = s_initial_buffer;
     s_capacity = BOOT_ALLOC_INITIAL_CAPACITY;
     s_entry_count = count;
@@ -419,6 +421,7 @@ static void allocator_state_setup(struct memory_range *ranges, size_t count)
 
     boot_allocator_setup(ranges, count);
     buddy_setup();
+    s_test_init_level = NUM_INIT_LEVELS;
     kernel_heap_init();
 }
 
