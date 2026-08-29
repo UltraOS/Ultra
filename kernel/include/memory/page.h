@@ -264,9 +264,9 @@ static inline ptr_t page_to_block_ptr(const struct page *page)
     return (ptr_t)page;
 }
 
-#define page_to_block(p) (_Generic((p),                                  \
-    const struct page *: (const struct page_block *)page_to_block_ptr(p),\
-          struct page *: (struct page_block *)page_to_block_ptr(p)))
+#define page_to_block(p) (_Generic((p),                                 \
+    const struct page*: (const struct page_block*)page_to_block_ptr(p), \
+          struct page*: (struct page_block*)page_to_block_ptr(p)))
 
 extern struct page *g_memory_map;
 
