@@ -127,6 +127,11 @@ KERNEL_FILE(
     INCLUDE_FILE "cpu_mask.h"
 )
 KERNEL_FILE(SOURCE_PATH "arch/x86_64" SOURCE_FILE "vector_alloc.c")
+KERNEL_FILE(SOURCE_PATH "irq" SOURCE_FILE "chip.c")
+KERNEL_FILE(SOURCE_PATH "irq" SOURCE_FILE "domain.c")
+KERNEL_FILE(SOURCE_PATH "irq" SOURCE_FILE "request.c")
+KERNEL_FILE(INCLUDE_FILE "irq.h")
+KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "irq.h")
 KERNEL_FILE(
     SOURCE_PATH "arch/x86_64/include/arch/private" SOURCE_FILE "idt.h"
 )
