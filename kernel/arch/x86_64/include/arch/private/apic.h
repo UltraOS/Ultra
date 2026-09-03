@@ -90,6 +90,7 @@ void apic_cpu_init(void);
 
 void apic_eoi(void);
 bool apic_vector_in_isr(u8 vector);
+bool apic_vector_in_tmr(u8 vector);
 
 void apic_icr_write(u32 value, u32 dest_apic_id);
 void apic_send_fixed_ipi(u32 dest_apic_id, u8 vector);
