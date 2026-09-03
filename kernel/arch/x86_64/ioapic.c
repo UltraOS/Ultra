@@ -305,12 +305,7 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
         goto out_no_reg;
     }
 
-    new_ioapic->base = base;
-    new_ioapic->gsi_base = gsi_base;
-
     if (unlikely(base == 0)) {
-        new_ioapic->id = id;
-        new_ioapic->gsi_last = gsi_base;
         why = "invalid base address";
         goto out_no_reg;
     }
@@ -334,6 +329,8 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     }
 
     new_ioapic->id = id;
+    new_ioapic->base = base;
+    new_ioapic->gsi_base = gsi_base;
     new_ioapic->gsi_last = gsi_base + BIT_FIELD_READ(
         ioapic_read(new_ioapic, IOAPIC_REG_VER), IOAPIC_MAX_REDIR_ENTRY
     );
@@ -353,8 +350,7 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
 
 out_no_reg:
     pr_warn(
-       "unable to register IOAPIC[%u] (0x%llX, GSI[%u->%u]): %s\n",
-       new_ioapic->id, new_ioapic->base, new_ioapic->gsi_base,
-       new_ioapic->gsi_last, why
+        "unable to register IOAPIC[%u] (0x%llX, GSI base %u): %s\n",
+        id, base, gsi_base, why
     );
 }
