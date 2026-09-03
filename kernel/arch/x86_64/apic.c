@@ -104,14 +104,24 @@ static enum apic_reg apic_bitmap_reg(enum apic_reg base, u32 index)
     return base + index * APIC_REG_STRIDE;
 }
 
-bool apic_vector_in_isr(u8 vector)
+static bool apic_bitmap_test(enum apic_reg base, u8 vector)
 {
     u32 value;
 
     value = g_apic->read(
-        apic_bitmap_reg(APIC_REG_ISR, vector / APIC_BITS_PER_BITMAP_REG)
+        apic_bitmap_reg(base, vector / APIC_BITS_PER_BITMAP_REG)
     );
     return value & BIT_U32(vector % APIC_BITS_PER_BITMAP_REG);
+}
+
+bool apic_vector_in_isr(u8 vector)
+{
+    return apic_bitmap_test(APIC_REG_ISR, vector);
+}
+
+bool apic_vector_in_tmr(u8 vector)
+{
+    return apic_bitmap_test(APIC_REG_TMR, vector);
 }
 
 FIXED_VECTOR_HANDLER(X86_APIC_SPURIOUS, VECTOR_APIC_SPURIOUS)

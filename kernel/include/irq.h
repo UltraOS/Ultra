@@ -60,6 +60,11 @@ static inline bool irq_trigger_is_level(enum irq_trigger trigger)
     return (trigger & IRQ_TRIGGER_LEVEL) != 0;
 }
 
+static inline bool irq_trigger_is_active_low(enum irq_trigger trigger)
+{
+    return (trigger & IRQ_TRIGGER_ACTIVE_LOW) != 0;
+}
+
 /*
  * The identity of an interrupt line: the controller it enters the
  * hierarchy through, the line number in that controller's own

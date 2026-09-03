@@ -1,39 +1,72 @@
 #define MSG_FMT(msg) "ioapic: " msg
 
 #include <arch/private/ioapic.h>
+#include <arch/private/irq.h>
+#include <arch/private/apic.h>
 #include <arch/constants.h>
+
+#include <private/irq.h>
 
 #include <log.h>
 #include <bug.h>
+#include <init_level.h>
 #include <free_after_init.h>
+#include <spinlock.h>
 
 #include <memory/io.h>
+#include <memory/alloc.h>
 
 #include <uacpi/acpi.h>
 #include <uacpi/tables.h>
 
 #include <common/string.h>
+#include <common/format.h>
 #include <common/bit.h>
 
 #define IOAPIC_IOREGSEL 0x00
 #define IOAPIC_IOWIN 0x10
+#define IOAPIC_EOIR 0x40
 
 enum ioapic_reg {
     IOAPIC_REG_ID = 0x00,
         #define IOAPIC_ID MAKE_BIT_MASK(31, 24)
 
     IOAPIC_REG_VER = 0x01,
+        #define IOAPIC_VERSION MAKE_BIT_MASK(7, 0)
         #define IOAPIC_MAX_REDIR_ENTRY MAKE_BIT_MASK(23, 16)
+
+        // The directed EOI register only exists from this version on
+        #define IOAPIC_MIN_VERSION_EOIR 0x20
 
     IOAPIC_REG_ARB = 0x02,
     IOAPIC_REG_IOREDTBL = 0x10,
+        // Two registers per entry, the low word first
+        #define IOAPIC_RTE_STRIDE 2
+        #define IOAPIC_RTE_VECTOR_MASK MAKE_BIT_MASK_U32(7, 0)
+        #define IOAPIC_RTE_DELIVERY_MASK MAKE_BIT_MASK_U32(10, 8)
+        #define IOAPIC_RTE_DELIVERY_SMI 0x2
+        #define IOAPIC_RTE_DEST_MODE_LOGICAL BIT_U32(11)
+        #define IOAPIC_RTE_ACTIVE_LOW BIT_U32(13)
+        #define IOAPIC_RTE_REMOTE_IRR BIT_U32(14)
+        #define IOAPIC_RTE_LEVEL BIT_U32(15)
+        #define IOAPIC_RTE_MASKED BIT_U32(16)
+
+        // The high half of an entry
+        #define IOAPIC_RTE_VIRT_DESTID_8_14_MASK MAKE_BIT_MASK_U32(23, 17)
+        #define IOAPIC_RTE_DESTID_0_7_MASK MAKE_BIT_MASK_U32(31, 24)
 };
 
 struct ioapic {
     u8 id;
+    u8 version;
     phys_addr_t base;
     io_window iow;
     u32 gsi_base, gsi_last;
+
+    // Guards the two-step index/data register window
+    struct spinlock lock;
+    struct irq_domain domain;
+    char name[16];
 };
 
 #define MAX_IOAPICS 128
@@ -41,6 +74,11 @@ struct ioapic {
 
 static struct ioapic s_ioapics[MAX_IOAPICS];
 static size_t s_num_ioapics;
+
+static u32 ioapic_num_pins(struct ioapic *ioapic)
+{
+    return ioapic->gsi_last - ioapic->gsi_base + 1;
+}
 
 static struct ioapic *find_ioapic_for_gsi(u32 gsi)
 {
@@ -287,6 +325,354 @@ static u32 ioapic_read(struct ioapic *ioapic, enum ioapic_reg reg)
     return value;
 }
 
+static void ioapic_write(struct ioapic *ioapic, enum ioapic_reg reg, u32 value)
+{
+    iowrite32(&ioapic->iow, IOAPIC_IOREGSEL, (u32)reg);
+    iowrite32(&ioapic->iow, IOAPIC_IOWIN, value);
+}
+
+/*
+ * IOAPIC register writes are posted, but for some writes (namely masking an
+ * RTE), it's very important that the write completes before returning back.
+ * We accomplish this by simply reading back what we wrote.
+ */
+static void ioapic_write_sync(
+    struct ioapic *ioapic, enum ioapic_reg reg, u32 value
+)
+{
+    ioapic_write(ioapic, reg, value);
+    ioread32(&ioapic->iow, IOAPIC_IOWIN);
+}
+
+static enum ioapic_reg ioapic_rte_low_reg(u32 pin)
+{
+    return IOAPIC_REG_IOREDTBL + pin * IOAPIC_RTE_STRIDE;
+}
+
+static enum ioapic_reg ioapic_rte_high_reg(u32 pin)
+{
+    return ioapic_rte_low_reg(pin) + 1;
+}
+
+/*
+ * Clear a level pin's Remote IRR without the EOI broadcast, the
+ * caller holds the lock.
+ */
+static void ioapic_pin_eoi(struct ioapic *ioapic, u32 pin, u8 vector)
+{
+    enum ioapic_reg reg;
+    u32 value;
+
+    if (ioapic->version >= IOAPIC_MIN_VERSION_EOIR) {
+        iowrite32(&ioapic->iow, IOAPIC_EOIR, vector);
+        return;
+    }
+
+    /*
+     * No EOI register: flipping the masked entry to edge and back
+     * drops the latch instead.
+     */
+    reg = ioapic_rte_low_reg(pin);
+    value = ioapic_read(ioapic, reg);
+    ioapic_write(
+        ioapic, reg, (value | IOAPIC_RTE_MASKED) & ~IOAPIC_RTE_LEVEL
+    );
+    ioapic_write(ioapic, reg, value);
+}
+
+// The domain's private bookkeeping for one allocated pin
+struct ioapic_route {
+    struct ioapic *ioapic;
+
+    // The low word of the entry as last written, mask bit included
+    u32 rte_low;
+};
+
+static void ioapic_pin_set_masked(struct irq_level *level, bool masked)
+{
+    struct ioapic_route *route = level->chip_data;
+    struct ioapic *ioapic = route->ioapic;
+    enum ioapic_reg reg;
+    irq_state_t irq_state;
+
+    reg = ioapic_rte_low_reg(level->line);
+
+    irq_state = spin_lock_irq_save(&ioapic->lock);
+
+    if (masked) {
+        route->rte_low |= IOAPIC_RTE_MASKED;
+        // Masking must be done synchronously
+        ioapic_write_sync(ioapic, reg, route->rte_low);
+    } else {
+        route->rte_low &= ~IOAPIC_RTE_MASKED;
+        ioapic_write(ioapic, reg, route->rte_low);
+    }
+
+    spin_unlock_irq_restore(&ioapic->lock, irq_state);
+}
+
+static void ioapic_chip_mask(struct irq_level *level)
+{
+    ioapic_pin_set_masked(level, true);
+}
+
+static void ioapic_chip_unmask(struct irq_level *level)
+{
+    ioapic_pin_set_masked(level, false);
+}
+
+static void ioapic_chip_eoi(struct irq_level *level)
+{
+    struct ioapic_route *route = level->chip_data;
+    struct ioapic *ioapic = route->ioapic;
+    irq_state_t irq_state;
+    u8 vector;
+
+    vector = route->rte_low & IOAPIC_RTE_VECTOR_MASK;
+    if (likely(apic_vector_in_tmr(vector)))
+        /*
+         * LAPIC agrees that this IRQ is level triggered, so nothing is needed
+         * on our side.
+         */
+        return;
+
+    /*
+     * IOAPIC decided to send this IRQ as edge triggered, so LAPIC EOI
+     * won't clear it, we must do it ourselves. If we don't, Remote IRR
+     * will remain set so this pin will remain blocked forever.
+     */
+    irq_state = spin_lock_irq_save(&ioapic->lock);
+    ioapic_pin_eoi(ioapic, level->line, vector);
+    spin_unlock_irq_restore(&ioapic->lock, irq_state);
+}
+
+/*
+ * A level occurrence the target CPU has accepted but not yet serviced
+ * holds Remote IRR, and only an EOI arriving while the entry is still
+ * level with the same vector releases it. The bit means nothing for
+ * an edge entry.
+ */
+static bool ioapic_chip_is_outstanding(struct irq_level *level)
+{
+    struct ioapic_route *route = level->chip_data;
+    struct ioapic *ioapic = route->ioapic;
+    irq_state_t irq_state;
+    u32 value;
+
+    irq_state = spin_lock_irq_save(&ioapic->lock);
+    value = ioapic_read(ioapic, ioapic_rte_low_reg(level->line));
+    spin_unlock_irq_restore(&ioapic->lock, irq_state);
+
+    if (!(value & IOAPIC_RTE_LEVEL))
+        return false;
+
+    return value & IOAPIC_RTE_REMOTE_IRR;
+}
+
+// ack/retrigger are handled by LAPIC
+static const struct irq_chip s_ioapic_chip = {
+    .name = "ioapic",
+    .mask = ioapic_chip_mask,
+    .unmask = ioapic_chip_unmask,
+    .eoi = ioapic_chip_eoi,
+    .is_outstanding = ioapic_chip_is_outstanding,
+};
+
+static error_t ioapic_domain_alloc(
+    struct irq *irq, struct irq_level *level, struct irq_alloc_request *desc
+)
+{
+    struct ioapic *ioapic = level->domain->priv;
+    struct ioapic_route *route;
+    irq_line_t pin = desc->spec.line;
+
+    UNREFERENCED_PARAMETER(irq);
+
+    // A pin latches one edge, the GPIO-world trigger cannot be served
+    if (desc->spec.trigger == IRQ_TRIGGER_EDGE_BOTH)
+        return EINVAL;
+
+    if (pin >= ioapic_num_pins(ioapic))
+        return EINVAL;
+
+    route = alloc(sizeof(*route), ALLOC_GENERIC_ZEROED);
+    if (route == NULL)
+        return ENOMEM;
+
+    route->ioapic = ioapic;
+
+    level->chip = &s_ioapic_chip;
+    level->chip_data = route;
+    level->line = pin;
+    return EOK;
+}
+
+static void ioapic_domain_free(struct irq *irq, struct irq_level *level)
+{
+    UNREFERENCED_PARAMETER(irq);
+    free(level->chip_data);
+}
+
+static error_t ioapic_domain_activate(struct irq *irq, struct irq_level *level)
+{
+    struct ioapic_route *route = level->chip_data;
+    struct ioapic *ioapic = route->ioapic;
+    struct msi_route_msg msg;
+    irq_state_t irq_state;
+    u32 low, high, value;
+
+    irq_hw_compose_msi_route(irq, &msg);
+
+    /*
+     * An RTE is the composed message in a different register layout,
+     * moved field by field since the bit positions differ. The
+     * vector and delivery mode occupy the same bits on both sides.
+     */
+    low = msg.data & (X86_MSI_DATA_VECTOR_MASK | X86_MSI_DATA_DELIVERY_MASK);
+    if (msg.address_low & X86_MSI_ADDR_DEST_MODE_LOGICAL)
+        low |= IOAPIC_RTE_DEST_MODE_LOGICAL;
+
+    value = BIT_FIELD_READ(msg.address_low, X86_MSI_ADDR_DESTID_0_7_MASK);
+    high = BIT_FIELD_MAKE(IOAPIC_RTE_DESTID_0_7_MASK, value);
+
+    value = BIT_FIELD_READ(
+        msg.address_low, X86_MSI_ADDR_VIRT_DESTID_8_14_MASK
+    );
+    high |= BIT_FIELD_MAKE(IOAPIC_RTE_VIRT_DESTID_8_14_MASK, value);
+
+    // Trigger facts are the pin's own, layered on top of the message
+    if (irq_trigger_is_level(irq->spec.trigger))
+        low |= IOAPIC_RTE_LEVEL;
+    if (irq_trigger_is_active_low(irq->spec.trigger))
+        low |= IOAPIC_RTE_ACTIVE_LOW;
+
+    // .activate() expects the line to remain masked until a later .unmask()
+    low |= IOAPIC_RTE_MASKED;
+
+    irq_state = spin_lock_irq_save(&ioapic->lock);
+    route->rte_low = low;
+    ioapic_write(ioapic, ioapic_rte_high_reg(level->line), high);
+    ioapic_write(ioapic, ioapic_rte_low_reg(level->line), low);
+    spin_unlock_irq_restore(&ioapic->lock, irq_state);
+
+    return EOK;
+}
+
+static void ioapic_domain_deactivate(
+    struct irq *irq, struct irq_level *level
+)
+{
+    struct ioapic_route *route = level->chip_data;
+    struct ioapic *ioapic = route->ioapic;
+    irq_state_t irq_state;
+
+    UNREFERENCED_PARAMETER(irq);
+
+    irq_state = spin_lock_irq_save(&ioapic->lock);
+
+    // The mask bit must be in place before the route is wiped
+    ioapic_write(ioapic, ioapic_rte_low_reg(level->line), IOAPIC_RTE_MASKED);
+    ioapic_write(ioapic, ioapic_rte_high_reg(level->line), 0);
+
+    spin_unlock_irq_restore(&ioapic->lock, irq_state);
+}
+
+static const struct irq_domain_ops s_ioapic_domain_ops = {
+    .alloc = ioapic_domain_alloc,
+    .free = ioapic_domain_free,
+    .activate = ioapic_domain_activate,
+    .deactivate = ioapic_domain_deactivate,
+};
+
+error_t ioapic_gsi_to_pin(
+    u32 gsi, struct irq_domain **out_domain, irq_line_t *out_pin
+)
+{
+    struct ioapic *ioapic;
+
+    ioapic = find_ioapic_for_gsi(gsi);
+    if (ioapic == NULL)
+        return ENOENT;
+
+    *out_domain = &ioapic->domain;
+    *out_pin = gsi - ioapic->gsi_base;
+    return EOK;
+}
+
+static void INIT_CODE ioapic_quiesce_pin(struct ioapic *ioapic, u32 pin)
+{
+    enum ioapic_reg reg;
+    u32 value;
+
+    reg = ioapic_rte_low_reg(pin);
+    value = ioapic_read(ioapic, reg);
+
+    // Firmware may route SMI through a pin, that must keep working
+    if (BIT_FIELD_READ(value, IOAPIC_RTE_DELIVERY_MASK) ==
+        IOAPIC_RTE_DELIVERY_SMI)
+        return;
+
+    /*
+     * Remote IRR may still change until the mask lands, the entry
+     * read back afterwards is the settled one.
+     */
+    if (!(value & IOAPIC_RTE_MASKED)) {
+        ioapic_write(ioapic, reg, value | IOAPIC_RTE_MASKED);
+        value = ioapic_read(ioapic, reg);
+    }
+
+    /*
+     * A Remote IRR left set by an interrupt the firmware never
+     * acknowledged blocks the pin forever. An explicit EOI only
+     * clears it in level mode, so force that first.
+     */
+    if (value & IOAPIC_RTE_REMOTE_IRR) {
+        if (!(value & IOAPIC_RTE_LEVEL)) {
+            value |= IOAPIC_RTE_LEVEL;
+            ioapic_write(ioapic, reg, value);
+        }
+
+        ioapic_pin_eoi(ioapic, pin, value & IOAPIC_RTE_VECTOR_MASK);
+    }
+
+    ioapic_write(ioapic, reg, IOAPIC_RTE_MASKED);
+    ioapic_write(ioapic, ioapic_rte_high_reg(pin), 0);
+
+    value = ioapic_read(ioapic, reg);
+    if (unlikely(value & IOAPIC_RTE_REMOTE_IRR)) {
+        pr_warn(
+            "IOAPIC[%u] pin %u Remote IRR is stuck set\n", ioapic->id, pin
+        );
+    }
+}
+
+static error_t INIT_CODE ioapic_domains_init(void)
+{
+    struct ioapic *ioapic;
+    size_t i;
+    u32 pin, num_pins;
+
+    for (i = 0; i < s_num_ioapics; i++) {
+        ioapic = &s_ioapics[i];
+
+        // Nothing may be live before the first request
+        num_pins = ioapic_num_pins(ioapic);
+        for (pin = 0; pin < num_pins; pin++)
+            ioapic_quiesce_pin(ioapic, pin);
+
+        snprintf(ioapic->name, sizeof(ioapic->name), "ioapic-%zu", i);
+        ioapic->domain = (struct irq_domain) {
+            .name = ioapic->name,
+            .ops = &s_ioapic_domain_ops,
+            .priv = ioapic,
+        };
+        irq_domain_register(&ioapic->domain, &g_x86_lapic_domain);
+    }
+
+    return EOK;
+}
+INIT_CALL_PRE(IRQS_AVAILABLE, ioapic_domains_init);
+
 // Nothing is behind the window if every register reads as all ones
 static bool INIT_CODE ioapic_is_absent(struct ioapic *ioapic)
 {
@@ -304,7 +690,10 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     struct ioapic *new_ioapic;
     error_t ret;
     const char *why;
-    u32 actual_id;
+    u32 actual_id, version;
+
+    // GSI resolution relies on every IOAPIC being known by then
+    BUG_ON_INIT_LEVEL_AT_OR_ABOVE(IRQS_AVAILABLE);
 
     new_ioapic = ioapic_next_empty_slot();
     if (unlikely(!new_ioapic)) {
@@ -343,15 +732,18 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     new_ioapic->id = id;
     new_ioapic->base = base;
     new_ioapic->gsi_base = gsi_base;
-    new_ioapic->gsi_last = gsi_base + BIT_FIELD_READ(
-        ioapic_read(new_ioapic, IOAPIC_REG_VER), IOAPIC_MAX_REDIR_ENTRY
-    );
+
+    version = ioapic_read(new_ioapic, IOAPIC_REG_VER);
+    new_ioapic->version = BIT_FIELD_READ(version, IOAPIC_VERSION);
+    new_ioapic->gsi_last =
+        gsi_base + BIT_FIELD_READ(version, IOAPIC_MAX_REDIR_ENTRY);
 
     if (unlikely(ioapic_check_collisions(new_ioapic))) {
         io_window_unmap(&new_ioapic->iow);
         return;
     }
 
+    spin_lock_init(&new_ioapic->lock);
     s_num_ioapics++;
     pr_info(
         "registered IOAPIC[%u] (0x%llX, GSI[%u->%u])\n",
