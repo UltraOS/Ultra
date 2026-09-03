@@ -130,7 +130,7 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     s_loader_ctx = ctx;
 
-    init_level_raise(INIT_LEVEL_VALLOC_AVAILABLE);
+    init_level_raise(INIT_LEVEL_IRQS_AVAILABLE);
 
     for (;;);
 }

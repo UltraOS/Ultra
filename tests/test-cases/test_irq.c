@@ -111,6 +111,14 @@ static void fake_leaf_eoi(struct irq_level *level)
     log_op("leaf-eoi");
 }
 
+static void fake_compose(struct irq_level *level, struct msi_route_msg *out)
+{
+    UNREFERENCED_PARAMETER(level);
+    log_op("compose");
+    out->address_low = 0xAB;
+    out->data = 0xCD;
+}
+
 // Reports outstanding this many more times, silent once drained
 static u32 s_num_outstanding_polls;
 
@@ -127,8 +135,8 @@ static bool fake_is_outstanding(struct irq_level *level)
 }
 
 /*
- * The leaf chip deliberately lacks ack/eoi/retrigger so the walks
- * are forced to delegate them to the parent level.
+ * The leaf chip deliberately lacks ack/eoi/retrigger/compose so the
+ * walks are forced to delegate them to the parent level.
  */
 static const struct irq_chip s_leaf_chip = {
     .name = "fake-leaf",
@@ -151,6 +159,7 @@ static const struct irq_chip s_parent_chip = {
     .ack = fake_ack,
     .eoi = fake_eoi,
     .retrigger = fake_retrigger,
+    .compose_msi_route = fake_compose,
 };
 
 static error_t fake_alloc(
@@ -829,4 +838,33 @@ TEST_CASE(irq_flow_shared_walk_accounting)
     ASSERT_EQ(irq->num_unhandled, 1);
 
     irq_free(irq, &c1);
+}
+
+TEST_CASE(irq_compose_delegates_toward_the_cpu)
+{
+    struct msi_route_msg msg = { };
+    struct irq_spec spec;
+    struct irq *irq;
+    u32 counter = 0;
+
+    reset_state();
+    spec = make_spec(13, IRQ_TRIGGER_EDGE_ACTIVE_HIGH);
+
+    ASSERT_EQ(
+        irq_request(&spec, count_handler, &counter, IRQ_FLAG_NONE, "t",
+                    &irq),
+        EOK
+    );
+
+    /*
+     * The leaf asks for the message its routing entry must aim at,
+     * the composing parent answers without the leaf knowing who did.
+     */
+    s_num_ops = 0;
+    irq_hw_compose_msi_route(irq, &msg);
+    ASSERT_OPS("compose");
+    ASSERT_EQ(msg.address_low, 0xAB);
+    ASSERT_EQ(msg.data, 0xCD);
+
+    irq_free(irq, &counter);
 }

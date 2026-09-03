@@ -7,6 +7,7 @@
 #include <common/list.h>
 
 #include <spinlock.h>
+#include <bug.h>
 
 struct irq_domain;
 struct irq_chip;
@@ -22,6 +23,17 @@ struct irq_chip;
 struct arch_irq_alloc_request {
 };
 #endif
+
+/*
+ * The MSI message every routing entry ultimately stores, a 32-bit
+ * datum written to a 64-bit address. The bit layout of the words is
+ * the architecture's.
+ */
+struct msi_route_msg {
+    u32 address_low;
+    u32 address_high;
+    u32 data;
+};
 
 /*
  * Built by the core from the request arguments and handed to every
@@ -98,6 +110,12 @@ struct irq_chip {
      * interrupts & permanently jammed pins.
      */
     bool (*is_outstanding)(struct irq_level*);
+
+    /*
+     * Produce the message a lower level aims its routing entry at.
+     * The walk toward the CPU stops at the first implementer.
+     */
+    void (*compose_msi_route)(struct irq_level*, struct msi_route_msg*);
 };
 
 /*
@@ -214,6 +232,7 @@ void irq_hw_unmask(struct irq*);
 error_t irq_hw_retrigger(struct irq*);
 void irq_hw_ack(struct irq*);
 void irq_hw_eoi(struct irq*);
+void irq_hw_compose_msi_route(struct irq*, struct msi_route_msg*);
 
 /*
  * Whether any level still holds an occurrence of the line, and the

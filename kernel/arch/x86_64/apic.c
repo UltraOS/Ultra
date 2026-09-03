@@ -77,6 +77,21 @@ void apic_eoi(void)
     g_apic->write(APIC_REG_EOI, 0);
 }
 
+void apic_icr_write(u32 value, u32 dest_apic_id)
+{
+    g_apic->icr_write(value, dest_apic_id);
+}
+
+void apic_send_fixed_ipi(u32 dest_apic_id, u8 vector)
+{
+    apic_icr_write(APIC_ICR_DELIVERY_FIXED | vector, dest_apic_id);
+}
+
+void apic_send_ipi_self(u8 vector)
+{
+    g_apic->send_ipi_self(vector);
+}
+
 #define APIC_REG_STRIDE 0x10
 
 // The ISR/TMR/IRR banks are bitmaps split into 32-bit registers

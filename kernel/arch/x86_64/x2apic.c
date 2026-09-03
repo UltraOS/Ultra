@@ -29,6 +29,23 @@ static void x2apic_write(enum apic_reg reg, u32 data)
     wrmsr_or_die(x2apic_reg_to_offset(reg), data);
 }
 
+// A single 64-bit write, no busy bit or separate destination half
+static void x2apic_icr_write(u32 value, u32 dest_apic_id)
+{
+    u64 icr;
+
+    // Older stores must be visible before the target can observe the IPI
+    weak_wrmsr_fence();
+
+    icr = ((u64)dest_apic_id << 32) | value;
+    wrmsr_or_die(x2apic_reg_to_offset(APIC_REG_ICR), icr);
+}
+
+static void x2apic_send_ipi_self(u8 vector)
+{
+    x2apic_write(APIC_REG_SELF_IPI, vector);
+}
+
 static void INIT_CODE x2apic_setup(void)
 {
     u64 apic_base_msr;
@@ -46,4 +63,7 @@ struct apic DATA_REFERENCES_INIT_DATA g_x2apic = {
     .read = x2apic_read,
     .write = x2apic_write,
     .setup = x2apic_setup,
+
+    .icr_write = x2apic_icr_write,
+    .send_ipi_self = x2apic_send_ipi_self,
 };

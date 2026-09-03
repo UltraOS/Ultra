@@ -63,6 +63,9 @@
     void X86_IRQ_DISPATCH(struct registers *regs); \
     void X86_IRQ_DISPATCH(struct registers *regs)
 
+void hard_irq_enter(void);
+void hard_irq_exit(void);
+
 void fixed_vector_enter(u8 vector);
 void fixed_vector_exit(void);
 
