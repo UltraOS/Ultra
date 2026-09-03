@@ -245,11 +245,6 @@ static INIT_CODE bool ioapic_check_collisions(
     for (i = 0; i < s_num_ioapics; i++) {
         other = &s_ioapics[i];
 
-        if (unlikely(ioapic->id == other->id)) {
-            which = "id";
-            goto out_collision;
-        }
-
         if (unlikely(ioapic->base == other->base)) {
             which = "address";
             goto out_collision;
@@ -338,10 +333,10 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
         IOAPIC_ID
     );
 
-    if (unlikely(actual_id != id)) {
-        pr_warn(
-            "ACPI-provided id %d does not match actual: %d\n",
-            id, actual_id
+    if (actual_id != id) {
+        pr_debug(
+            "hardware id %u differs from the ACPI-provided %u\n",
+            actual_id, id
         );
     }
 
