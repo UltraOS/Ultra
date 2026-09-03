@@ -292,6 +292,18 @@ static u32 ioapic_read(struct ioapic *ioapic, enum ioapic_reg reg)
     return value;
 }
 
+// Nothing is behind the window if every register reads as all ones
+static bool INIT_CODE ioapic_is_absent(struct ioapic *ioapic)
+{
+    u32 value;
+
+    value = ioapic_read(ioapic, IOAPIC_REG_ID);
+    value &= ioapic_read(ioapic, IOAPIC_REG_VER);
+    value &= ioapic_read(ioapic, IOAPIC_REG_ARB);
+
+    return value == 0xFFFFFFFF;
+}
+
 void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
 {
     struct ioapic *new_ioapic;
@@ -314,6 +326,11 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     if (is_error(ret)) {
         why = "unable to map";
         goto out_no_reg;
+    }
+
+    if (unlikely(ioapic_is_absent(new_ioapic))) {
+        why = "not present";
+        goto out_unmap;
     }
 
     actual_id = BIT_FIELD_READ(
@@ -348,6 +365,8 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     );
     return;
 
+out_unmap:
+    io_window_unmap(&new_ioapic->iow);
 out_no_reg:
     pr_warn(
         "unable to register IOAPIC[%u] (0x%llX, GSI base %u): %s\n",
