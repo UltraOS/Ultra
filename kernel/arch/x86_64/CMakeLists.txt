@@ -4,6 +4,7 @@ ultra_sources(
     string.c
     apic.c
     vector_alloc.c
+    lapic_domain.c
     xapic.c
     x2apic.c
     i8259a.c

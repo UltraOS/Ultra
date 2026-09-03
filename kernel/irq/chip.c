@@ -2,6 +2,8 @@
 
 #include <private/irq.h>
 
+#include <bug.h>
+
 #include <arch/cpu_helpers.h>
 
 void irq_hw_mask(struct irq *irq)
@@ -76,6 +78,29 @@ void irq_hw_eoi(struct irq *irq)
 
         chip->eoi(&irq->levels[i]);
     }
+}
+
+/*
+ * Reaching the end of the walk means a routing entry exists with
+ * nothing to aim it at, which is a topology construction bug.
+ */
+void irq_hw_compose_msi_route(
+    struct irq *irq, struct msi_route_msg *out
+)
+{
+    u32 i;
+
+    for (i = 0; i < irq->num_levels; i++) {
+        const struct irq_chip *chip = irq->levels[i].chip;
+
+        if (chip->compose_msi_route == NULL)
+            continue;
+
+        chip->compose_msi_route(&irq->levels[i], out);
+        return;
+    }
+
+    BUG();
 }
 
 bool irq_hw_is_outstanding(struct irq *irq)

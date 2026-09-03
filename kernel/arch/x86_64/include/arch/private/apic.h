@@ -23,6 +23,12 @@ enum apic_reg {
 
     APIC_REG_LVT_CMCI = 0x2F0,
     APIC_REG_ICR = 0x300,
+        #define APIC_ICR_DELIVERY_FIXED 0
+        #define APIC_ICR_BUSY BIT_U32(12)
+
+        // Destination shorthand field, bits 19:18
+        #define APIC_ICR_DEST_SELF BIT_U32(18)
+
     APIC_REG_ICR2 = 0x310,
     APIC_REG_LVT_TIMER = 0x320,
     APIC_REG_LVT_THERMAL = 0x330,
@@ -41,6 +47,9 @@ enum apic_reg {
     APIC_REG_TIMER_INITIAL_COUNT = 0x380,
     APIC_REG_TIMER_CURRENT_COUNT = 0x390,
     APIC_REG_TIMER_DIVIDE_CONFIG = 0x3E0,
+
+    // x2APIC-only shorthand for a fixed IPI to self
+    APIC_REG_SELF_IPI = 0x3F0,
 
     APIC_REG_EXT_FEATURE = 0x400,
     APIC_REG_EXT_CONTROL = 0x410,
@@ -69,6 +78,9 @@ struct apic {
     void (*setup)(void);
     u32 (*read)(enum apic_reg);
     void (*write)(enum apic_reg, u32 value);
+
+    void (*icr_write)(u32 value, u32 dest_apic_id);
+    void (*send_ipi_self)(u8 vector);
 };
 
 void apic_detect(void);
@@ -78,5 +90,9 @@ void apic_cpu_init(void);
 
 void apic_eoi(void);
 bool apic_vector_in_isr(u8 vector);
+
+void apic_icr_write(u32 value, u32 dest_apic_id);
+void apic_send_fixed_ipi(u32 dest_apic_id, u8 vector);
+void apic_send_ipi_self(u8 vector);
 
 void apic_set_known_frequency(u64 hz);

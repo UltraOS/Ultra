@@ -45,6 +45,8 @@
 
 void efer_feature_enable(u64 mask);
 
+void weak_wrmsr_fence(void);
+
 error_t rdmsr(u32 msr, u64 *out_value);
 error_t wrmsr(u32 msr, u64 value);
 

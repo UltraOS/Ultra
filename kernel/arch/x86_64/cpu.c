@@ -267,6 +267,17 @@ void wrmsr_or_die(u32 msr, u64 value)
         die_on_msr_access_failure("write to", msr);
 }
 
+/*
+ * WRMSR to the x2APIC register range is not serializing and is
+ * weakly ordered against older stores. MFENCE makes those stores
+ * globally visible first, LFENCE keeps the WRMSR from starting
+ * early.
+ */
+void weak_wrmsr_fence(void)
+{
+    asm volatile("mfence; lfence" ::: "memory");
+}
+
 static ALWAYS_INLINE void INIT_CODE cr0_write(reg_t val)
 {
     asm volatile("mov %0, %%cr0" :: "r" (val) : "memory");
