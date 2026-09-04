@@ -7,7 +7,7 @@
 #include <bug.h>
 #include <free_after_init.h>
 
-static u64 s_freq_hz;
+static UNUSED_DECL u64 s_freq_hz;
 
 struct apic *g_apic = nullptr;
 enum apic_mode g_apic_mode = APIC_MODE_NONE;
