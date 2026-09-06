@@ -72,7 +72,7 @@ jobs:
           key: ${{ steps.toolchain-cache.outputs.cache-primary-key }}
 
       - name: Build the kernel
-        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
+        run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/${{ matrix.arch }}-ci.config --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
       - name: Run the userspace unit tests
         run: "${{ github.workspace }}/build.py --unit-tests"
