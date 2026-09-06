@@ -23,8 +23,12 @@ struct param_ops {
     /*
      * Sets the value of the given parameter to one specified by the string.
      * Returns an error in case the operation wasn't successful.
+     *
+     * The string is only valid for the duration of the call. is_runtime is
+     * false when the value comes from the kernel command line at boot and
+     * true when it is being modified on a running system.
      */
-    error_t (*set)(struct string, struct param*);
+    error_t (*set)(struct string, struct param*, bool is_runtime);
 
     /*
      * Converts a given parameter to a null-terminated string.
@@ -41,10 +45,10 @@ struct param_ops {
 // Helper for get callbacks that produce a string
 size_t param_write_string(struct string *out, struct string value);
 
-#define PARAMETER_OPS_DECL(type)                            \
-    error_t param_set_##type(struct string, struct param*); \
-    size_t param_get_##type(struct string*, struct param*); \
-                                                            \
+#define PARAMETER_OPS_DECL(type)                                  \
+    error_t param_set_##type(struct string, struct param*, bool); \
+    size_t param_get_##type(struct string*, struct param*);       \
+                                                                  \
     extern const struct param_ops g_param_##type##_ops;
 
 PARAMETER_OPS_DECL(i8);

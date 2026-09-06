@@ -6,11 +6,14 @@
 
 #include <param.h>
 
-#define PARAM_SET_OPS_TEMPLATE(type)                                    \
-    error_t param_set_##type(struct string str, struct param *p)        \
-    {                                                                   \
-        return str_to_##type(str, p->value);                            \
-    }                                                                   \
+#define PARAM_SET_OPS_TEMPLATE(type)                        \
+    error_t param_set_##type(                               \
+        struct string str, struct param *p, bool is_runtime \
+    )                                                       \
+    {                                                       \
+        UNREFERENCED_PARAMETER(is_runtime);                 \
+        return str_to_##type(str, p->value);                \
+    }                                                       \
 
 #define PARAM_GET_OPS_TEMPLATE(type, fmt)                               \
     size_t param_get_##type(                                            \
@@ -49,8 +52,10 @@ MAKE_PARAM_OPS_WITH_FMT(u64, "%llu");
 
 PARAM_GET_OPS_TEMPLATE(bool, "%d")
 
-error_t param_set_bool(struct string str, struct param *p)
+error_t param_set_bool(struct string str, struct param *p, bool is_runtime)
 {
+    UNREFERENCED_PARAMETER(is_runtime);
+
     // Empty value means true, e.g. "bar" in "foo=1 bar baz=0"
     if (str_empty(str)) {
         *(bool*)p->value = true;
@@ -66,8 +71,10 @@ const struct param_ops g_param_bool_ops = {
     .get = param_get_bool,
 };
 
-error_t param_set_string(struct string str, struct param *p)
+error_t param_set_string(struct string str, struct param *p, bool is_runtime)
 {
+    UNREFERENCED_PARAMETER(is_runtime);
+
     *(struct string*)p->value = str;
     return EOK;
 }
@@ -201,7 +208,7 @@ struct string cmdline_parse(
         }
 
         if (likely(!str_empty(value) || p->ops->allows_empty_value))
-            ret = p->ops->set(value, p);
+            ret = p->ops->set(value, p, false);
         else
             ret = EINVAL;
 
