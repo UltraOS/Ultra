@@ -3,6 +3,7 @@ import argparse
 import subprocess
 import os
 import platform
+import re
 import shutil
 import urllib.request
 import signal
@@ -125,6 +126,44 @@ def build_toolchain(args: argparse.Namespace) -> None:
     tb.build_toolchain(tp)
 
 
+def cmake_cache_get(build_dir: str, key: str) -> Optional[str]:
+    cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
+    if not os.path.isfile(cmake_cache):
+        return None
+
+    with open(cmake_cache) as f:
+        for line in f:
+            name, sep, value = line.strip().partition("=")
+            if sep and name.split(":")[0] == key:
+                return value
+
+    return None
+
+
+def make_supports_output_sync(make_program: str) -> bool:
+    try:
+        proc = subprocess.run([make_program, "--version"],
+                              capture_output=True, text=True)
+    except OSError:
+        return False
+
+    match = re.match(r"GNU Make (\d+)", proc.stdout)
+    return match is not None and int(match.group(1)) >= 4
+
+
+def cmake_native_build_args(build_dir: str) -> List[str]:
+    generator = cmake_cache_get(build_dir, "CMAKE_GENERATOR")
+    if generator is None or not generator.endswith("Makefiles"):
+        return []
+
+    make_program = cmake_cache_get(build_dir, "CMAKE_MAKE_PROGRAM")
+    if make_program is None or not make_supports_output_sync(make_program):
+        return []
+
+    # Parallel make interleaves the output of concurrent jobs otherwise
+    return ["--", "-Oline"]
+
+
 def cmake_build(
     args: argparse.Namespace, build_dir: str, extra_args: List[str] = [],
     reconfigure_cb: Optional[Callable[[], None]] = None
@@ -141,8 +180,11 @@ def cmake_build(
         print("Not rerunning cmake since build directory already exists "
               "(--reconfigure)")
 
-    subprocess.run(["cmake", "--build", ".", "-j", str(os.cpu_count())],
-                   cwd=build_dir, check=True)
+    subprocess.run(
+        ["cmake", "--build", ".", "-j", str(os.cpu_count()),
+         *cmake_native_build_args(build_dir)],
+        cwd=build_dir, check=True
+    )
 
 
 def build_ultra(
