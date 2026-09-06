@@ -40,15 +40,15 @@ struct test_param {
     struct param param;
 };
 
-#define DEFINE_PARAM(type, name, init, expected) \
-    {                                            \
-        .value = { .as_##type = init, },         \
-        .expect = { .as_##type = expected, },    \
-        .stored_type = st_##type,                \
-        {                                        \
-            STR(#name),                          \
-            &g_param_##type##_ops,               \
-        }                                        \
+#define DEFINE_PARAM(type, param_name, init, expected) \
+    {                                                  \
+        .value = { .as_##type = init, },               \
+        .expect = { .as_##type = expected, },          \
+        .stored_type = st_##type,                      \
+        .param = {                                     \
+            .name = STR(#param_name),                  \
+            .ops = &g_param_##type##_ops,              \
+        },                                             \
     }
 
 #define CMDLINE_TEST(cmdline, ...)                        \
@@ -217,7 +217,11 @@ TEST_CASE(get_fits)
     char buf[8];
     struct string out = MAKE_STR(buf, sizeof(buf));
     u32 value = 1234567;
-    struct param p = { STR("x"), &g_param_u32_ops, &value };
+    struct param p = {
+        .name = STR("x"),
+        .ops = &g_param_u32_ops,
+        .value = &value,
+    };
 
     ASSERT_EQ(param_get_u32(&out, &p), 7);
     ASSERT_EQ(out.size, 7);
@@ -231,7 +235,11 @@ TEST_CASE(get_overflow)
     struct string out = MAKE_STR(buf, sizeof(buf));
     u32 value = 12345678;
     struct string text = STR("12345678");
-    struct param p = { STR("x"), &g_param_u32_ops, &value };
+    struct param p = {
+        .name = STR("x"),
+        .ops = &g_param_u32_ops,
+        .value = &value,
+    };
 
     ASSERT_EQ(param_get_u32(&out, &p), 8);
     ASSERT_EQ(out.size, 0);
