@@ -225,7 +225,7 @@ struct string cmdline_parse(
 
         if (is_error(ret)) {
             pr_err(
-                "bad \"%pS\" value \"%pS\" (%d)\n", &key, &value, ret
+                "bad \"%pS\" value \"%pS\" (%pE)\n", &key, &value, &ret
             );
         }
 

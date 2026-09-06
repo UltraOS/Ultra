@@ -109,7 +109,7 @@ static INIT_CODE error_t kvm_setup_pvclock(void)
      */
     ret = pvclock_counter_register();
     if (is_error(ret))
-        pr_warn("unable to register the pvclock counter: %d\n", ret);
+        pr_warn("unable to register the pvclock counter: %pE\n", &ret);
 
     tsc_set_known_frequency(pvclock_calculate_tsc_hz(this_info), "pvclock");
     return EOK;

@@ -65,7 +65,7 @@ static error_t pm_timer_init(void)
 
     ret = io_window_map_pio(&s_pm_io, port, 4);
     if (is_error(ret)) {
-        pr_warn("unable to map: %d\n", ret);
+        pr_warn("unable to map: %pE\n", &ret);
         return ret;
     }
 
