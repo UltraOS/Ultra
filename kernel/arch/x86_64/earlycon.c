@@ -69,11 +69,15 @@ static error_t earlycon_destroy(void)
     return EOK;
 }
 
-static error_t earlycon_set(struct string value, struct param *p)
+static error_t earlycon_set(
+    struct string value, struct param *p, bool is_runtime
+)
 {
     error_t ret;
     size_t mode;
     enum earlycon_mode *cur = p->value;
+
+    UNREFERENCED_PARAMETER(is_runtime);
 
     for (mode = 0; mode < ARRAY_SIZE(s_earlycon_mode_names); mode++) {
         if (str_equals_caseless(value, s_earlycon_mode_names[mode]))
