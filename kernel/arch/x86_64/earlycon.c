@@ -49,51 +49,68 @@ unmap:
     return ret;
 }
 
-#define EARLYCON_MODE_NONE STR_CONSTEXPR("none")
-#define EARLYCON_MODE_E9 STR_CONSTEXPR("e9")
+enum earlycon_mode {
+    EARLYCON_MODE_NONE,
+    EARLYCON_MODE_E9,
+};
 
-struct string g_earlycon = EARLYCON_MODE_NONE;
+static const struct string s_earlycon_mode_names[] = {
+    [EARLYCON_MODE_NONE] = STR_CONSTEXPR("none"),
+    [EARLYCON_MODE_E9] = STR_CONSTEXPR("e9"),
+};
+
+static enum earlycon_mode s_earlycon_mode = EARLYCON_MODE_NONE;
 
 static error_t earlycon_destroy(void)
 {
-    if (str_equals_caseless(g_earlycon, EARLYCON_MODE_E9))
+    if (s_earlycon_mode == EARLYCON_MODE_E9)
         return unregister_console(&e9_console);
 
     return EOK;
 }
 
-static error_t earlycon_set(struct string mode, struct param *p)
+static error_t earlycon_set(struct string value, struct param *p)
 {
     error_t ret;
-    struct string *cur = p->value;
+    size_t mode;
+    enum earlycon_mode *cur = p->value;
+
+    for (mode = 0; mode < ARRAY_SIZE(s_earlycon_mode_names); mode++) {
+        if (str_equals_caseless(value, s_earlycon_mode_names[mode]))
+            break;
+    }
+    if (mode == ARRAY_SIZE(s_earlycon_mode_names))
+        return EINVAL;
 
     ret = earlycon_destroy();
     if (is_error(ret))
         return ret;
 
-    if (str_equals_caseless(mode, EARLYCON_MODE_NONE)) {
-        *cur = EARLYCON_MODE_NONE;
-        return EOK;
-    }
-
-    if (str_equals_caseless(mode, EARLYCON_MODE_E9)) {
+    if (mode == EARLYCON_MODE_E9) {
         ret = e9_console_init();
         if (is_error(ret))
             return ret;
-
-        *cur = EARLYCON_MODE_E9;
-        goto out_ok;
     }
 
-    return EINVAL;
+    *cur = mode;
+    if (mode == EARLYCON_MODE_NONE)
+        return EOK;
 
-out_ok:
-    pr_info("using '%pS' as the early console\n", cur);
+    pr_info(
+        "using '%pS' as the early console\n", &s_earlycon_mode_names[mode]
+    );
     return EOK;
 }
 
-static const struct param_ops g_earlycon_ops = {
+static size_t earlycon_get(struct string *out, struct param *p)
+{
+    enum earlycon_mode *cur = p->value;
+
+    return param_write_string(out, s_earlycon_mode_names[*cur]);
+}
+
+static const struct param_ops s_earlycon_param_ops = {
     .set = earlycon_set,
-    .get = param_get_string,
+    .get = earlycon_get,
 };
-early_parameter_with_ops(g_earlycon, g_earlycon_ops);
+custom_early_parameter(earlycon, s_earlycon_mode, s_earlycon_param_ops);
