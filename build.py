@@ -175,7 +175,13 @@ def cmake_build(
         if reconfigure_cb is not None:
             reconfigure_cb()
         os.makedirs(build_dir, exist_ok=True)
-        subprocess.run(["cmake", "..", *extra_args], check=True, cwd=build_dir)
+
+        generator_args = []
+        if not os.path.isfile(cmake_cache) and shutil.which("ninja"):
+            generator_args = ["-G", "Ninja"]
+
+        subprocess.run(["cmake", "..", *generator_args, *extra_args],
+                       check=True, cwd=build_dir)
     else:
         print("Not rerunning cmake since build directory already exists "
               "(--reconfigure)")
