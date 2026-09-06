@@ -29,11 +29,17 @@ struct param_ops {
     /*
      * Converts a given parameter to a null-terminated string.
      *
-     * Writes up to the string size bytes and returns the number of bytes that
-     * would've been written not including the terminating null.
+     * The string size is the capacity of the buffer on entry and the number
+     * of bytes written not including the terminating null on return. The
+     * return value is the number of bytes required not including the
+     * terminating null. If the required bytes don't fit along with the
+     * terminating null, the buffer contents are unspecified.
      */
     size_t (*get)(struct string*, struct param*);
 };
+
+// Helper for get callbacks that produce a string
+size_t param_write_string(struct string *out, struct string value);
 
 #define PARAMETER_OPS_DECL(type)                            \
     error_t param_set_##type(struct string, struct param*); \
