@@ -43,6 +43,7 @@ void print(const char *msg, ...)
     va_end(vlist);
 }
 
+#undef panic
 void panic(const char *msg, ...)
 {
     char buf[4096];
@@ -64,7 +65,7 @@ void do_assert_eq(uint64_t lhs, uint64_t rhs, const char *file, size_t line)
         return;
 
     panic(
-        "Assertion failed: %" PRIX64 " != %" PRIX64 " at %s:%zu\n",
+        "Assertion failed: %" PRIX64 " != %" PRIX64 " at %s:%zu",
         lhs, rhs, file, line
     );
 }
@@ -75,7 +76,7 @@ void do_assert_ne(uint64_t lhs, uint64_t rhs, const char *file, size_t line)
         return;
 
     panic(
-        "Assertion failed: %" PRIX64 " == %" PRIX64 " at %s:%zu\n",
+        "Assertion failed: %" PRIX64 " == %" PRIX64 " at %s:%zu",
         lhs, rhs, file, line
     );
 }
@@ -87,7 +88,7 @@ void do_assert_str_eq(const char *lhs, const char *rhs,
         return;
 
     panic(
-        "Assertion failed: %s != %s at %s:%zu\n",
+        "Assertion failed: %s != %s at %s:%zu",
         lhs, rhs, file, line
     );
 }

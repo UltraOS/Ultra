@@ -184,7 +184,7 @@ static void INIT_CODE run_one_callback(
      * this level's promise broken
      */
     if (type == INIT_CALL_TYPE_AT)
-        panic("establisher %pSM failed: %d\n", cb, ret);
+        panic("establisher %pSM failed: %d", cb, ret);
 
     /*
      * This information is already logged in trace_callback_finish if it's

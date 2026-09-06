@@ -5,7 +5,7 @@
 #include <log.h>
 
 #define BUG() \
-    panic("BUG! At %s() in file %s:%d\n", __func__, __FILE__, __LINE__)
+    panic("BUG! At %s() in file %s:%d", __func__, __FILE__, __LINE__)
 
 #define BUG_WITH_MSG(msg, ...) \
     panic("BUG! " msg, ##__VA_ARGS__)
