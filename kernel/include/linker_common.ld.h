@@ -72,10 +72,9 @@
 
 #define INIT_LEVEL_CB_SECTIONS INIT_LEVELS
 
-#define RODATA                                                 \
-    *(.rodata .rodata.*)                                       \
-    *(.INIT_DATA_REFERENCE_RODATA_SECTION)                     \
-    NATURALLY_ALIGNED_MARKED_SECTION(EARLY_PARAMETERS_SECTION) \
+#define RODATA                                           \
+    *(.rodata .rodata.*)                                 \
+    *(.INIT_DATA_REFERENCE_RODATA_SECTION)               \
     NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)
 
 #define RODATA_FREE_AFTER_INIT_BEGIN \

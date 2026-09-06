@@ -111,21 +111,22 @@ PARAMETER_OPS_DECL(string)
         STR_CONSTEXPR(#name)                                    \
     )
 
-#define custom_parameter_with_section(name, value, ops, flags, section)     \
-    SECTION_VAR(section, static const, struct param) param_##name = {       \
-        PARAM_NAME(name), &(ops), &(value), (flags), PARAM_CAPACITY(value), \
-    }
-
 /*
- * Parameters are set from the kernel command line and can be read back if
- * their ops provide a get callback. See enum param_flags for what a
- * parameter may additionally opt into.
+ * Parameters are set from the kernel command line as soon as it is available
+ * at boot and can be read back if their ops provide a get callback. See enum
+ * param_flags for what a parameter may additionally opt into.
+ *
+ * A setter that cannot act on its value that early caches it and acts at the
+ * init level where it can.
  *
  * custom_parameter is the fully explicit form, the shorthands deduce the
  * name from the variable, the ops from its type, or both.
  */
-#define custom_parameter(name, value, ops, flags)                              \
-    custom_parameter_with_section(name, value, ops, flags, PARAMETERS_SECTION)
+#define custom_parameter(name, value, ops, flags)                           \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param)             \
+    param_##name = {                                                        \
+        PARAM_NAME(name), &(ops), &(value), (flags), PARAM_CAPACITY(value), \
+    }
 
 #define renamed_parameter_with_ops(name, var, ops) \
     custom_parameter(name, var, ops, 0)
@@ -141,17 +142,6 @@ PARAMETER_OPS_DECL(string)
 #define parameter_with_flags(var, flags)          \
     renamed_parameter_with_flags(var, var, flags)
 #define parameter(var) parameter_with_flags(var, 0)
-
-/*
- * Early parameters, these are parsed and set by the kernel as soon as possible
- * very early in the boot process.
- */
-#define custom_early_parameter(name, value, ops)      \
-    custom_parameter_with_section(                    \
-        name, value, ops, 0, EARLY_PARAMETERS_SECTION \
-    )
-#define early_parameter(var)                              \
-    custom_early_parameter(var, var, PARAM_TYPE_OPS(var))
 
 typedef void (*unknown_param_cb_t)(struct string name, struct string arg);
 

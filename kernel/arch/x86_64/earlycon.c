@@ -117,4 +117,4 @@ static const struct param_ops s_earlycon_param_ops = {
     .set = earlycon_set,
     .get = earlycon_get,
 };
-custom_early_parameter(earlycon, s_earlycon_mode, s_earlycon_param_ops);
+custom_parameter(earlycon, s_earlycon_mode, s_earlycon_param_ops, 0);
