@@ -397,6 +397,26 @@ static MAYBE_NERR(int) do_vsnprintf(
                 continue;
             }
 
+            if (consume(&fmt, STR("E"))) {
+                char unknown[32];
+                const char *name;
+                error_t *err_ptr;
+                int len;
+
+                err_ptr = va_arg(vlist, error_t*);
+                name = error_to_string(*err_ptr);
+
+                if (name != nullptr) {
+                    write_cstr(fb_state, name);
+                    continue;
+                }
+
+                len = snprintf(unknown, sizeof(unknown), "<errno %d>",
+                               *err_ptr);
+                write_many(fb_state, unknown, len);
+                continue;
+            }
+
             if (consume(&fmt, STR("V"))) {
                 struct nested_printf *npf;
                 va_list nested_vlist;
