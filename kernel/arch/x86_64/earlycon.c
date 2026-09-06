@@ -59,11 +59,11 @@ static const struct string s_earlycon_mode_names[] = {
     [EARLYCON_MODE_E9] = STR_CONSTEXPR("e9"),
 };
 
-static enum earlycon_mode s_earlycon_mode = EARLYCON_MODE_NONE;
+static enum earlycon_mode s_earlycon = EARLYCON_MODE_NONE;
 
 static error_t earlycon_destroy(void)
 {
-    if (s_earlycon_mode == EARLYCON_MODE_E9)
+    if (s_earlycon == EARLYCON_MODE_E9)
         return unregister_console(&e9_console);
 
     return EOK;
@@ -117,4 +117,4 @@ static const struct param_ops s_earlycon_param_ops = {
     .set = earlycon_set,
     .get = earlycon_get,
 };
-custom_parameter(earlycon, s_earlycon_mode, s_earlycon_param_ops, 0);
+parameter_with_ops(s_earlycon, s_earlycon_param_ops);

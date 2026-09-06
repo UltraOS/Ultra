@@ -104,9 +104,11 @@ PARAMETER_OPS_DECL(string)
     default: 0                                   \
 )
 
+// The name of a parameter is that of its variable minus a g_ or s_ prefix
 #define PARAM_NAME(name)                                        \
     __builtin_choose_expr(                                      \
-        __builtin_strncmp(#name, "g_", 2) == 0,                 \
+        __builtin_strncmp(#name, "g_", 2) == 0 ||               \
+        __builtin_strncmp(#name, "s_", 2) == 0,                 \
         (struct string) { { &(#name)[2] }, sizeof(#name) - 3 }, \
         STR_CONSTEXPR(#name)                                    \
     )
