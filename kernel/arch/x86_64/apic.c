@@ -41,7 +41,7 @@ void INIT_CODE apic_detect(void)
     u64 apic_base_msr;
 
     if (unlikely(!all_cpus_have(X86_FEATURE_APIC)))
-        panic("APIC not supported or disabled in software\n");
+        panic("APIC not supported or disabled in software");
 
     apic_base_msr = rdmsr_or_die(MSR_IA32_APIC_BASE);
 

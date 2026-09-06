@@ -225,7 +225,7 @@ static INIT_CODE uacpi_iteration_decision detect_lapics(
          * Apparently these might exist even on x86, but there's no confirmation
          * of that ever happening, so guard against that explicitly.
          */
-        panic("Local SAPIC entries are not supported\n");
+        panic("Local SAPIC entries are not supported");
 
     default:
         return UACPI_ITERATION_DECISION_CONTINUE;

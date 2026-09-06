@@ -291,7 +291,7 @@ static INIT_CODE phys_addr_t allocate_top_down(
 
     BUG_ON_WITH_MSG(
         (bytes_to_allocate / PAGE_SIZE) != page_count,
-        "invalid allocation size (%zu pages)\n", page_count
+        "invalid allocation size (%zu pages)", page_count
     );
 
     align = MAX(align, (size_t)PAGE_SIZE);
@@ -342,7 +342,7 @@ static INIT_CODE phys_addr_t allocate_within(
     bytes_to_allocate = page_count * PAGE_SIZE;
     BUG_ON_WITH_MSG(
         bytes_to_allocate <= page_count,
-        "invalid allocation size (%zu pages)\n", page_count
+        "invalid allocation size (%zu pages)", page_count
     );
 
     // invalid input
@@ -401,7 +401,7 @@ static INIT_CODE phys_addr_t allocate_within(
 
 out_invalid_allocation:
     BUG_WITH_MSG(
-        "invalid allocation: %zu pages within 0x%016llX -> 0x%016llX\n",
+        "invalid allocation: %zu pages within 0x%016llX -> 0x%016llX",
          page_count, lower_limit, upper_limit
     );
 }
@@ -572,7 +572,7 @@ void INIT_CODE boot_free(phys_addr_t address, size_t num_pages)
 
     mr_idx = find_range(address, ALLOW_ONE_ABOVE_NO);
     BUG_ON_WITH_MSG(
-        mr_idx < 0, "invalid free at 0x%016llX (%zu pages)\n",
+        mr_idx < 0, "invalid free at 0x%016llX (%zu pages)",
         address, num_pages
     );
 

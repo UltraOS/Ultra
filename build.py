@@ -3,6 +3,7 @@ import argparse
 import subprocess
 import os
 import platform
+import re
 import shutil
 import urllib.request
 import signal
@@ -125,6 +126,44 @@ def build_toolchain(args: argparse.Namespace) -> None:
     tb.build_toolchain(tp)
 
 
+def cmake_cache_get(build_dir: str, key: str) -> Optional[str]:
+    cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
+    if not os.path.isfile(cmake_cache):
+        return None
+
+    with open(cmake_cache) as f:
+        for line in f:
+            name, sep, value = line.strip().partition("=")
+            if sep and name.split(":")[0] == key:
+                return value
+
+    return None
+
+
+def make_supports_output_sync(make_program: str) -> bool:
+    try:
+        proc = subprocess.run([make_program, "--version"],
+                              capture_output=True, text=True)
+    except OSError:
+        return False
+
+    match = re.match(r"GNU Make (\d+)", proc.stdout)
+    return match is not None and int(match.group(1)) >= 4
+
+
+def cmake_native_build_args(build_dir: str) -> List[str]:
+    generator = cmake_cache_get(build_dir, "CMAKE_GENERATOR")
+    if generator is None or not generator.endswith("Makefiles"):
+        return []
+
+    make_program = cmake_cache_get(build_dir, "CMAKE_MAKE_PROGRAM")
+    if make_program is None or not make_supports_output_sync(make_program):
+        return []
+
+    # Parallel make interleaves the output of concurrent jobs otherwise
+    return ["--", "-Oline"]
+
+
 def cmake_build(
     args: argparse.Namespace, build_dir: str, extra_args: List[str] = [],
     reconfigure_cb: Optional[Callable[[], None]] = None
@@ -136,13 +175,22 @@ def cmake_build(
         if reconfigure_cb is not None:
             reconfigure_cb()
         os.makedirs(build_dir, exist_ok=True)
-        subprocess.run(["cmake", "..", *extra_args], check=True, cwd=build_dir)
+
+        generator_args = []
+        if not os.path.isfile(cmake_cache) and shutil.which("ninja"):
+            generator_args = ["-G", "Ninja"]
+
+        subprocess.run(["cmake", "..", *generator_args, *extra_args],
+                       check=True, cwd=build_dir)
     else:
         print("Not rerunning cmake since build directory already exists "
               "(--reconfigure)")
 
-    subprocess.run(["cmake", "--build", ".", "-j", str(os.cpu_count())],
-                   cwd=build_dir, check=True)
+    subprocess.run(
+        ["cmake", "--build", ".", "-j", str(os.cpu_count()),
+         *cmake_native_build_args(build_dir)],
+        cwd=build_dir, check=True
+    )
 
 
 def build_ultra(
@@ -344,16 +392,28 @@ def root_kconfig() -> kc.Kconfig:
     return kconfig
 
 
-def config_sanitize(path: str) -> None:
+def make_config_from_preset(
+    preset: str, out_path: str, toolchain: str, arch: str
+) -> str:
     kconfig = root_kconfig()
-    kconfig.load_config(path)
-    kconfig.write_config(path)
+    kconfig.load_config(preset)
 
+    preset_arch = kconfig.syms["ARCH_STRING"].str_value
+    if arch != "auto" and arch != preset_arch:
+        sys.exit(f"--arch {arch} conflicts with {preset}, "
+                 f"which is for {preset_arch}")
 
-def config_get_arch(path: str) -> str:
-    kconfig = root_kconfig()
-    kconfig.load_config(path)
-    return kconfig.syms["ARCH_STRING"].str_value
+    toolchain_sym = kconfig.syms[TOOLCHAIN_TO_CONFIG_KEY[toolchain]]
+    preset_toolchain = toolchain_sym.choice.user_selection
+
+    if preset_toolchain is not None and preset_toolchain is not toolchain_sym:
+        print(f"Ignoring {preset_toolchain.name} from {preset}, "
+              f"building with --toolchain {toolchain}")
+
+    toolchain_sym.set_value("y")
+    kconfig.write_config(out_path)
+
+    return preset_arch
 
 
 def make_default_config(out_path: str, toolchain: str, arch: str) -> None:
@@ -406,6 +466,8 @@ def main() -> None:
     parser.add_argument("--hyper-uefi-binary-paths", nargs='+',
                         help="Paths to the hyper UEFI binaries "
                              "(BOOT{X64,AA64}.EFI)")
+    parser.add_argument("--toolchain-only", action="store_true",
+                        help="build the toolchain and exit")
     parser.add_argument("--no-build", action="store_true",
                         help="Assume the kernel is already built")
     parser.add_argument("--reconfigure", action="store_true",
@@ -428,25 +490,27 @@ def main() -> None:
     if args.unit_tests:
         sys.exit(run_unit_tests(args, this_os.lower()))
 
-    if args.config and args.arch != "auto":
-        sys.exit(
-            "Provided both --arch and a custom --config!\n"
-            "Config already provides an arch, please choose one"
-        )
-
-    if args.arch == "auto" and not args.config:
-        args.arch = "x86_64"
-
     if args.config:
         if not os.path.isfile(args.config):
             raise RuntimeError(f"Invalid --config path: {args.config}")
 
-        config_sanitize(args.config)
-        args.arch = config_get_arch(args.config)
+        preset_name = os.path.splitext(os.path.basename(args.config))[0]
+        if preset_name.startswith("."):
+            preset_name = "user-config"
 
-        build_dir = pg.project_root_relative("build-user-config")
+        build_dir = pg.project_root_relative(
+            f"build-{args.toolchain}-{preset_name}"
+        )
         os.makedirs(build_dir, exist_ok=True)
+
+        config = os.path.join(build_dir, ".config")
+        args.arch = make_config_from_preset(args.config, config,
+                                            args.toolchain, args.arch)
+        args.config = config
     else:
+        if args.arch == "auto":
+            args.arch = "x86_64"
+
         build_dir = pg.project_root_relative(
             f"build-{args.toolchain}-{args.arch}"
         )
@@ -466,6 +530,10 @@ def main() -> None:
 
         with enter_work_dir(pg.project_root()):
             module.menuconfig(root_kconfig())
+        sys.exit(0)
+
+    if args.toolchain_only:
+        build_toolchain(args)
         sys.exit(0)
 
     if not args.no_build:
