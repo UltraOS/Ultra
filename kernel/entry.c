@@ -98,6 +98,11 @@ static error_t INIT_CODE boot_info_init(void)
     pi = g_boot_ctx.platform_info;
     g_direct_map_base = pi->higher_half_base;
 
+    print(
+        "Kernel command line: \"%s\"\n",
+        str_empty(g_boot_ctx.cmdline) ? "<empty>" : g_boot_ctx.cmdline.text
+    );
+
     cmdline_parse(g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(PARAMETERS_SECTION));
 
     pr_info(
@@ -108,11 +113,6 @@ static error_t INIT_CODE boot_info_init(void)
     pr_info(
         "direct map set at 0x%016zX (%d pt levels)\n",
         g_direct_map_base, pi->page_table_depth
-    );
-
-    print(
-        "Kernel command line: \"%s\"\n",
-        str_empty(g_boot_ctx.cmdline) ? "<empty>" : g_boot_ctx.cmdline.text
     );
 
     return EOK;
