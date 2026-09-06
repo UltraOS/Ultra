@@ -67,10 +67,8 @@ struct test_param {
     }                                                     \
     g_cmdline = STR(cmdline)
 
-#define CMDLINE_PARSE_WITH_CB(unknown_cb) \
-    cmdline_parse(g_cmdline, g_params, ARRAY_SIZE(params), unknown_cb)
-
-#define CMDLINE_PARSE() CMDLINE_PARSE_WITH_CB(NULL)
+#define CMDLINE_PARSE() \
+    cmdline_parse(g_cmdline, g_params, ARRAY_SIZE(params))
 
 #define CMDLINE_PARSE_EXPECT(str)                   \
     ASSERT(str_equals(CMDLINE_PARSE(), STR(str)));  \

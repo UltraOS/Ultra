@@ -98,9 +98,7 @@ static error_t INIT_CODE boot_info_init(void)
     pi = g_boot_ctx.platform_info;
     g_direct_map_base = pi->higher_half_base;
 
-    cmdline_parse(
-        g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(PARAMETERS_SECTION), NULL
-    );
+    cmdline_parse(g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(PARAMETERS_SECTION));
 
     pr_info(
         "booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
