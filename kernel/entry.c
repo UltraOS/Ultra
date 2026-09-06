@@ -99,7 +99,7 @@ static error_t INIT_CODE boot_info_init(void)
     g_direct_map_base = pi->higher_half_base;
 
     cmdline_parse(
-        g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(EARLY_PARAMETERS_SECTION), NULL
+        g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(PARAMETERS_SECTION), NULL
     );
 
     pr_info(
