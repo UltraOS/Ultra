@@ -174,3 +174,6 @@ typedef phys_addr_t phys_addr_or_error_t;
 #define encode_error_phys_addr(value) ((phys_addr_t)(value))
 #define decode_error_phys_addr(value) ((error_t)(value))
 #define error_phys_addr(ret) unlikely(ret <= MAX_ERRNO)
+
+// nullptr if the value is not a known error code, nerror_t is accepted too
+const char *error_to_string(error_t err);
