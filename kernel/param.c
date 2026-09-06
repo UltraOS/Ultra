@@ -2,7 +2,6 @@
 
 #include <common/conversions.h>
 #include <common/format.h>
-#include <common/minmax.h>
 #include <common/ctype.h>
 
 #include <param.h>
@@ -23,7 +22,7 @@
         bytes = (size_t)snprintf(                                       \
             out_str->mutable_text, out_str->size, fmt, *(type*)p->value \
         );                                                              \
-        out_str->size = MIN(bytes, out_str->size);                      \
+        out_str->size = bytes < out_str->size ? bytes : 0;              \
                                                                         \
         return bytes;                                                   \
     }                                                                   \
@@ -73,16 +72,21 @@ error_t param_set_string(struct string str, struct param *p)
     return EOK;
 }
 
+size_t param_write_string(struct string *out, struct string value)
+{
+    if (value.size >= out->size) {
+        out->size = 0;
+        return value.size;
+    }
+
+    str_terminated_copy(out->mutable_text, value);
+    out->size = value.size;
+    return value.size;
+}
+
 size_t param_get_string(struct string *dst, struct param *p)
 {
-    struct string *src = p->value;
-
-    memcpy(dst->mutable_text, src->text, MIN(src->size, dst->size));
-    if (dst->size > src->size)
-        dst->mutable_text[src->size] = '\0';
-
-    dst->size = MIN(src->size, dst->size);
-    return src->size;
+    return param_write_string(dst, *(struct string*)p->value);
 }
 
 PARAM_OPS(string);

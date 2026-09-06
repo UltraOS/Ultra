@@ -211,3 +211,39 @@ TEST_CASE(bools)
 
     CMDLINE_PARSE_EXPECT("e=1 a=T");
 }
+
+TEST_CASE(get_fits)
+{
+    char buf[8];
+    struct string out = MAKE_STR(buf, sizeof(buf));
+    u32 value = 1234567;
+    struct param p = { STR("x"), &g_param_u32_ops, &value };
+
+    ASSERT_EQ(param_get_u32(&out, &p), 7);
+    ASSERT_EQ(out.size, 7);
+    ASSERT(str_equals(out, STR("1234567")));
+    ASSERT_EQ(buf[7], '\0');
+}
+
+TEST_CASE(get_overflow)
+{
+    char buf[8];
+    struct string out = MAKE_STR(buf, sizeof(buf));
+    u32 value = 12345678;
+    struct string text = STR("12345678");
+    struct param p = { STR("x"), &g_param_u32_ops, &value };
+
+    ASSERT_EQ(param_get_u32(&out, &p), 8);
+    ASSERT_EQ(out.size, 0);
+
+    out = MAKE_STR(buf, sizeof(buf));
+    p.ops = &g_param_string_ops;
+    p.value = &text;
+
+    ASSERT_EQ(param_get_string(&out, &p), 8);
+    ASSERT_EQ(out.size, 0);
+
+    out = MAKE_STR(buf, 0);
+    ASSERT_EQ(param_get_string(&out, &p), 8);
+    ASSERT_EQ(out.size, 0);
+}
