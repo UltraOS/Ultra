@@ -108,8 +108,8 @@ static void INIT_CODE trace_callback_finish(
         lvl = LOG_LEVEL_WARN;
 
     pr_lvl(
-        lvl, "    < leaving %s init call %pSM (ret=%d)\n",
-        s_init_call_type_to_string[type], cb, ret
+        lvl, "    < leaving %s init call %pSM (ret=%pE)\n",
+        s_init_call_type_to_string[type], cb, &ret
     );
 }
 
@@ -184,7 +184,7 @@ static void INIT_CODE run_one_callback(
      * this level's promise broken
      */
     if (type == INIT_CALL_TYPE_AT)
-        panic("establisher %pSM failed: %d", cb, ret);
+        panic("establisher %pSM failed: %pE", cb, &ret);
 
     /*
      * This information is already logged in trace_callback_finish if it's
@@ -192,8 +192,8 @@ static void INIT_CODE run_one_callback(
      */
 #if !IS_ENABLED(VERBOSE_INIT_LEVELS)
     pr_warn(
-        "%s callback %pSM failed: %d\n",
-        s_init_call_type_to_string[type], cb, ret
+        "%s callback %pSM failed: %pE\n",
+        s_init_call_type_to_string[type], cb, &ret
     );
 #endif
 }

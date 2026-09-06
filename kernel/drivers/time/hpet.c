@@ -89,7 +89,7 @@ static error_t hpet_init(void)
     // Timer 31 ends at 0x3FF
     ret = io_window_map(&s_hpet_io, address, 0x3FF + 1);
     if (is_error(ret)) {
-        pr_warn("unable to map: %d\n", ret);
+        pr_warn("unable to map: %pE\n", &ret);
         return ret;
     }
 

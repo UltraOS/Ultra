@@ -1215,8 +1215,8 @@ error_t vreserve_permanent(virt_addr_t start, virt_addr_t end, const char *what)
 out_warn:
     // Be loud because permanent reservations are usually very important
     pr_warn(
-        "unable to reserve %s [0x%016zX -> 0x%016zX]: %d\n",
-        what, start, end, ret
+        "unable to reserve %s [0x%016zX -> 0x%016zX]: %pE\n",
+        what, start, end, &ret
     );
     return ret;
 }
