@@ -143,10 +143,10 @@ PARAMETER_OPS_DECL(string)
     renamed_parameter_with_flags(var, var, flags)
 #define parameter(var) parameter_with_flags(var, 0)
 
-typedef void (*unknown_param_cb_t)(struct string name, struct string arg);
-
-// Parses the given command line and returns the string (if any) after --
+/*
+ * Parses the given command line against the given parameters and returns the
+ * string (if any) after --. Unknown parameters and bad values are logged.
+ */
 struct string cmdline_parse(
-    struct string cmdline, struct param *params, size_t num_params,
-    unknown_param_cb_t unknown_cb
+    struct string cmdline, struct param *params, size_t num_params
 );

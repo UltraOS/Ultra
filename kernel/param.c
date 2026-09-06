@@ -143,9 +143,18 @@ static bool match_whitespace(struct string str)
     return isspace(str.text[0]);
 }
 
+static void warn_unknown_param(struct string name, struct string value)
+{
+    if (str_empty(value)) {
+        pr_warn("unknown parameter \"%pS\"\n", &name);
+        return;
+    }
+
+    pr_warn("unknown parameter \"%pS\" (value \"%pS\")\n", &name, &value);
+}
+
 struct string cmdline_parse(
-    struct string cmdline, struct param *params, size_t num_params,
-    unknown_param_cb_t unknown_cb
+    struct string cmdline, struct param *params, size_t num_params
 )
 {
     error_t ret;
@@ -205,8 +214,7 @@ struct string cmdline_parse(
 
         p = find_param(key, params, num_params);
         if (p == NULL) {
-            if (unknown_cb != NULL)
-                unknown_cb(key, value);
+            warn_unknown_param(key, value);
             goto do_next;
         }
 
