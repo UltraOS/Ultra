@@ -75,7 +75,10 @@ error_t param_set_string(struct string str, struct param *p, bool is_runtime)
 {
     UNREFERENCED_PARAMETER(is_runtime);
 
-    *(struct string*)p->value = str;
+    if (str.size >= p->capacity)
+        return ENOSPC;
+
+    str_terminated_copy(p->value, str);
     return EOK;
 }
 
@@ -93,7 +96,7 @@ size_t param_write_string(struct string *out, struct string value)
 
 size_t param_get_string(struct string *dst, struct param *p)
 {
-    return param_write_string(dst, *(struct string*)p->value);
+    return param_write_string(dst, STR_RUNTIME((const char*)p->value));
 }
 
 PARAM_OPS(string);

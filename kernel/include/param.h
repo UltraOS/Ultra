@@ -29,6 +29,9 @@ struct param {
 
     void *value;
     u32 flags;
+
+    // Size of the value in bytes for parameters stored in a char array
+    size_t capacity;
 };
 
 struct param_ops {
@@ -79,17 +82,26 @@ PARAMETER_OPS_DECL(u64);
 PARAMETER_OPS_DECL(bool)
 PARAMETER_OPS_DECL(string)
 
-#define PARAM_TYPE_OPS(value) _Generic((value), \
-    i8: g_param_i8_ops,                         \
-    u8: g_param_u8_ops,                         \
-    i16: g_param_i16_ops,                       \
-    u16: g_param_u16_ops,                       \
-    i32: g_param_i32_ops,                       \
-    u32: g_param_u32_ops,                       \
-    i64: g_param_i64_ops,                       \
-    u64: g_param_u64_ops,                       \
-    struct string: g_param_string_ops,          \
-    bool: g_param_bool_ops                      \
+/*
+ * Dispatch on the address so that a char array is seen as such along with
+ * its size, a plain char pointer intentionally matches nothing.
+ */
+#define PARAM_TYPE_OPS(value) _Generic(&(value), \
+    char (*)[sizeof(value)]: g_param_string_ops, \
+    i8*: g_param_i8_ops,                         \
+    u8*: g_param_u8_ops,                         \
+    i16*: g_param_i16_ops,                       \
+    u16*: g_param_u16_ops,                       \
+    i32*: g_param_i32_ops,                       \
+    u32*: g_param_u32_ops,                       \
+    i64*: g_param_i64_ops,                       \
+    u64*: g_param_u64_ops,                       \
+    bool*: g_param_bool_ops                      \
+)
+
+#define PARAM_CAPACITY(value) _Generic(&(value), \
+    char (*)[sizeof(value)]: sizeof(value),      \
+    default: 0                                   \
 )
 
 #define PARAM_NAME(name)                                        \
@@ -99,9 +111,9 @@ PARAMETER_OPS_DECL(string)
         STR_CONSTEXPR(#name)                                    \
     )
 
-#define custom_parameter_with_section(name, value, ops, flags, section) \
-    SECTION_VAR(section, static const, struct param) param_##name = {   \
-        PARAM_NAME(name), &(ops), &(value), (flags),                    \
+#define custom_parameter_with_section(name, value, ops, flags, section)     \
+    SECTION_VAR(section, static const, struct param) param_##name = {       \
+        PARAM_NAME(name), &(ops), &(value), (flags), PARAM_CAPACITY(value), \
     }
 
 /*

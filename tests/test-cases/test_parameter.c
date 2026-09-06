@@ -17,22 +17,19 @@ struct string g_cmdline;
     TYPE(i64, i64)   \
     TYPE(u64, u64)
 
-#define SPECIAL_TYPES \
-    TYPE(string, struct string)
-
 enum stored_type {
 #define TYPE(name, type) st_##name,
         TYPES
-        SPECIAL_TYPES
 #undef TYPE
+    st_string,
 };
 
 struct test_param {
     union param_value {
     #define TYPE(name, type) type as_##name;
         TYPES
-        SPECIAL_TYPES
     #undef TYPE
+        char as_string[16];
     } value, expect;
 
     enum stored_type stored_type;
@@ -62,6 +59,10 @@ struct test_param {
                                                           \
     for (size_t i = 0; i < ARRAY_SIZE(params); i++) {     \
         params[i].param.value = &params[i].value;         \
+        if (params[i].stored_type == st_string) {         \
+            params[i].param.capacity =                    \
+                sizeof(params[i].value.as_string);        \
+        }                                                 \
         g_params[i] = params[i].param;                    \
     }                                                     \
     g_cmdline = STR(cmdline)
@@ -88,7 +89,10 @@ static void ensure_param_matches(struct test_param *param)
         TYPES
     #undef TYPE
     case st_string:
-        ASSERT(str_equals(param->value.as_string, param->expect.as_string));
+        ASSERT(str_equals(
+            STR_RUNTIME(param->value.as_string),
+            STR_RUNTIME(param->expect.as_string)
+        ));
         break;
     default:
         ASSERT(false);
@@ -145,8 +149,8 @@ TEST_CASE(parse_mixed)
         DEFINE_PARAM(bool, foo, false, true),
         DEFINE_PARAM(u32, bar, 0, 123),
         DEFINE_PARAM(bool, baz, false, true),
-        DEFINE_PARAM(string, beef, STR("alive"), STR("dead")),
-        DEFINE_PARAM(string, cafe, STR(""), STR("123 321")),
+        DEFINE_PARAM(string, beef, "alive", "dead"),
+        DEFINE_PARAM(string, cafe, "", "123 321"),
         DEFINE_PARAM(i8, x, 0, -3),
         DEFINE_PARAM(u64, y, 0, 0xDEADBEF),
     );
@@ -158,7 +162,7 @@ TEST_CASE(parse_end)
 {
     CMDLINE_TEST(
         "foo bar hello=\"  ==world==\"     ----x=y--test 123",
-        DEFINE_PARAM(string, hello, STR(""), STR("  ==world==")),
+        DEFINE_PARAM(string, hello, "", "  ==world=="),
     );
 
     CMDLINE_PARSE_EXPECT("--x=y--test 123");
@@ -175,6 +179,18 @@ TEST_CASE(bad_values)
         DEFINE_PARAM(i32, b, 123, 2147483647),
         DEFINE_PARAM(i32, c, 123, -2147483648),
         DEFINE_PARAM(i32, d, 123, 123),
+    );
+
+    CMDLINE_PARSE_CHECKED();
+}
+
+TEST_CASE(string_capacity)
+{
+    CMDLINE_TEST(
+        "fits=0123456789abcde full=0123456789abcdef over=\"0123456789abcdefg\"",
+        DEFINE_PARAM(string, fits, "x", "0123456789abcde"),
+        DEFINE_PARAM(string, full, "x", "x"),
+        DEFINE_PARAM(string, over, "x", "x"),
     );
 
     CMDLINE_PARSE_CHECKED();
@@ -234,7 +250,7 @@ TEST_CASE(get_overflow)
     char buf[8];
     struct string out = MAKE_STR(buf, sizeof(buf));
     u32 value = 12345678;
-    struct string text = STR("12345678");
+    char text[] = "12345678";
     struct param p = {
         .name = STR("x"),
         .ops = &g_param_u32_ops,
@@ -246,7 +262,8 @@ TEST_CASE(get_overflow)
 
     out = MAKE_STR(buf, sizeof(buf));
     p.ops = &g_param_string_ops;
-    p.value = &text;
+    p.value = text;
+    p.capacity = sizeof(text);
 
     ASSERT_EQ(param_get_string(&out, &p), 8);
     ASSERT_EQ(out.size, 0);
