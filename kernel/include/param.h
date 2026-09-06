@@ -7,14 +7,28 @@
 
 #include <linker.h>
 
+enum param_flags {
+    /*
+     * The value may be changed on a running system, the setter is invoked
+     * with is_runtime set to true for such writes. Writing is always a
+     * privileged operation.
+     */
+    PARAM_RUNTIME_WRITABLE = 1 << 0,
+
+    /*
+     * Only privileged readers may see the value.
+     */
+    PARAM_PRIVILEGED_READ = 1 << 1,
+};
+
 struct param {
     struct string name;
     const struct param_ops *ops;
 
-    // TODO: permissions for sysfs
     // TODO: reference to the module defining this parameter
 
     void *value;
+    u32 flags;
 };
 
 struct param_ops {
@@ -38,6 +52,9 @@ struct param_ops {
      * return value is the number of bytes required not including the
      * terminating null. If the required bytes don't fit along with the
      * terminating null, the buffer contents are unspecified.
+     *
+     * May be NULL for a parameter that cannot be read back, such a parameter
+     * is never exposed to readers.
      */
     size_t (*get)(struct string*, struct param*);
 };
@@ -82,25 +99,36 @@ PARAMETER_OPS_DECL(string)
         STR_CONSTEXPR(#name)                                    \
     )
 
-#define custom_parameter_with_section(                         \
-    name, value, ops, permissions, section                            \
-)                                                                     \
-    SECTION_VAR(section, static const, struct param) param_##name = { \
-        PARAM_NAME(name), &(ops), &(value),                           \
+#define custom_parameter_with_section(name, value, ops, flags, section) \
+    SECTION_VAR(section, static const, struct param) param_##name = {   \
+        PARAM_NAME(name), &(ops), &(value), (flags),                    \
     }
 
 /*
- * Normal module parameters, these appear in sysfs and are only configured at
- * late init. Set 'perms' to 0 to hide from sysfs.
+ * Parameters are set from the kernel command line and can be read back if
+ * their ops provide a get callback. See enum param_flags for what a
+ * parameter may additionally opt into.
+ *
+ * custom_parameter is the fully explicit form, the shorthands deduce the
+ * name from the variable, the ops from its type, or both.
  */
-#define custom_parameter(name, value, ops, perms)   \
-    custom_parameter_with_section(                  \
-        name, value, ops, perms, PARAMETERS_SECTION \
-    )
-#define parameter_with_ops(var, ops, perms) \
-    custom_parameter(var, var, ops, perms)
-#define parameter(var, perms) \
-    parameter_with_ops(var, PARAM_TYPE_OPS(var), perms)
+#define custom_parameter(name, value, ops, flags)                              \
+    custom_parameter_with_section(name, value, ops, flags, PARAMETERS_SECTION)
+
+#define renamed_parameter_with_ops(name, var, ops) \
+    custom_parameter(name, var, ops, 0)
+
+#define renamed_parameter_with_flags(name, var, flags)      \
+    custom_parameter(name, var, PARAM_TYPE_OPS(var), flags)
+#define renamed_parameter(name, var) renamed_parameter_with_flags(name, var, 0)
+
+#define parameter_with_ops_and_flags(var, ops, flags) \
+    custom_parameter(var, var, ops, flags)
+#define parameter_with_ops(var, ops) parameter_with_ops_and_flags(var, ops, 0)
+
+#define parameter_with_flags(var, flags)          \
+    renamed_parameter_with_flags(var, var, flags)
+#define parameter(var) parameter_with_flags(var, 0)
 
 /*
  * Early parameters, these are parsed and set by the kernel as soon as possible
@@ -110,8 +138,8 @@ PARAMETER_OPS_DECL(string)
     custom_parameter_with_section(                    \
         name, value, ops, 0, EARLY_PARAMETERS_SECTION \
     )
-#define early_parameter_with_ops(var, ops) custom_early_parameter(var, var, ops)
-#define early_parameter(var) early_parameter_with_ops(var, PARAM_TYPE_OPS(var))
+#define early_parameter(var)                              \
+    custom_early_parameter(var, var, PARAM_TYPE_OPS(var))
 
 typedef void (*unknown_param_cb_t)(struct string name, struct string arg);
 
