@@ -454,6 +454,8 @@ def main() -> None:
     parser.add_argument("--hyper-uefi-binary-paths", nargs='+',
                         help="Paths to the hyper UEFI binaries "
                              "(BOOT{X64,AA64}.EFI)")
+    parser.add_argument("--toolchain-only", action="store_true",
+                        help="build the toolchain and exit")
     parser.add_argument("--no-build", action="store_true",
                         help="Assume the kernel is already built")
     parser.add_argument("--reconfigure", action="store_true",
@@ -514,6 +516,10 @@ def main() -> None:
 
         with enter_work_dir(pg.project_root()):
             module.menuconfig(root_kconfig())
+        sys.exit(0)
+
+    if args.toolchain_only:
+        build_toolchain(args)
         sys.exit(0)
 
     if not args.no_build:
