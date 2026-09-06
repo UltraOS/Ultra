@@ -243,7 +243,7 @@ void cpuid(u32 function, struct cpuid_res *id)
 
 static void die_on_msr_access_failure(const char *op, u32 msr)
 {
-    panic("Unable to %s MSR 0x%08X\n", op, msr);
+    panic("Unable to %s MSR 0x%08X", op, msr);
 }
 
 u64 rdmsr_or_die(u32 msr)

@@ -8,6 +8,7 @@
 
 static bool g_in_panic;
 
+#undef panic
 void panic(const char *fmt, ...)
 {
     va_list vlist;
@@ -20,7 +21,7 @@ void panic(const char *fmt, ...)
     npf.fmt = fmt;
     npf.vlist = &vlist;
 
-    pr_emerg("Kernel panic: %pV", &npf);
+    pr_emerg("Kernel panic: %pV\n", &npf);
     va_end(vlist);
 
     dump_stack(LOG_LEVEL_EMERG, NULL);

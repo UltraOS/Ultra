@@ -35,11 +35,11 @@ BUILD_BUG_ON(FLAGS_OFFSET != offsetof(struct registers, flags));
 BUILD_BUG_ON(RSP_OFFSET != offsetof(struct registers, rsp));
 BUILD_BUG_ON(SS_OFFSET != offsetof(struct registers, ss));
 
-#define STUB_EXCEPTION(x)                               \
-    EXCEPTION_HANDLER(x)                                \
-    {                                                   \
-        UNREFERENCED_PARAMETER(regs);                   \
-        panic("Unexpected exception: %s\n", TO_STR(x)); \
+#define STUB_EXCEPTION(x)                             \
+    EXCEPTION_HANDLER(x)                              \
+    {                                                 \
+        UNREFERENCED_PARAMETER(regs);                 \
+        panic("Unexpected exception: %s", TO_STR(x)); \
     }
 
 STUB_EXCEPTION(X86_EXCEPTION_DE)
@@ -74,7 +74,7 @@ EXCEPTION_HANDLER(X86_EXCEPTION_PF)
         return;
 
     asm volatile("mov %%cr2, %0" : "=r"(addr));
-    panic("Page fault at 0x%016llX\n", addr);
+    panic("Page fault at 0x%016llX", addr);
 }
 
 bool arch_handle_abortable_instruction(
@@ -113,5 +113,5 @@ EXCEPTION_HANDLER(X86_EXCEPTION_GP)
     if (handle_abortable_instruction(regs))
         return;
 
-    panic("Unhandled #GP at 0x%016llX\n", regs->rip);
+    panic("Unhandled #GP at 0x%016llX", regs->rip);
 }
