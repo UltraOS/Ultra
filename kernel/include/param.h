@@ -146,6 +146,22 @@ PARAMETER_OPS_DECL(string)
 #define parameter(var) parameter_with_flags(var, 0)
 
 /*
+ * Action parameters have no stored value, fn is called with whatever value
+ * the parameter is given, including an empty one, and the parameter is never
+ * exposed to readers. fn has the signature of the set callback.
+ */
+#define action_parameter_with_flags(name, fn, flags)            \
+    static const struct param_ops param_##name##_ops = {        \
+        .allows_empty_value = true,                             \
+        .set = (fn),                                            \
+    };                                                          \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
+    param_##name = {                                            \
+        PARAM_NAME(name), &param_##name##_ops, NULL, (flags), 0 \
+    }
+#define action_parameter(name, fn) action_parameter_with_flags(name, fn, 0)
+
+/*
  * Parses the given command line against the given parameters and returns the
  * string (if any) after --. Unknown parameters and bad values are logged.
  */

@@ -270,3 +270,36 @@ TEST_CASE(get_overflow)
     ASSERT_EQ(param_get_string(&out, &p), 8);
     ASSERT_EQ(out.size, 0);
 }
+
+static struct string s_action_values[4];
+static size_t s_action_calls;
+
+static error_t action_set(struct string value, struct param *p, bool is_runtime)
+{
+    if (p->value != NULL || is_runtime)
+        return EINVAL;
+
+    s_action_values[s_action_calls++] = value;
+    return EOK;
+}
+
+TEST_CASE(action)
+{
+    const struct param_ops ops = {
+        .allows_empty_value = true,
+        .set = action_set,
+    };
+    struct param p = {
+        .name = STR("act"),
+        .ops = &ops,
+    };
+
+    s_action_calls = 0;
+    cmdline_parse(STR("act act=1 act= act=\"a b\""), &p, 1);
+
+    ASSERT_EQ(s_action_calls, 4);
+    ASSERT(str_equals(s_action_values[0], STR("")));
+    ASSERT(str_equals(s_action_values[1], STR("1")));
+    ASSERT(str_equals(s_action_values[2], STR("")));
+    ASSERT(str_equals(s_action_values[3], STR("a b")));
+}
