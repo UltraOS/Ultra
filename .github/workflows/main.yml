@@ -52,16 +52,26 @@ jobs:
           submodules: true
 
       - if: ${{ matrix.toolchain == 'gcc' }}
-        name: Restore cache
-        uses: actions/cache@v4.2.2
+        id: toolchain-cache
+        name: Restore the toolchain cache
+        uses: actions/cache/restore@v4.2.2
         env:
           gcc-version: 15.1.0
         with:
           path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
           key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc-${{ env.gcc-version }}"
 
-      # TODO: maybe split these steps
-      - name: Build platform toolchain & Kernel
+      - name: Build the platform toolchain
+        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native --toolchain-only"
+
+      - if: ${{ matrix.toolchain == 'gcc' && steps.toolchain-cache.outputs.cache-hit != 'true' }}
+        name: Save the toolchain cache
+        uses: actions/cache/save@v4.2.2
+        with:
+          path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
+          key: ${{ steps.toolchain-cache.outputs.cache-primary-key }}
+
+      - name: Build the kernel
         run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
       - name: Run the userspace unit tests
