@@ -264,8 +264,7 @@ static void* CODE_REFERENCES_INIT_DATA io_window_do_map(
 }
 
 static error_t CODE_REFERENCES_INIT_DATA io_window_map_with_prot(
-    io_window *out_iow, phys_addr_t phys_base, size_t length,
-    pt_prot prot
+    phys_addr_t phys_base, size_t length, pt_prot prot, io_window *out_iow
 )
 {
     void *mapping;
@@ -281,15 +280,15 @@ static error_t CODE_REFERENCES_INIT_DATA io_window_map_with_prot(
     return EOK;
 }
 
-error_t io_window_map(io_window *out_iow, phys_addr_t phys_base, size_t length)
+error_t io_window_map(phys_addr_t phys_base, size_t length, io_window *out_iow)
 {
     return io_window_map_with_prot(
-        out_iow, phys_base, length, io_window_pt_prot(s_default_pt_prot)
+        phys_base, length, io_window_pt_prot(s_default_pt_prot), out_iow
     );
 }
 
 error_t io_window_map_wc(
-    io_window *out_iow, phys_addr_t phys_base, size_t length
+    phys_addr_t phys_base, size_t length, io_window *out_iow
 )
 {
     pt_prot prot;
@@ -300,11 +299,11 @@ error_t io_window_map_wc(
     prot = io_window_pt_prot(s_default_pt_prot);
 #endif
 
-    return io_window_map_with_prot(out_iow, phys_base, length, prot);
+    return io_window_map_with_prot(phys_base, length, prot, out_iow);
 }
 
 error_t io_window_map_wt(
-    io_window *out_iow, phys_addr_t phys_base, size_t length
+    phys_addr_t phys_base, size_t length, io_window *out_iow
 )
 {
     pt_prot prot;
@@ -315,11 +314,11 @@ error_t io_window_map_wt(
     prot = io_window_pt_prot(s_default_pt_prot);
 #endif
 
-    return io_window_map_with_prot(out_iow, phys_base, length, prot);
+    return io_window_map_with_prot(phys_base, length, prot, out_iow);
 }
 
 error_t io_window_map_np(
-    io_window *out_iow, phys_addr_t phys_base, size_t length
+    phys_addr_t phys_base, size_t length, io_window *out_iow
 )
 {
     pt_prot prot;
@@ -330,11 +329,11 @@ error_t io_window_map_np(
     prot = io_window_pt_prot(s_default_pt_prot);
 #endif
 
-    return io_window_map_with_prot(out_iow, phys_base, length, prot);
+    return io_window_map_with_prot(phys_base, length, prot, out_iow);
 }
 
 error_t io_window_map_pio(
-    io_window *out_iow, phys_addr_t phys_base, size_t length
+    phys_addr_t phys_base, size_t length, io_window *out_iow
 )
 {
     pio_addr_t addr;

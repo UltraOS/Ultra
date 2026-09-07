@@ -87,7 +87,7 @@ static error_t hpet_init(void)
     address = hpet->address.address;
 
     // Timer 31 ends at 0x3FF
-    ret = io_window_map(&s_hpet_io, address, 0x3FF + 1);
+    ret = io_window_map(address, 0x3FF + 1, &s_hpet_io);
     if (is_error(ret)) {
         pr_warn("unable to map: %pE\n", &ret);
         return ret;
