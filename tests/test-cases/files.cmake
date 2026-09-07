@@ -3,6 +3,7 @@ add_test_cases(
     test_parameter.c
     test_log_ring.c
     test_bit.c
+    test_string.c
     test_smbios.c
     test_list.c
     test_slist.c
