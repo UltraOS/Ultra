@@ -54,11 +54,6 @@ enum earlycon_mode {
     EARLYCON_MODE_E9,
 };
 
-static const struct string s_earlycon_mode_names[] = {
-    [EARLYCON_MODE_NONE] = STR_CONSTEXPR("none"),
-    [EARLYCON_MODE_E9] = STR_CONSTEXPR("e9"),
-};
-
 static enum earlycon_mode s_earlycon = EARLYCON_MODE_NONE;
 
 static error_t earlycon_destroy(void)
@@ -75,22 +70,28 @@ static error_t earlycon_set(
 {
     error_t ret;
     size_t mode;
+    bool colored = false;
+    struct suboption options[] = { suboption(colored) };
+    struct suboption_variant modes[] = {
+        [EARLYCON_MODE_NONE] = SUBOPTION_VARIANT("none"),
+        [EARLYCON_MODE_E9] = SUBOPTION_VARIANT("e9", options),
+    };
     enum earlycon_mode *cur = v->ptr;
 
-    UNREFERENCED_PARAMETER(is_runtime);
-
-    for (mode = 0; mode < ARRAY_SIZE(s_earlycon_mode_names); mode++) {
-        if (str_equals_caseless(value, s_earlycon_mode_names[mode]))
-            break;
-    }
-    if (mode == ARRAY_SIZE(s_earlycon_mode_names))
-        return EINVAL;
+    ret = parse_suboptions_by_head(
+        value, modes, ARRAY_SIZE(modes), &mode, is_runtime
+    );
+    if (is_error(ret))
+        return ret;
 
     ret = earlycon_destroy();
     if (is_error(ret))
         return ret;
 
     if (mode == EARLYCON_MODE_E9) {
+        e9_console.flags =
+            colored ? CONSOLE_FLAG_ANSI_COLOR : CONSOLE_FLAG_NONE;
+
         ret = e9_console_init();
         if (is_error(ret))
             return ret;
@@ -101,7 +102,8 @@ static error_t earlycon_set(
         return EOK;
 
     pr_info(
-        "using '%pS' as the early console\n", &s_earlycon_mode_names[mode]
+        "using%s '%pS' as the early console\n",
+        colored ? " (colored)" : "", &modes[mode].head
     );
     return EOK;
 }
