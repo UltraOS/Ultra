@@ -126,7 +126,7 @@ PARAMETER_OPS_DECL(string)
  */
 #define custom_parameter(name, value, ops, flags)                           \
     SECTION_VAR(PARAMETERS_SECTION, static const, struct param)             \
-    param_##name = {                                                        \
+    s_param_##name = {                                                      \
         PARAM_NAME(name), &(ops), &(value), (flags), PARAM_CAPACITY(value), \
     }
 
@@ -150,14 +150,14 @@ PARAMETER_OPS_DECL(string)
  * the parameter is given, including an empty one, and the parameter is never
  * exposed to readers. fn has the signature of the set callback.
  */
-#define action_parameter_with_flags(name, fn, flags)            \
-    static const struct param_ops param_##name##_ops = {        \
-        .allows_empty_value = true,                             \
-        .set = (fn),                                            \
-    };                                                          \
-    SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
-    param_##name = {                                            \
-        PARAM_NAME(name), &param_##name##_ops, NULL, (flags), 0 \
+#define action_parameter_with_flags(name, fn, flags)                 \
+    static const struct param_ops s_param_##name##_ops = {           \
+        .allows_empty_value = true,                                  \
+        .set = (fn),                                                 \
+    };                                                               \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param)      \
+    s_param_##name = {                                               \
+        PARAM_NAME(name), &s_param_##name##_ops, nullptr, (flags), 0 \
     }
 #define action_parameter(name, fn) action_parameter_with_flags(name, fn, 0)
 
