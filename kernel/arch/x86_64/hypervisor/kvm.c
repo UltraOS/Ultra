@@ -87,9 +87,9 @@ static INIT_CODE error_t kvm_setup_pvclock(void)
     );
 
     BUILD_BUG_ON(sizeof(struct pvclock_vcpu_time_info) > CACHE_LINE_SIZE);
-    bytes_to_allocate = PAGE_ROUND_UP(CACHE_LINE_SIZE * g_num_present_cpus);
+    bytes_to_allocate = CACHE_LINE_SIZE * g_num_present_cpus;
 
-    ret = boot_alloc(bytes_to_allocate >> PAGE_SHIFT, &time_info_base);
+    ret = boot_alloc_bytes(bytes_to_allocate, &time_info_base);
     if (is_error(ret))
         return ret;
 
