@@ -4,6 +4,7 @@
 #include <boot/boot.h>
 
 error_t boot_alloc(size_t num_pages, phys_addr_t *out_addr);
+error_t boot_alloc_bytes(size_t num_bytes, phys_addr_t *out_addr);
 error_t boot_alloc_zeroed(size_t num_pages, phys_addr_t *out_addr);
 
 error_t boot_alloc_aligned(

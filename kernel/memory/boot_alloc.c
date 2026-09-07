@@ -487,6 +487,11 @@ error_t INIT_CODE boot_alloc(size_t num_pages, phys_addr_t *out_addr)
     return boot_alloc_nogrow(num_pages, 0, out_addr);
 }
 
+error_t INIT_CODE boot_alloc_bytes(size_t num_bytes, phys_addr_t *out_addr)
+{
+    return boot_alloc(PAGE_ROUND_UP(num_bytes) >> PAGE_SHIFT, out_addr);
+}
+
 error_t INIT_CODE boot_alloc_zeroed(size_t num_pages, phys_addr_t *out_addr)
 {
     error_t ret;
