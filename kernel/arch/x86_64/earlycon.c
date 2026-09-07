@@ -5,6 +5,7 @@
 #include <common/types.h>
 
 #include <module.h>
+#include <free_after_init.h>
 #include <console.h>
 #include <param.h>
 #include <arch/private/cpu.h>
@@ -25,9 +26,9 @@ static struct console e9_console = {
 };
 
 // The console currently registered, it owns s_earlycon_iow
-static struct console *s_active_console;
+static struct console *INIT_DATA s_active_console;
 
-static error_t earlycon_activate(struct console *con, bool colored)
+static error_t INIT_CODE earlycon_activate(struct console *con, bool colored)
 {
     error_t ret;
 
@@ -41,7 +42,7 @@ static error_t earlycon_activate(struct console *con, bool colored)
     return EOK;
 }
 
-static error_t earlycon_destroy(void)
+static error_t INIT_CODE earlycon_destroy(void)
 {
     error_t ret;
 
@@ -57,7 +58,7 @@ static error_t earlycon_destroy(void)
     return EOK;
 }
 
-static error_t e9_console_init(bool colored)
+static error_t INIT_CODE e9_console_init(bool colored)
 {
     error_t ret;
 
@@ -88,7 +89,7 @@ enum earlycon_mode {
     EARLYCON_MODE_E9,
 };
 
-static error_t earlycon_set(
+static error_t INIT_CODE earlycon_set(
     struct string value, struct param_value *v, bool is_runtime
 )
 {
