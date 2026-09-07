@@ -106,15 +106,7 @@ static error_t earlycon_set(
     return EOK;
 }
 
-static size_t earlycon_get(struct string *out, const struct param_value *v)
-{
-    enum earlycon_mode *cur = v->ptr;
-
-    return param_write_string(out, s_earlycon_mode_names[*cur]);
-}
-
 static const struct param_ops s_earlycon_param_ops = {
     .set = earlycon_set,
-    .get = earlycon_get,
 };
 parameter_with_ops(s_earlycon, s_earlycon_param_ops);
