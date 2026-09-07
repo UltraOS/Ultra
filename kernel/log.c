@@ -2,6 +2,8 @@
 #include <common/format.h>
 #include <common/error.h>
 #include <common/minmax.h>
+#include <common/string.h>
+#include <common/ctype.h>
 
 #include <console.h>
 #include <log.h>
@@ -26,18 +28,133 @@ void log_set_hardware_identity_string(const char *fmt, ...)
     va_end(va);
 }
 
+// Select graphic rendition parameters, combined with ";"
+#define ATTR_RESET "0"
+#define ATTR_BOLD "1"
+#define ATTR_DIM "2"
+#define FG_RED "31"
+#define FG_YELLOW "33"
+#define FG_BLUE "34"
+#define FG_BRIGHT_WHITE "97"
+#define BG_RED "41"
+
+#define SGR(params) "\x1b[" params "m"
+#define SGR_RESET SGR(ATTR_RESET)
+#define SGR_BOLD_RED SGR(ATTR_BOLD ";" FG_RED)
+#define SGR_PREFIX SGR(ATTR_BOLD ";" FG_BLUE)
+
+static const char *const s_level_sgr[LOG_LEVEL_COUNT] = {
+    [LOG_LEVEL_EMERG] = SGR(FG_BRIGHT_WHITE ";" BG_RED),
+    [LOG_LEVEL_ALERT] = SGR_BOLD_RED,
+    [LOG_LEVEL_CRIT] = SGR_BOLD_RED,
+    [LOG_LEVEL_ERR] = SGR(FG_RED),
+    [LOG_LEVEL_WARN] = SGR(ATTR_BOLD ";" FG_YELLOW),
+    [LOG_LEVEL_NOTICE] = SGR(ATTR_BOLD),
+    [LOG_LEVEL_DEBUG] = SGR(ATTR_DIM),
+};
+
+#define MAX_LOG_PREFIX_LENGTH 16
+
+/*
+ * Length of the "subsys: " prefix at the start of a message including the
+ * colon, zero if the message doesn't start with one
+ */
+static size_t log_prefix_length(const char *msg, size_t len)
+{
+    size_t i;
+
+    if (len == 0 || !islower(msg[0]))
+        return 0;
+
+    for (i = 1; i < len && i < MAX_LOG_PREFIX_LENGTH; i++) {
+        char c = msg[i];
+
+        if (islower(c) || isdigit(c) || c == '-')
+            continue;
+
+        if (c == ':' && (i + 1) < len && msg[i + 1] == ' ')
+            return i + 1;
+
+        break;
+    }
+
+    return 0;
+}
+
+struct out_buf {
+    char *data;
+    size_t size, capacity;
+};
+
+static void out_buf_append(struct out_buf *buf, const char *str, size_t len)
+{
+    len = MIN(len, buf->capacity - buf->size);
+    memcpy(buf->data + buf->size, str, len);
+    buf->size += len;
+}
+
+static void out_buf_append_cstr(struct out_buf *buf, const char *str)
+{
+    out_buf_append(buf, str, strlen(str));
+}
+
+static void format_record(
+    struct out_buf *out, const char *stamp, size_t stamp_len,
+    const char *msg, size_t len, u8 level, bool color
+)
+{
+    size_t prefix_len;
+    bool has_newline;
+
+    out_buf_append(out, stamp, stamp_len);
+
+    if (!color) {
+        out_buf_append(out, msg, len);
+        return;
+    }
+
+    // The reset and the newline that end the line must always fit
+    out->capacity -= sizeof(SGR_RESET);
+
+    prefix_len = log_prefix_length(msg, len);
+    if (prefix_len) {
+        out_buf_append_cstr(out, SGR_PREFIX);
+        out_buf_append(out, msg, prefix_len);
+        out_buf_append_cstr(out, SGR_RESET);
+
+        msg += prefix_len;
+        len -= prefix_len;
+    }
+
+    has_newline = len && msg[len - 1] == '\n';
+    len -= has_newline;
+
+    if (level < LOG_LEVEL_COUNT && s_level_sgr[level])
+        out_buf_append_cstr(out, s_level_sgr[level]);
+    out_buf_append(out, msg, len);
+
+    out->capacity += sizeof(SGR_RESET);
+    out_buf_append_cstr(out, SGR_RESET);
+    if (has_newline)
+        out_buf_append(out, "\n", 1);
+}
+
 static void print_flush(void)
 {
-    static char msg_buf[512], out_buf[512 + 64];
+    static char msg_buf[512], out_data[512 + 128];
 
     struct console *con;
     struct log_record rec;
+    struct out_buf out;
     error_t ret;
     u64 sec, usec;
-    int prefix_len;
-    size_t copy_len;
+    int stamp_len;
+    char stamp[32];
+    bool color;
 
     for (con = g_consoles; con; con = con->next) {
+        color = con->flags & CONSOLE_FLAG_ANSI_COLOR;
+
         for (;;) {
             ret = log_ring_read(
                 &s_log_ring, con->log_seq_num, msg_buf, sizeof(msg_buf), &rec
@@ -47,15 +164,19 @@ static void print_flush(void)
 
             sec = rec.timestamp_ns / NS_PER_SEC;
             usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
-
-            prefix_len = snprintf(
-                out_buf, sizeof(out_buf), "[%5llu.%06llu] ", sec, usec
+            stamp_len = snprintf(
+                stamp, sizeof(stamp), "[%5llu.%06llu] ", sec, usec
             );
 
-            copy_len = MIN(rec.length, sizeof(out_buf) - prefix_len);
-            memcpy(out_buf + prefix_len, msg_buf, copy_len);
+            out = (struct out_buf) {
+                .data = out_data,
+                .capacity = sizeof(out_data),
+            };
+            format_record(
+                &out, stamp, stamp_len, msg_buf, rec.length, rec.level, color
+            );
 
-            con->write(con, out_buf, prefix_len + copy_len);
+            con->write(con, out.data, out.size);
             con->log_seq_num = rec.seq_num + 1;
         }
     }
