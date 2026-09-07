@@ -99,7 +99,7 @@ static error_t INIT_CODE boot_info_init(void)
     g_direct_map_base = pi->higher_half_base;
 
     print(
-        "Kernel command line: \"%s\"\n",
+        LOG_INFO"Kernel command line: \"%s\"\n",
         str_empty(g_boot_ctx.cmdline) ? "<empty>" : g_boot_ctx.cmdline.text
     );
 
@@ -122,7 +122,7 @@ INIT_CALL_AT(BOOT_INFO_AVAILABLE, boot_info_init);
 void INIT_CODE entry(struct ultra_boot_context *ctx)
 {
     print(
-        "Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
+        LOG_INFO"Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
         ULTRA_ARCH, ULTRA_GIT_SHA, __DATE__, __TIME__
     );
 
