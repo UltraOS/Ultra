@@ -73,7 +73,7 @@ static void INIT_CODE xapic_setup(void)
 
     pr_info("base set at 0x%016llX\n", s_xapic_phys_base);
 
-    ret = io_window_map(&s_xapic_io, s_xapic_phys_base, PAGE_SIZE);
+    ret = io_window_map(s_xapic_phys_base, PAGE_SIZE, &s_xapic_io);
     BUG_ON(ret != EOK);
 }
 

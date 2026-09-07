@@ -54,11 +54,11 @@ typedef struct io_window {
  *
  * Use the io{read,write} helpers to access.
  */
-error_t io_window_map(io_window*, phys_addr_t phys_base, size_t length);
-error_t io_window_map_wc(io_window*, phys_addr_t phys_base, size_t length);
-error_t io_window_map_wt(io_window*, phys_addr_t phys_base, size_t length);
-error_t io_window_map_np(io_window*, phys_addr_t phys_base, size_t length);
-error_t io_window_map_pio(io_window*, phys_addr_t phys_base, size_t length);
+error_t io_window_map(phys_addr_t phys_base, size_t length, io_window*);
+error_t io_window_map_wc(phys_addr_t phys_base, size_t length, io_window*);
+error_t io_window_map_wt(phys_addr_t phys_base, size_t length, io_window*);
+error_t io_window_map_np(phys_addr_t phys_base, size_t length, io_window*);
+error_t io_window_map_pio(phys_addr_t phys_base, size_t length, io_window*);
 
 // Maps requested physical memory in cached mode
 void *io_window_map_cached(phys_addr_t phys_base, size_t length);

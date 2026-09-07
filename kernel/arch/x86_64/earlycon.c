@@ -31,7 +31,7 @@ static error_t e9_console_init(void)
     if (!all_cpus_have(X86_FEATURE_HYPERVISOR))
         return ENODEV;
 
-    ret = io_window_map_pio(&s_e9_iow, 0xE9, 1);
+    ret = io_window_map_pio(0xE9, 1, &s_e9_iow);
     if (is_error(ret))
         return ret;
 

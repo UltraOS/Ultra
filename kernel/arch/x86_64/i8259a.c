@@ -60,8 +60,8 @@ void INIT_CODE i8259a_quiesce(void)
 {
     io_window master, slave;
 
-    BUG_ON(is_error(io_window_map_pio(&master, I8259A_MASTER, 2)));
-    BUG_ON(is_error(io_window_map_pio(&slave, I8259A_SLAVE, 2)));
+    BUG_ON(is_error(io_window_map_pio(I8259A_MASTER, 2, &master)));
+    BUG_ON(is_error(io_window_map_pio(I8259A_SLAVE, 2, &slave)));
 
     i8259a_program_one(
         &master, VECTOR_DYNAMIC_FIRST,

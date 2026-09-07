@@ -63,7 +63,7 @@ static error_t pm_timer_init(void)
 
     pr_info("at 0x%04X, %d-bit counter\n", port, bitness);
 
-    ret = io_window_map_pio(&s_pm_io, port, 4);
+    ret = io_window_map_pio(port, 4, &s_pm_io);
     if (is_error(ret)) {
         pr_warn("unable to map: %pE\n", &ret);
         return ret;

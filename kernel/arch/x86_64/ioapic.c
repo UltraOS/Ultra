@@ -747,7 +747,7 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
         goto out_no_reg;
     }
 
-    ret = io_window_map(&new_ioapic->iow, base, PAGE_SIZE);
+    ret = io_window_map(base, PAGE_SIZE, &new_ioapic->iow);
     if (is_error(ret)) {
         why = "unable to map";
         goto out_no_reg;
