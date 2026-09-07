@@ -35,6 +35,7 @@ static error_t e9_console_init(void)
     if (is_error(ret))
         return ret;
 
+    ret = ENODEV;
     if (ioread8(&s_e9_iow, 0) != 0xE9)
         goto unmap;
 
