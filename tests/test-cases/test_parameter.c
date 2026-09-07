@@ -467,6 +467,23 @@ TEST_CASE(suboptions_actions)
     ASSERT_TRUE(g_action_runtime);
 }
 
+TEST_CASE(tables_are_searched_in_order)
+{
+    bool a = false, b = false;
+    struct param first[] = { PARAM_ENTRY(a, a, g_param_bool_ops, 0) };
+    struct param second[] = { PARAM_ENTRY(b, b, g_param_bool_ops, 0) };
+    struct param_table tables[] = {
+        { first, ARRAY_SIZE(first) }, { second, ARRAY_SIZE(second) },
+    };
+
+    ASSERT(str_equals(
+        cmdline_parse_tables(STR("b a -- init"), tables, ARRAY_SIZE(tables)),
+        STR("init")
+    ));
+    ASSERT_TRUE(a);
+    ASSERT_TRUE(b);
+}
+
 TEST_CASE(by_head_selects_the_variant)
 {
     bool colored = false;

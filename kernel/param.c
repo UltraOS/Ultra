@@ -279,6 +279,22 @@ error_t parse_suboptions_by_head(
     return EOK;
 }
 
+static struct param *find_param_in_tables(
+    struct string name, const struct param_table *tables, size_t num_tables
+)
+{
+    struct param *p;
+    size_t i;
+
+    for (i = 0; i < num_tables; i++) {
+        p = find_param(name, tables[i].params, tables[i].count);
+        if (p != nullptr)
+            return p;
+    }
+
+    return nullptr;
+}
+
 static void warn_unknown_param(struct string name, struct string value)
 {
     if (str_empty(value)) {
@@ -289,8 +305,8 @@ static void warn_unknown_param(struct string name, struct string value)
     pr_warn("unknown parameter \"%pS\" (value \"%pS\")\n", &name, &value);
 }
 
-struct string cmdline_parse(
-    struct string cmdline, struct param *params, size_t num_params
+struct string cmdline_parse_tables(
+    struct string cmdline, const struct param_table *tables, size_t num_tables
 )
 {
     error_t ret;
@@ -348,7 +364,7 @@ struct string cmdline_parse(
         if (str_empty(key))
             return cmdline;
 
-        p = find_param(key, params, num_params);
+        p = find_param_in_tables(key, tables, num_tables);
         if (p == NULL) {
             warn_unknown_param(key, value);
             goto do_next;
@@ -366,4 +382,13 @@ struct string cmdline_parse(
     do_next:
         cmdline_trim(&cmdline);
     }
+}
+
+struct string cmdline_parse(
+    struct string cmdline, struct param *params, size_t num_params
+)
+{
+    struct param_table table = { params, num_params };
+
+    return cmdline_parse_tables(cmdline, &table, 1);
 }
