@@ -92,6 +92,10 @@ static INIT_CODE const char *platform_type_to_string(u32 type)
 static error_t INIT_CODE boot_info_init(void)
 {
     struct ultra_platform_info_attribute *pi;
+    struct param_table param_tables[] = {
+        { SECTION_ARRAY_ARGS(PARAMETERS_SECTION) },
+        { SECTION_ARRAY_ARGS(FREE_AFTER_INIT_PARAMETERS_SECTION) },
+    };
 
     boot_context_init(s_loader_ctx);
 
@@ -103,7 +107,9 @@ static error_t INIT_CODE boot_info_init(void)
         str_empty(g_boot_ctx.cmdline) ? "<empty>" : g_boot_ctx.cmdline.text
     );
 
-    cmdline_parse(g_boot_ctx.cmdline, SECTION_ARRAY_ARGS(PARAMETERS_SECTION));
+    cmdline_parse_tables(
+        g_boot_ctx.cmdline, param_tables, ARRAY_SIZE(param_tables)
+    );
 
     pr_info(
         "booted via %s (by %s)\n", platform_type_to_string(pi->platform_type),
