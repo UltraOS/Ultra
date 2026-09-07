@@ -285,7 +285,7 @@ static error_t INIT_CODE unwind_init(void)
 }
 INIT_CALL_POST(BOOT_INFO_AVAILABLE, unwind_init);
 
-static ptr_or_error_t find_fde(ptr_t pc)
+static error_t find_fde(ptr_t pc, void **out_fde)
 {
     error_t ret;
     u64 sym_addr, fde_addr;
@@ -301,7 +301,7 @@ static ptr_or_error_t find_fde(ptr_t pc)
         };
         ret = decode_value(&data, g_fde_table_encoding, &sym_addr);
         if (is_error(ret))
-            return encode_error_ptr(ret);
+            return ret;
 
         if (sym_addr <= pc)
             begin = i;
@@ -316,9 +316,10 @@ static ptr_or_error_t find_fde(ptr_t pc)
     };
     ret = decode_value(&data, g_fde_table_encoding, &fde_addr);
     if (is_error(ret))
-        return encode_error_ptr(ret);
+        return ret;
 
-    return (void*)((ptr_t)fde_addr);
+    *out_fde = (void*)((ptr_t)fde_addr);
+    return EOK;
 }
 
 error_t unwind_current_begin(struct unwind_state *state, ptr_t starting_pc)
@@ -509,14 +510,15 @@ static error_t parse_fde(struct unwind_state *state, struct eh_data *fde)
 
 static error_t prepare_unwind_state(struct unwind_state *state)
 {
-    ptr_or_error_t pret;
     struct eh_data fde;
+    void *fde_ptr;
+    error_t ret;
 
-    pret = find_fde(get_reliable_pc(state));
-    if (error_ptr(pret))
-        return decode_error_ptr(pret);
+    ret = find_fde(get_reliable_pc(state), &fde_ptr);
+    if (is_error(ret))
+        return ret;
 
-    eh_data_init(&fde, pret);
+    eh_data_init(&fde, fde_ptr);
 
     return parse_fde(state, &fde);
 }
