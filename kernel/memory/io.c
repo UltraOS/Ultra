@@ -337,13 +337,14 @@ error_t io_window_map_pio(
     io_window *out_iow, phys_addr_t phys_base, size_t length
 )
 {
-    pio_addr_or_error_t ret;
+    pio_addr_t addr;
+    error_t ret;
 
-    ret = arch_map_pio(phys_base, length);
-    if (error_pio_addr(ret))
-        return decode_error_pio_addr(ret);
+    ret = arch_map_pio(phys_base, length, &addr);
+    if (is_error(ret))
+        return ret;
 
-    out_iow->port_address = ret;
+    out_iow->port_address = addr;
     out_iow->type = IO_TYPE_PORT_IO;
     out_iow->length = length;
 
@@ -630,7 +631,7 @@ MAKE_GENERIC_MMIO_MANY(64, _relaxed)
        iowrite##width(iow, offset, value);                           \
     }
 
-pio_addr_or_error_t arch_map_pio(phys_addr_t phys_base, size_t length)
+error_t arch_map_pio(phys_addr_t phys_base, size_t length, pio_addr_t *out_addr)
 {
     /*
      * TODO: implement generic PIO over MMIO for the non-ARCH_HAS_CUSTOM_PIO
@@ -638,8 +639,9 @@ pio_addr_or_error_t arch_map_pio(phys_addr_t phys_base, size_t length)
      */
     UNREFERENCED_PARAMETER(phys_base);
     UNREFERENCED_PARAMETER(length);
+    UNREFERENCED_PARAMETER(out_addr);
 
-    return encode_error_pio_addr(ENOTSUP);
+    return ENOTSUP;
 }
 
 void arch_unmap_pio(pio_addr_t addr, size_t length)
