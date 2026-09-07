@@ -8,21 +8,16 @@
 
 #define X86_PORT_IO_WINDOW_OFFSET 0x10000
 #define X86_PORT_IO_WINDOW_LEN 0xFFFF
-#define X86_PORT_IO_WINDOW_END \
-    (X86_PORT_IO_WINDOW_OFFSET + X86_PORT_IO_WINDOW_LEN + 1)
 
-#define encode_error_pio_addr(ret) ((ret) + X86_PORT_IO_WINDOW_END)
-#define decode_error_pio_addr(ret) ((ret) - X86_PORT_IO_WINDOW_END)
-#define error_pio_addr(ret) ((ret) >= X86_PORT_IO_WINDOW_END)
-
-static inline pio_addr_or_error_t arch_map_pio(
-    phys_addr_t phys_base, size_t length
+static inline error_t arch_map_pio(
+    phys_addr_t phys_base, size_t length, pio_addr_t *out_addr
 )
 {
     if (unlikely((phys_base + length) > X86_PORT_IO_WINDOW_LEN))
-        return encode_error_pio_addr(EINVAL);
+        return EINVAL;
 
-    return (pio_addr_t)(X86_PORT_IO_WINDOW_OFFSET + phys_base);
+    *out_addr = (pio_addr_t)(X86_PORT_IO_WINDOW_OFFSET + phys_base);
+    return EOK;
 }
 
 static inline void arch_unmap_pio(phys_addr_t phys_base, size_t length)
