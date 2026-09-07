@@ -16,11 +16,6 @@ static bool console_registered(struct console *con)
 
 error_t register_console(struct console *con)
 {
-    if (!g_consoles) {
-        g_consoles = con;
-        return EOK;
-    }
-
     if (console_registered(con))
         return EBUSY;
 
@@ -31,8 +26,7 @@ error_t register_console(struct console *con)
 
 error_t unregister_console(struct console *con)
 {
-    struct console *cur_con;
-    struct console *prev_con = NULL;
+    struct console *cur_con, *prev_con = nullptr;
 
     for (cur_con = g_consoles; cur_con; cur_con = cur_con->next) {
         if (cur_con != con) {
@@ -42,6 +36,9 @@ error_t unregister_console(struct console *con)
 
         if (prev_con)
             prev_con->next = cur_con->next;
+        else
+            g_consoles = cur_con->next;
+
         return EOK;
     }
 
