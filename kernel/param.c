@@ -6,39 +6,39 @@
 
 #include <param.h>
 
-#define PARAM_SET_OPS_TEMPLATE(type)                        \
-    error_t param_set_##type(                               \
-        struct string str, struct param *p, bool is_runtime \
-    )                                                       \
-    {                                                       \
-        UNREFERENCED_PARAMETER(is_runtime);                 \
-        return str_to_##type(str, p->value);                \
-    }                                                       \
+#define PARAM_SET_OPS_TEMPLATE(type)                              \
+    error_t param_set_##type(                                     \
+        struct string str, struct param_value *v, bool is_runtime \
+    )                                                             \
+    {                                                             \
+        UNREFERENCED_PARAMETER(is_runtime);                       \
+        return str_to_##type(str, v->ptr);                        \
+    }                                                             \
 
-#define PARAM_GET_OPS_TEMPLATE(type, fmt)                               \
-    size_t param_get_##type(                                            \
-        struct string *out_str, struct param *p                         \
-    )                                                                   \
-    {                                                                   \
-        size_t bytes;                                                   \
-                                                                        \
-        bytes = (size_t)snprintf(                                       \
-            out_str->mutable_text, out_str->size, fmt, *(type*)p->value \
-        );                                                              \
-        out_str->size = bytes < out_str->size ? bytes : 0;              \
-                                                                        \
-        return bytes;                                                   \
-    }                                                                   \
+#define PARAM_GET_OPS_TEMPLATE(type, fmt)                             \
+    size_t param_get_##type(                                          \
+        struct string *out_str, const struct param_value *v           \
+    )                                                                 \
+    {                                                                 \
+        size_t bytes;                                                 \
+                                                                      \
+        bytes = (size_t)snprintf(                                     \
+            out_str->mutable_text, out_str->size, fmt, *(type*)v->ptr \
+        );                                                            \
+        out_str->size = bytes < out_str->size ? bytes : 0;            \
+                                                                      \
+        return bytes;                                                 \
+    }                                                                 \
 
-#define PARAM_OPS(type)                                                 \
-    const struct param_ops g_param_##type##_ops = {                     \
-        .set = param_set_##type,                                        \
-        .get = param_get_##type,                                        \
+#define PARAM_OPS(type)                             \
+    const struct param_ops g_param_##type##_ops = { \
+        .set = param_set_##type,                    \
+        .get = param_get_##type,                    \
     }
 
-#define MAKE_PARAM_OPS_WITH_FMT(type, fmt)                              \
-    PARAM_SET_OPS_TEMPLATE(type)                                        \
-    PARAM_GET_OPS_TEMPLATE(type, fmt)                                   \
+#define MAKE_PARAM_OPS_WITH_FMT(type, fmt) \
+    PARAM_SET_OPS_TEMPLATE(type)           \
+    PARAM_GET_OPS_TEMPLATE(type, fmt)      \
     PARAM_OPS(type)
 
 MAKE_PARAM_OPS_WITH_FMT(i8, "%d");
@@ -52,17 +52,19 @@ MAKE_PARAM_OPS_WITH_FMT(u64, "%llu");
 
 PARAM_GET_OPS_TEMPLATE(bool, "%d")
 
-error_t param_set_bool(struct string str, struct param *p, bool is_runtime)
+error_t param_set_bool(
+    struct string str, struct param_value *v, bool is_runtime
+)
 {
     UNREFERENCED_PARAMETER(is_runtime);
 
     // Empty value means true, e.g. "bar" in "foo=1 bar baz=0"
     if (str_empty(str)) {
-        *(bool*)p->value = true;
+        *(bool*)v->ptr = true;
         return EOK;
     }
 
-    return str_to_bool(str, p->value);
+    return str_to_bool(str, v->ptr);
 }
 
 const struct param_ops g_param_bool_ops = {
@@ -71,14 +73,16 @@ const struct param_ops g_param_bool_ops = {
     .get = param_get_bool,
 };
 
-error_t param_set_string(struct string str, struct param *p, bool is_runtime)
+error_t param_set_string(
+    struct string str, struct param_value *v, bool is_runtime
+)
 {
     UNREFERENCED_PARAMETER(is_runtime);
 
-    if (str.size >= p->capacity)
+    if (str.size >= v->capacity)
         return ENOSPC;
 
-    str_terminated_copy(p->value, str);
+    str_terminated_copy(v->ptr, str);
     return EOK;
 }
 
@@ -94,9 +98,9 @@ size_t param_write_string(struct string *out, struct string value)
     return value.size;
 }
 
-size_t param_get_string(struct string *dst, struct param *p)
+size_t param_get_string(struct string *dst, const struct param_value *v)
 {
-    return param_write_string(dst, STR_RUNTIME((const char*)p->value));
+    return param_write_string(dst, STR_RUNTIME((const char*)v->ptr));
 }
 
 PARAM_OPS(string);
@@ -141,6 +145,66 @@ static void cmdline_trim(struct string *cmdline)
 static bool match_whitespace(struct string str)
 {
     return isspace(str.text[0]);
+}
+
+static error_t param_set_checked(
+    param_set_t set, bool allows_empty_value, struct param_value *v,
+    struct string value, bool is_runtime
+)
+{
+    if (unlikely(str_empty(value) && !allows_empty_value))
+        return EINVAL;
+
+    return set(value, v, is_runtime);
+}
+
+static struct suboption *find_suboption(
+    struct string name, struct suboption *opts, size_t num_opts
+)
+{
+    size_t i;
+
+    for (i = 0; i < num_opts; i++) {
+        if (str_equals_with_cb(opts[i].name, name, cmdline_name_compare))
+            return &opts[i];
+    }
+
+    return nullptr;
+}
+
+error_t parse_suboptions(
+    struct string list, char separator, struct suboption *opts,
+    size_t num_opts, bool is_runtime
+)
+{
+    struct string token, key, value;
+    struct suboption *opt;
+    ssize_t eq;
+    error_t ret;
+
+    while (str_pop_token(&list, separator, &token)) {
+        eq = str_find_one(token, '=', 0);
+        if (eq < 0) {
+            key = token;
+            str_clear(&value);
+        } else {
+            key = str_substring(token, 0, eq);
+            value = str_substring(token, eq + 1, token.size);
+        }
+
+        opt = find_suboption(key, opts, num_opts);
+        if (opt == nullptr)
+            return EINVAL;
+
+        ret = param_set_checked(
+            opt->set, opt->flags & SUBOPTION_ALLOWS_EMPTY_VALUE, &opt->value,
+            value, is_runtime
+        );
+        if (is_error(ret))
+            return ret;
+    }
+
+    return EOK;
 }
 
 static void warn_unknown_param(struct string name, struct string value)
@@ -218,11 +282,9 @@ struct string cmdline_parse(
             goto do_next;
         }
 
-        if (likely(!str_empty(value) || p->ops->allows_empty_value))
-            ret = p->ops->set(value, p, false);
-        else
-            ret = EINVAL;
-
+        ret = param_set_checked(
+            p->ops->set, p->ops->allows_empty_value, &p->value, value, false
+        );
         if (is_error(ret)) {
             pr_err(
                 "bad \"%pS\" value \"%pS\" (%pE)\n", &key, &value, &ret
