@@ -280,8 +280,9 @@ out_case4:
     s_entry_count -= mergeable_before + mergeable_after;
 }
 
-static INIT_CODE phys_addr_t allocate_top_down(
-    size_t page_count, phys_addr_t upper_limit, size_t align
+static INIT_CODE error_t allocate_top_down(
+    size_t page_count, phys_addr_t upper_limit, size_t align,
+    phys_addr_t *out_addr
 )
 {
     phys_addr_t range_end, bytes_to_allocate = page_count * PAGE_SIZE;
@@ -318,7 +319,7 @@ static INIT_CODE phys_addr_t allocate_top_down(
     }
 
     if (!allocated_end)
-        return encode_error_phys_addr(ENOMEM);
+        return ENOMEM;
 
     allocated_mr = (struct memory_range) {
         .physical_address = allocated_end - bytes_to_allocate,
@@ -326,11 +327,13 @@ static INIT_CODE phys_addr_t allocate_top_down(
     };
     allocate_out_of(i, &allocated_mr);
 
-    return allocated_mr.physical_address;
+    *out_addr = allocated_mr.physical_address;
+    return EOK;
 }
 
-static INIT_CODE phys_addr_t allocate_within(
-    size_t page_count, phys_addr_t lower_limit, phys_addr_t upper_limit
+static INIT_CODE error_t allocate_within(
+    size_t page_count, phys_addr_t lower_limit, phys_addr_t upper_limit,
+    phys_addr_t *out_addr
 )
 {
     phys_addr_t range_begin;
@@ -359,7 +362,7 @@ static INIT_CODE phys_addr_t allocate_within(
 
     mr_idx = find_range(lower_limit, ALLOW_ONE_ABOVE_YES);
     if (mr_idx < 0)
-        return encode_error_phys_addr(ENOMEM);
+        return ENOMEM;
 
     for (; mr_idx < (ssize_t)s_entry_count; ++mr_idx) {
         phys_addr_t end;
@@ -369,7 +372,7 @@ static INIT_CODE phys_addr_t allocate_within(
         end = mr_end(picked_mr);
 
         if (picked_mr->physical_address > upper_limit)
-            return encode_error_phys_addr(ENOMEM);
+            return ENOMEM;
 
         if (MR_TYPE(picked_mr) != MEMORY_FREE)
             goto next_range;
@@ -381,14 +384,14 @@ static INIT_CODE phys_addr_t allocate_within(
 
     next_range:
         if (end >= upper_limit)
-            return encode_error_phys_addr(ENOMEM);
+            return ENOMEM;
 
         if ((upper_limit - end) < bytes_to_allocate)
-            return encode_error_phys_addr(ENOMEM);
+            return ENOMEM;
     }
 
     if (mr_idx == (ssize_t)s_entry_count)
-        return encode_error_phys_addr(ENOMEM);
+        return ENOMEM;
 
     range_begin = MAX(lower_limit, picked_mr->physical_address);
     allocated_mr = (struct memory_range) {
@@ -397,7 +400,8 @@ static INIT_CODE phys_addr_t allocate_within(
     };
     allocate_out_of(mr_idx, &allocated_mr);
 
-    return allocated_mr.physical_address;
+    *out_addr = allocated_mr.physical_address;
+    return EOK;
 
 out_invalid_allocation:
     BUG_WITH_MSG(
@@ -406,9 +410,11 @@ out_invalid_allocation:
     );
 }
 
-static INIT_CODE phys_addr_t boot_alloc_nogrow(size_t num_pages, size_t align)
+static INIT_CODE error_t boot_alloc_nogrow(
+    size_t num_pages, size_t align, phys_addr_t *out_addr
+)
 {
-    return allocate_top_down(num_pages, -1ull, align);
+    return allocate_top_down(num_pages, -1ull, align, out_addr);
 }
 
 static INIT_CODE bool maybe_grow_buffer(void)
@@ -416,6 +422,7 @@ static INIT_CODE bool maybe_grow_buffer(void)
     void *new_buffer, *old_buffer;
     phys_addr_t addr;
     size_t growth_watermark, new_capacity, old_capacity;
+    error_t ret;
 
     /*
      * Base watermark is the capacity for at least two worst-cast allocations:
@@ -436,8 +443,8 @@ static INIT_CODE bool maybe_grow_buffer(void)
 
     new_capacity = PAGE_ROUND_UP(s_capacity * 2 * sizeof(struct memory_range));
 
-    addr = boot_alloc_nogrow(new_capacity >> PAGE_SHIFT, 0);
-    if (WARN_ON(error_phys_addr(addr)))
+    ret = boot_alloc_nogrow(new_capacity >> PAGE_SHIFT, 0, &addr);
+    if (WARN_ON(is_error(ret)))
         return false;
 
     new_buffer = phys_to_virt(addr);
@@ -470,67 +477,68 @@ static INIT_CODE error_t range_append(struct memory_range *mr)
     return EOK;
 }
 
-phys_addr_or_error_t INIT_CODE boot_alloc(size_t num_pages)
+error_t INIT_CODE boot_alloc(size_t num_pages, phys_addr_t *out_addr)
 {
     BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
 
     if (unlikely(!maybe_grow_buffer()))
-        return encode_error_phys_addr(ENOMEM);
+        return ENOMEM;
 
-    return boot_alloc_nogrow(num_pages, 0);
+    return boot_alloc_nogrow(num_pages, 0, out_addr);
 }
 
-phys_addr_or_error_t INIT_CODE boot_alloc_zeroed(size_t num_pages)
+error_t INIT_CODE boot_alloc_zeroed(size_t num_pages, phys_addr_t *out_addr)
 {
-    phys_addr_or_error_t ret;
+    error_t ret;
 
-    ret = boot_alloc(num_pages);
-    if (error_phys_addr(ret))
+    ret = boot_alloc(num_pages, out_addr);
+    if (is_error(ret))
         return ret;
 
-    memzero(phys_to_virt(ret), num_pages << PAGE_SHIFT);
-    return ret;
+    memzero(phys_to_virt(*out_addr), num_pages << PAGE_SHIFT);
+    return EOK;
 }
 
-phys_addr_or_error_t INIT_CODE boot_alloc_aligned(
-    size_t num_pages, size_t align
+error_t INIT_CODE boot_alloc_aligned(
+    size_t num_pages, size_t align, phys_addr_t *out_addr
 )
 {
     BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
 
     if (unlikely(!maybe_grow_buffer()))
-        return encode_error_phys_addr(ENOMEM);
+        return ENOMEM;
 
-    return boot_alloc_nogrow(num_pages, align);
+    return boot_alloc_nogrow(num_pages, align, out_addr);
 }
 
-phys_addr_or_error_t INIT_CODE boot_alloc_aligned_zeroed(
-    size_t num_pages, size_t align
+error_t INIT_CODE boot_alloc_aligned_zeroed(
+    size_t num_pages, size_t align, phys_addr_t *out_addr
 )
 {
-    phys_addr_or_error_t ret;
+    error_t ret;
 
-    ret = boot_alloc_aligned(num_pages, align);
-    if (error_phys_addr(ret))
+    ret = boot_alloc_aligned(num_pages, align, out_addr);
+    if (is_error(ret))
         return ret;
 
-    memzero(phys_to_virt(ret), num_pages << PAGE_SHIFT);
-    return ret;
+    memzero(phys_to_virt(*out_addr), num_pages << PAGE_SHIFT);
+    return EOK;
 }
 
 void* INIT_CODE boot_alloc_or_die(size_t num_pages, const char *why)
 {
-    phys_addr_or_error_t ret;
+    phys_addr_t addr;
+    error_t ret;
 
-    ret = boot_alloc(num_pages);
-    if (error_phys_addr(ret)) {
+    ret = boot_alloc(num_pages, &addr);
+    if (is_error(ret)) {
         panic(
             "Unable to satisfy a critical allocation of %zu pages for %s",
             num_pages, why
         );
     }
 
-    return phys_to_virt(ret);
+    return phys_to_virt(addr);
 }
 
 void* INIT_CODE boot_alloc_zeroed_or_die(size_t num_pages, const char *why)
@@ -540,17 +548,17 @@ void* INIT_CODE boot_alloc_zeroed_or_die(size_t num_pages, const char *why)
     );
 }
 
-phys_addr_or_error_t INIT_CODE boot_alloc_at(
-    phys_addr_t address, size_t num_pages
-)
+error_t INIT_CODE boot_alloc_at(phys_addr_t address, size_t num_pages)
 {
+    phys_addr_t addr;
+
     BUG_ON_INIT_LEVEL_AT_OR_ABOVE(BUDDY_AVAILABLE);
 
     if (unlikely(!maybe_grow_buffer()))
-        return encode_error_phys_addr(ENOMEM);
+        return ENOMEM;
 
     return allocate_within(
-        num_pages, address, address + (num_pages << PAGE_SHIFT)
+        num_pages, address, address + (num_pages << PAGE_SHIFT), &addr
     );
 }
 

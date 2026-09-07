@@ -74,7 +74,7 @@ static void kvm_start_pvclock(void)
 static INIT_CODE error_t kvm_setup_pvclock(void)
 {
     size_t bytes_to_allocate;
-    phys_addr_or_error_t time_info_base;
+    phys_addr_t time_info_base;
     void *this_info;
     error_t ret;
 
@@ -89,9 +89,9 @@ static INIT_CODE error_t kvm_setup_pvclock(void)
     BUILD_BUG_ON(sizeof(struct pvclock_vcpu_time_info) > CACHE_LINE_SIZE);
     bytes_to_allocate = PAGE_ROUND_UP(CACHE_LINE_SIZE * g_num_present_cpus);
 
-    time_info_base = boot_alloc(bytes_to_allocate >> PAGE_SHIFT);
-    if (error_phys_addr(time_info_base))
-        return decode_error_phys_addr(time_info_base);
+    ret = boot_alloc(bytes_to_allocate >> PAGE_SHIFT, &time_info_base);
+    if (is_error(ret))
+        return ret;
 
     if (kvm_has_feature(KVM_FEATURE_CLOCKSOURCE_STABLE_BIT))
         pvclock_enable_stable_bit();

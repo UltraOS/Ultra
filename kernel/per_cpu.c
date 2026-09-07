@@ -28,8 +28,8 @@ static error_t INIT_CODE per_cpu_setup(void)
     size_t static_size, per_cpu_size, alloc_size, i;
     ptr_t this_cpu_offset;
     void *this_cpu_ptr;
-    phys_addr_or_error_t addr;
-    error_t err;
+    phys_addr_t addr;
+    error_t ret;
 
     static_size = SECTION_SIZE(PER_CPU_SECTION);
     per_cpu_size = PAGE_ROUND_UP(static_size);
@@ -40,11 +40,9 @@ static error_t INIT_CODE per_cpu_setup(void)
         static_size, per_cpu_size, alloc_size
     );
 
-    addr = boot_alloc(alloc_size);
-    if (error_phys_addr(addr)) {
-        err = decode_error_phys_addr(addr);
-        panic("Unable to allocate the initial per-cpu area: %pE", &err);
-    }
+    ret = boot_alloc(alloc_size, &addr);
+    if (is_error(ret))
+        panic("Unable to allocate the initial per-cpu area: %pE", &ret);
 
     this_cpu_ptr = phys_to_virt(addr);
     g_per_cpu_base = (ptr_t)this_cpu_ptr;
