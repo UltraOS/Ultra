@@ -147,7 +147,8 @@ static INIT_CODE void smbios_save_string(
 
     bytes_needed = strlen(str) + 1;
     if (s_bytes_left < bytes_needed) {
-        phys_addr_or_error_t ret;
+        phys_addr_t page;
+        error_t ret;
 
         if (unlikely(bytes_needed > PAGE_SIZE)) {
             pr_warn(
@@ -157,13 +158,13 @@ static INIT_CODE void smbios_save_string(
             return;
         }
 
-        ret = boot_alloc(1);
-        if (error_phys_addr(ret)) {
+        ret = boot_alloc(1, &page);
+        if (is_error(ret)) {
             pr_warn("out of memory\n");
             return;
         }
 
-        s_pool = phys_to_virt(ret);
+        s_pool = phys_to_virt(page);
         s_bytes_left = PAGE_SIZE;
     }
 

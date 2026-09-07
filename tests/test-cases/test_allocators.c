@@ -54,22 +54,26 @@ static void verify_state(struct memory_range *ranges, size_t count)
 #define CHECK_STATE(...) DO_CHECK_STATE(__LINE__, __VA_ARGS__)
 
 #define ALLOC_PAGES_AT_ASSERT_EQ(value, num_pages, expect) \
-    do {                                                   \
-        phys_addr_t ret = boot_alloc_at(value, num_pages); \
-        ASSERT_EQ(ret, expect);                            \
-    } while (0)
+    ASSERT_EQ(boot_alloc_at(value, num_pages), expect)
 
 #define ALLOC_PAGE_AT_ASSERT(value) \
-    ALLOC_PAGES_AT_ASSERT_EQ(value, 1, value)
+    ALLOC_PAGES_AT_ASSERT_EQ(value, 1, EOK)
 
 #define ALLOC_PAGES_AT_ASSERT_OOM(value, num_pages) \
-    ALLOC_PAGES_AT_ASSERT_EQ(value, num_pages, encode_error_phys_addr(ENOMEM))
+    ALLOC_PAGES_AT_ASSERT_EQ(value, num_pages, ENOMEM)
 
-#define ALLOC_EXPECT(num_pages, expect)          \
-        do {                                     \
-        phys_addr_t ret = boot_alloc(num_pages); \
-        ASSERT_EQ(ret, expect);                  \
-} while (0)
+#define ALLOC_EXPECT(num_pages, expect)               \
+    do {                                              \
+        phys_addr_t addr;                             \
+        ASSERT_EQ(boot_alloc(num_pages, &addr), EOK); \
+        ASSERT_EQ(addr, expect);                      \
+    } while (0)
+
+#define ALLOC_EXPECT_OOM(num_pages)                      \
+    do {                                                 \
+        phys_addr_t addr;                                \
+        ASSERT_EQ(boot_alloc(num_pages, &addr), ENOMEM); \
+    } while (0)
 
 TEST_CASE(boot_alloc_middle_split)
 {
@@ -273,7 +277,7 @@ TEST_CASE(boot_alloc_top_down)
         RANGE(0x8000, 0x3000, MEMORY_ALLOCATED),
     );
 
-    ALLOC_EXPECT(2, encode_error_phys_addr(ENOMEM));
+    ALLOC_EXPECT_OOM(2);
 
     ALLOC_EXPECT(1, 0x6000);
     CHECK_STATE(
@@ -282,7 +286,7 @@ TEST_CASE(boot_alloc_top_down)
         RANGE(0x8000, 0x3000, MEMORY_ALLOCATED),
     );
 
-    ALLOC_EXPECT(1, encode_error_phys_addr(ENOMEM));
+    ALLOC_EXPECT_OOM(1);
 }
 
 TEST_CASE(boot_alloc_buffer_growth)
@@ -333,10 +337,17 @@ TEST_CASE(boot_alloc_buffer_growth_multi)
     );
 }
 
-#define ALLOC_ALIGNED_EXPECT(num_pages, alignment, expect)          \
-    do {                                                            \
-        phys_addr_t ret = boot_alloc_aligned(num_pages, alignment); \
-        ASSERT_EQ(ret, expect);                                     \
+#define ALLOC_ALIGNED_EXPECT(num_pages, alignment, expect)               \
+    do {                                                                 \
+        phys_addr_t addr;                                                \
+        ASSERT_EQ(boot_alloc_aligned(num_pages, alignment, &addr), EOK); \
+        ASSERT_EQ(addr, expect);                                         \
+    } while (0)
+
+#define ALLOC_ALIGNED_EXPECT_OOM(num_pages, alignment)                      \
+    do {                                                                    \
+        phys_addr_t addr;                                                   \
+        ASSERT_EQ(boot_alloc_aligned(num_pages, alignment, &addr), ENOMEM); \
     } while (0)
 
 TEST_CASE(boot_alloc_aligned_middle_split)
@@ -404,7 +415,7 @@ TEST_CASE(boot_alloc_aligned_oom)
         RANGE(0x5000, 0x2000, MEMORY_FREE),
     );
 
-    ALLOC_ALIGNED_EXPECT(1, 0x4000, encode_error_phys_addr(ENOMEM));
+    ALLOC_ALIGNED_EXPECT_OOM(1, 0x4000);
 
     CHECK_STATE(
         RANGE(0x1000, 0x2000, MEMORY_FREE),

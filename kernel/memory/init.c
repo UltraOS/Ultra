@@ -625,6 +625,7 @@ static void INIT_CODE memory_map_populate_pt2(
     virt_addr_t next;
     struct pt1 *pt1;
     phys_addr_t huge_pt;
+    error_t ret;
 
     for (; virt < end; virt = next, pt2++) {
         next = ALIGN_DOWN(virt, PT2_SIZE) + PT2_SIZE;
@@ -643,8 +644,8 @@ static void INIT_CODE memory_map_populate_pt2(
             goto do_small_pages;
         }
 
-        huge_pt = boot_alloc_aligned(PT2_SIZE / PAGE_SIZE, PT2_SIZE);
-        if (error_phys_addr(huge_pt))
+        ret = boot_alloc_aligned(PT2_SIZE / PAGE_SIZE, PT2_SIZE, &huge_pt);
+        if (is_error(ret))
             goto do_small_pages;
 
         pt2_exclusive_make_leaf(pt2, huge_pt, s_kernel_memory_map_pt_prot);
