@@ -48,6 +48,10 @@ enum log_level {
 #define LOG_DEBUG   LOG_LEVEL_PREFIX TO_STR(SYSLOG_DEBUG)
 #define LOG_CONT    LOG_LEVEL_PREFIX TO_STR(LOG_LEVEL_CONTINUED)
 
+// For a level only known at runtime
+#define LOG_LEVEL_FMT LOG_LEVEL_PREFIX "%c"
+#define LOG_LEVEL_ARG(lvl) ('0' + (lvl))
+
 void vprint(const char *msg, va_list vlist);
 
 PRINTF_DECL(1, 2)
@@ -68,7 +72,7 @@ void print(const char *msg, ...);
 #define pr_cont(msg, ...)    print(LOG_CONT    msg, ##__VA_ARGS__)
 
 #define pr_lvl(lvl, msg, ...) \
-    print(LOG_LEVEL_PREFIX"%c" MSG_FMT(msg), lvl, ##__VA_ARGS__)
+    print(LOG_LEVEL_FMT MSG_FMT(msg), LOG_LEVEL_ARG(lvl), ##__VA_ARGS__)
 
 // Defined in arch/registers.h
 struct registers;
