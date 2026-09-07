@@ -83,8 +83,9 @@
 #define RODATA_FREE_AFTER_INIT_END \
     FREE_AFTER_INIT_END(FREE_AFTER_INIT_RODATA_SECTION)
 
-#define RODATA_FREE_AFTER_INIT \
-    *(.FREE_AFTER_INIT_RODATA_SECTION) \
+#define RODATA_FREE_AFTER_INIT                                           \
+    *(.FREE_AFTER_INIT_RODATA_SECTION)                                   \
+    NATURALLY_ALIGNED_MARKED_SECTION(FREE_AFTER_INIT_PARAMETERS_SECTION) \
     INIT_LEVEL_CB_SECTIONS
 
 #define RODATA_OUTPUT                                                     \

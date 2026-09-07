@@ -7,6 +7,7 @@
 
 #include <linker.h>
 #include <common/bit.h>
+#include <free_after_init.h>
 
 enum param_flags {
     /*
@@ -152,6 +153,23 @@ PARAMETER_OPS_DECL(string)
     SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
     s_param_##name = PARAM_ENTRY(name, value, ops, flags)
 
+/*
+ * An init parameter is released after init together with everything it
+ * references, its ops, its setter and whatever the setter uses may be INIT_*
+ * as well. It is parsed at boot and neither written nor read afterwards.
+ */
+#define custom_init_parameter(name, value, ops)                        \
+    SECTION_VAR(                                                       \
+        FREE_AFTER_INIT_PARAMETERS_SECTION, static const, struct param \
+    )                                                                  \
+    s_param_##name = PARAM_ENTRY(name, value, ops, 0)
+
+#define renamed_init_parameter(name, var) \
+    custom_init_parameter(name, var, PARAM_TYPE_OPS(var))
+
+#define init_parameter_with_ops(var, ops) custom_init_parameter(var, var, ops)
+#define init_parameter(var) renamed_init_parameter(var, var)
+
 #define renamed_parameter_with_ops(name, var, ops) \
     custom_parameter(name, var, ops, 0)
 
@@ -172,11 +190,13 @@ PARAMETER_OPS_DECL(string)
  * the parameter is given, including an empty one, and the parameter is never
  * exposed to readers. fn has the signature of the set callback.
  */
-#define param_action_ops(name, fn)                         \
-    static const struct param_ops s_param_##name##_ops = { \
-        .allows_empty_value = true,                        \
-        .set = (fn),                                       \
+#define PARAM_ACTION_OPS(name, fn, placement)                        \
+    static const struct param_ops placement s_param_##name##_ops = { \
+        .allows_empty_value = true,                                  \
+        .set = (fn),                                                 \
     }
+#define param_action_ops(name, fn) PARAM_ACTION_OPS(name, fn, )
+#define init_param_action_ops(name, fn) PARAM_ACTION_OPS(name, fn, INIT_RODATA)
 
 #define PARAM_ACTION_ENTRY(name, flags) \
     { PARAM_NAME(name), &s_param_##name##_ops, { nullptr, 0 }, (flags) }
@@ -186,6 +206,13 @@ PARAMETER_OPS_DECL(string)
     SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
     s_param_##name = PARAM_ACTION_ENTRY(name, flags)
 #define action_parameter(name, fn) action_parameter_with_flags(name, fn, 0)
+
+#define init_action_parameter(name, fn)                                \
+    init_param_action_ops(name, fn);                                   \
+    SECTION_VAR(                                                       \
+        FREE_AFTER_INIT_PARAMETERS_SECTION, static const, struct param \
+    )                                                                  \
+    s_param_##name = PARAM_ACTION_ENTRY(name, 0)
 
 enum suboption_flags : u32 {
     SUBOPTION_FLAG_NONE = 0,
