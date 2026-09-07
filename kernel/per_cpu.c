@@ -40,7 +40,7 @@ static error_t INIT_CODE per_cpu_setup(void)
         static_size, per_cpu_size, alloc_size
     );
 
-    ret = boot_alloc(alloc_size, &addr);
+    ret = boot_alloc_bytes(alloc_size, &addr);
     if (is_error(ret))
         panic("Unable to allocate the initial per-cpu area: %pE", &ret);
 
