@@ -437,7 +437,7 @@ static INIT_CODE bool maybe_grow_buffer(void)
     new_capacity = PAGE_ROUND_UP(s_capacity * 2 * sizeof(struct memory_range));
 
     addr = boot_alloc_nogrow(new_capacity >> PAGE_SHIFT, 0);
-    if (WARN_ON(addr == 0))
+    if (WARN_ON(error_phys_addr(addr)))
         return false;
 
     new_buffer = phys_to_virt(addr);
