@@ -81,6 +81,11 @@ static inline bool str_empty(struct string str)
     return str.size == 0;
 }
 
+static inline bool str_is_null(struct string str)
+{
+    return str.text == nullptr;
+}
+
 static inline bool str_contains(struct string str, struct string needle)
 {
     return str_find(str, needle, 0) >= 0;
@@ -112,6 +117,38 @@ static inline bool str_pop_one(struct string *str, char *c)
 
     *c = str->text[0];
     str_offset_by(str, 1);
+    return true;
+}
+
+/*
+ * Pops the token before the next separator, or the rest of the string if
+ * there is none. Returns false once the string is exhausted. A trailing
+ * separator yields an empty token after it.
+ */
+static inline bool str_pop_token(
+    struct string *str, char separator, struct string *out_token
+)
+{
+    ssize_t idx;
+
+    /*
+     * We must check for null explicitly because that's the only indicator
+     * the string has been fully exhausted by str_clear() below. A non-null
+     * but size == 0 string means there was a stray separator at the end
+     * like "a,b,c,", which we must also propagate to the caller correctly.
+     */
+    if (str_is_null(*str))
+        return false;
+
+    idx = str_find_one(*str, separator, 0);
+    if (idx < 0) {
+        *out_token = *str;
+        str_clear(str);
+        return true;
+    }
+
+    *out_token = str_substring(*str, 0, idx);
+    str_offset_by(str, idx + 1);
     return true;
 }
 
