@@ -70,12 +70,12 @@ static error_t earlycon_destroy(void)
 }
 
 static error_t earlycon_set(
-    struct string value, struct param *p, bool is_runtime
+    struct string value, struct param_value *v, bool is_runtime
 )
 {
     error_t ret;
     size_t mode;
-    enum earlycon_mode *cur = p->value;
+    enum earlycon_mode *cur = v->ptr;
 
     UNREFERENCED_PARAMETER(is_runtime);
 
@@ -106,9 +106,9 @@ static error_t earlycon_set(
     return EOK;
 }
 
-static size_t earlycon_get(struct string *out, struct param *p)
+static size_t earlycon_get(struct string *out, const struct param_value *v)
 {
-    enum earlycon_mode *cur = p->value;
+    enum earlycon_mode *cur = v->ptr;
 
     return param_write_string(out, s_earlycon_mode_names[*cur]);
 }

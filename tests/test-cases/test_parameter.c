@@ -23,7 +23,7 @@ enum stored_type {
 };
 
 struct test_param {
-    union param_value {
+    union test_value {
     #define TYPE(name, type) type as_##name;
         TYPES
     #undef TYPE
@@ -56,16 +56,16 @@ struct test_param {
     );                                                    \
                                                           \
     for (size_t i = 0; i < ARRAY_SIZE(params); i++) {     \
-        params[i].param.value = &params[i].value;         \
+        params[i].param.value.ptr = &params[i].value;     \
         if (params[i].stored_type == st_string) {         \
-            params[i].param.capacity =                    \
+            params[i].param.value.capacity =              \
                 sizeof(params[i].value.as_string);        \
         }                                                 \
         g_params[i] = params[i].param;                    \
     }                                                     \
     g_cmdline = STR(cmdline)
 
-#define CMDLINE_PARSE() \
+#define CMDLINE_PARSE()                                    \
     cmdline_parse(g_cmdline, g_params, ARRAY_SIZE(params))
 
 #define CMDLINE_PARSE_EXPECT(str)                   \
@@ -232,10 +232,10 @@ TEST_CASE(get_fits)
     struct param p = {
         .name = STR("x"),
         .ops = &g_param_u32_ops,
-        .value = &value,
+        .value.ptr = &value,
     };
 
-    ASSERT_EQ(param_get_u32(&out, &p), 7);
+    ASSERT_EQ(param_get_u32(&out, &p.value), 7);
     ASSERT_EQ(out.size, 7);
     ASSERT(str_equals(out, STR("1234567")));
     ASSERT_EQ(buf[7], '\0');
@@ -250,31 +250,33 @@ TEST_CASE(get_overflow)
     struct param p = {
         .name = STR("x"),
         .ops = &g_param_u32_ops,
-        .value = &value,
+        .value.ptr = &value,
     };
 
-    ASSERT_EQ(param_get_u32(&out, &p), 8);
+    ASSERT_EQ(param_get_u32(&out, &p.value), 8);
     ASSERT_EQ(out.size, 0);
 
     out = MAKE_STR(buf, sizeof(buf));
     p.ops = &g_param_string_ops;
-    p.value = text;
-    p.capacity = sizeof(text);
+    p.value.ptr = text;
+    p.value.capacity = sizeof(text);
 
-    ASSERT_EQ(param_get_string(&out, &p), 8);
+    ASSERT_EQ(param_get_string(&out, &p.value), 8);
     ASSERT_EQ(out.size, 0);
 
     out = MAKE_STR(buf, 0);
-    ASSERT_EQ(param_get_string(&out, &p), 8);
+    ASSERT_EQ(param_get_string(&out, &p.value), 8);
     ASSERT_EQ(out.size, 0);
 }
 
 static struct string s_action_values[4];
 static size_t s_action_calls;
 
-static error_t action_set(struct string value, struct param *p, bool is_runtime)
+static error_t action_set(
+    struct string value, struct param_value *v, bool is_runtime
+)
 {
-    if (p->value != NULL || is_runtime)
+    if (v->ptr != nullptr || is_runtime)
         return EINVAL;
 
     s_action_values[s_action_calls++] = value;
@@ -300,4 +302,167 @@ TEST_CASE(action)
     ASSERT(str_equals(s_action_values[1], STR("1")));
     ASSERT(str_equals(s_action_values[2], STR("")));
     ASSERT(str_equals(s_action_values[3], STR("a b")));
+}
+
+TEST_CASE(suboptions_flags_and_values)
+{
+    bool colored = false;
+    u32 baud = 0;
+    char name[8] = "";
+    struct suboption opts[] = {
+        suboption(colored), suboption(baud), suboption(name),
+    };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("colored,baud=115200,name=ttyS0"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EOK
+    );
+    ASSERT_TRUE(colored);
+    ASSERT_EQ(baud, 115200);
+    ASSERT_STR_EQ(name, "ttyS0");
+}
+
+TEST_CASE(suboptions_null_is_empty)
+{
+    bool colored = false;
+    struct suboption opts[] = { suboption(colored) };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            NULL_STR(), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EOK
+    );
+    ASSERT_FALSE(colored);
+}
+
+TEST_CASE(suboptions_rejects_empty_entries)
+{
+    bool colored = false;
+    struct suboption opts[] = { suboption(colored) };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR(""), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("colored,"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions(
+            STR(",colored"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+}
+
+TEST_CASE(suboptions_rejects_unknown_keys_and_bad_values)
+{
+    bool colored = false;
+    u32 baud = 0;
+    struct suboption opts[] = { suboption(colored), suboption(baud) };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("bogus"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("baud=fast"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("baud"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+}
+
+TEST_CASE(suboptions_stops_at_the_first_error)
+{
+    bool a = false, b = false;
+    struct suboption opts[] = { suboption(a), suboption(b) };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("a,bogus,b"), ',', opts,
+            ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_TRUE(a);
+    ASSERT_FALSE(b);
+}
+
+TEST_CASE(suboptions_names)
+{
+    bool s_no_color = false, bright = false;
+    struct suboption opts[] = {
+        suboption(s_no_color), renamed_suboption(vivid, bright),
+    };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("no-color,vivid=on"), ',', opts, ARRAY_SIZE(opts), false
+        ),
+        EOK
+    );
+    ASSERT_TRUE(s_no_color);
+    ASSERT_TRUE(bright);
+}
+
+static size_t g_action_calls;
+static bool g_action_runtime;
+
+static error_t count_action(
+    struct string value, struct param_value *v, bool rt
+)
+{
+    UNREFERENCED_PARAMETER(v);
+
+    g_action_calls += str_empty(value) ? 1 : 10;
+    g_action_runtime = rt;
+    return EOK;
+}
+
+TEST_CASE(suboptions_actions)
+{
+    struct suboption opts[] = { action_suboption(tick, count_action) };
+
+    g_action_calls = 0;
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("tick,tick=x"), ';', opts, ARRAY_SIZE(opts), true
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(g_action_calls, 0);
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("tick;tick=x"), ';', opts, ARRAY_SIZE(opts), true
+        ),
+        EOK
+    );
+    ASSERT_EQ(g_action_calls, 11);
+    ASSERT_TRUE(g_action_runtime);
 }

@@ -6,6 +6,7 @@
 #include <common/error.h>
 
 #include <linker.h>
+#include <common/bit.h>
 
 enum param_flags {
     /*
@@ -21,54 +22,64 @@ enum param_flags {
     PARAM_PRIVILEGED_READ = 1 << 1,
 };
 
+struct param_value {
+    void *ptr;
+
+    // Size in bytes for values stored in a char array
+    size_t capacity;
+};
+
+/*
+ * Sets the value to one specified by the string. Returns an error in case
+ * the operation wasn't successful.
+ *
+ * The string is only valid for the duration of the call. is_runtime is
+ * false when the value comes from the kernel command line at boot and
+ * true when it is being modified on a running system.
+ */
+typedef error_t (*param_set_t)(
+    struct string, struct param_value*, bool is_runtime
+);
+
+/*
+ * Converts the value to a null-terminated string.
+ *
+ * The string size is the capacity of the buffer on entry and the number
+ * of bytes written not including the terminating null on return. The
+ * return value is the number of bytes required not including the
+ * terminating null. If the required bytes don't fit along with the
+ * terminating null, the buffer contents are unspecified.
+ */
+typedef size_t (*param_get_t)(struct string*, const struct param_value*);
+
 struct param {
     struct string name;
     const struct param_ops *ops;
 
     // TODO: reference to the module defining this parameter
 
-    void *value;
+    struct param_value value;
     u32 flags;
-
-    // Size of the value in bytes for parameters stored in a char array
-    size_t capacity;
 };
 
 struct param_ops {
     bool allows_empty_value;
+    param_set_t set;
 
     /*
-     * Sets the value of the given parameter to one specified by the string.
-     * Returns an error in case the operation wasn't successful.
-     *
-     * The string is only valid for the duration of the call. is_runtime is
-     * false when the value comes from the kernel command line at boot and
-     * true when it is being modified on a running system.
-     */
-    error_t (*set)(struct string, struct param*, bool is_runtime);
-
-    /*
-     * Converts a given parameter to a null-terminated string.
-     *
-     * The string size is the capacity of the buffer on entry and the number
-     * of bytes written not including the terminating null on return. The
-     * return value is the number of bytes required not including the
-     * terminating null. If the required bytes don't fit along with the
-     * terminating null, the buffer contents are unspecified.
-     *
      * May be NULL for a parameter that cannot be read back, such a parameter
      * is never exposed to readers.
      */
-    size_t (*get)(struct string*, struct param*);
+    param_get_t get;
 };
 
 // Helper for get callbacks that produce a string
 size_t param_write_string(struct string *out, struct string value);
 
-#define PARAMETER_OPS_DECL(type)                                  \
-    error_t param_set_##type(struct string, struct param*, bool); \
-    size_t param_get_##type(struct string*, struct param*);       \
-                                                                  \
+#define PARAMETER_OPS_DECL(type)                                        \
+    error_t param_set_##type(struct string, struct param_value*, bool); \
+    size_t param_get_##type(struct string*, const struct param_value*); \
+                                                                        \
     extern const struct param_ops g_param_##type##_ops;
 
 PARAMETER_OPS_DECL(i8);
@@ -124,11 +135,12 @@ PARAMETER_OPS_DECL(string)
  * custom_parameter is the fully explicit form, the shorthands deduce the
  * name from the variable, the ops from its type, or both.
  */
-#define custom_parameter(name, value, ops, flags)                           \
-    SECTION_VAR(PARAMETERS_SECTION, static const, struct param)             \
-    s_param_##name = {                                                      \
-        PARAM_NAME(name), &(ops), &(value), (flags), PARAM_CAPACITY(value), \
-    }
+#define PARAM_ENTRY(name, value, ops, flags) \
+    { PARAM_NAME(name), &(ops), { &(value), PARAM_CAPACITY(value) }, (flags) }
+
+#define custom_parameter(name, value, ops, flags)               \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
+    s_param_##name = PARAM_ENTRY(name, value, ops, flags)
 
 #define renamed_parameter_with_ops(name, var, ops) \
     custom_parameter(name, var, ops, 0)
@@ -150,16 +162,75 @@ PARAMETER_OPS_DECL(string)
  * the parameter is given, including an empty one, and the parameter is never
  * exposed to readers. fn has the signature of the set callback.
  */
-#define action_parameter_with_flags(name, fn, flags)                 \
-    static const struct param_ops s_param_##name##_ops = {           \
-        .allows_empty_value = true,                                  \
-        .set = (fn),                                                 \
-    };                                                               \
-    SECTION_VAR(PARAMETERS_SECTION, static const, struct param)      \
-    s_param_##name = {                                               \
-        PARAM_NAME(name), &s_param_##name##_ops, nullptr, (flags), 0 \
+#define param_action_ops(name, fn)                         \
+    static const struct param_ops s_param_##name##_ops = { \
+        .allows_empty_value = true,                        \
+        .set = (fn),                                       \
     }
+
+#define PARAM_ACTION_ENTRY(name, flags) \
+    { PARAM_NAME(name), &s_param_##name##_ops, { nullptr, 0 }, (flags) }
+
+#define action_parameter_with_flags(name, fn, flags)            \
+    param_action_ops(name, fn);                                 \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
+    s_param_##name = PARAM_ACTION_ENTRY(name, flags)
 #define action_parameter(name, fn) action_parameter_with_flags(name, fn, 0)
+
+enum suboption_flags : u32 {
+    SUBOPTION_FLAG_NONE = 0,
+
+    // A bare key with no value is accepted, the setter sees an empty string
+    SUBOPTION_ALLOWS_EMPTY_VALUE = BIT_U32(0),
+};
+
+// A sub-option of a parameter value, e.g. the "colored" in earlycon=e9,colored
+struct suboption {
+    struct string name;
+    param_set_t set;
+    struct param_value value;
+    enum suboption_flags flags;
+};
+
+#define PARAM_TYPE_SET(value) _Generic(&(value), \
+    char (*)[sizeof(value)]: param_set_string,   \
+    i8*: param_set_i8,                           \
+    u8*: param_set_u8,                           \
+    i16*: param_set_i16,                         \
+    u16*: param_set_u16,                         \
+    i32*: param_set_i32,                         \
+    u32*: param_set_u32,                         \
+    i64*: param_set_i64,                         \
+    u64*: param_set_u64,                         \
+    bool*: param_set_bool                        \
+)
+
+#define PARAM_TYPE_SUBOPTION_FLAGS(value) _Generic(&(value), \
+    bool*: SUBOPTION_ALLOWS_EMPTY_VALUE,                     \
+    default: SUBOPTION_FLAG_NONE                             \
+)
+
+#define SUBOPTION_ENTRY(name, value, set, flags) \
+    { PARAM_NAME(name), (set), { &(value), PARAM_CAPACITY(value) }, (flags) }
+
+#define custom_suboption(name, value, set, flags) \
+    SUBOPTION_ENTRY(name, value, set, flags)
+
+#define renamed_suboption_with_flags(name, var, flags) \
+    custom_suboption(                                  \
+        name, var, PARAM_TYPE_SET(var),                \
+        PARAM_TYPE_SUBOPTION_FLAGS(var) | (flags)      \
+    )
+#define renamed_suboption(name, var) \
+    renamed_suboption_with_flags(name, var, SUBOPTION_FLAG_NONE)
+
+#define suboption_with_flags(var, flags) \
+    renamed_suboption_with_flags(var, var, flags)
+#define suboption(var) renamed_suboption(var, var)
+
+// An action sub-option has no value, fn is called with whatever it is given
+#define action_suboption(name, fn) \
+    { PARAM_NAME(name), (fn), { nullptr, 0 }, SUBOPTION_ALLOWS_EMPTY_VALUE }
 
 /*
  * Parses the given command line against the given parameters and returns the
@@ -167,4 +238,15 @@ PARAMETER_OPS_DECL(string)
  */
 struct string cmdline_parse(
     struct string cmdline, struct param *params, size_t num_params
+);
+
+/*
+ * Parses the sub-options of a parameter value, a separator delimited list of
+ * key[=value] entries, against the given table. An unknown key, an empty
+ * entry or a bad value is an error. Entries before the failing one have
+ * already been applied.
+ */
+error_t parse_suboptions(
+    struct string list, char separator, struct suboption *opts,
+    size_t num_opts, bool is_runtime
 );
