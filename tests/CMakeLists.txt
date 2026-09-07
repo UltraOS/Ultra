@@ -215,6 +215,7 @@ add_executable(
     run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
     kernel-source/spinlock.c kernel-source/memory/units.c
     kernel-source/common/bit.c kernel-source/mutex.c
+    kernel-source/common/string_container.c kernel-source/common/conversions.c
 )
 set_property(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
