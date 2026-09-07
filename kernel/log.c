@@ -294,9 +294,8 @@ static bool do_dump_frame(void *user, ptr_t addr, bool addr_after_call)
     ptr_t lookup_addr;
 
     lookup_addr = addr_after_call ? addr - 1 : addr;
-    print(
-        LOG_LEVEL_PREFIX"%c    #%zu in %pSM\n",
-        state->level, state->depth++, &lookup_addr
+    pr_lvl(
+        state->level, "    #%zu in %pSM\n", state->depth++, &lookup_addr
     );
 
     return true;
@@ -309,7 +308,7 @@ void dump_stack(enum log_level level, struct registers *regs)
         .depth = 0,
     };
 
-    print(LOG_LEVEL_PREFIX"%cHardware: %s\n", level, s_hw_id);
-    print(LOG_LEVEL_PREFIX"%cCall trace (most recent call first):\n", level);
+    pr_lvl(level, "Hardware: %s\n", s_hw_id);
+    pr_lvl(level, "Call trace (most recent call first):\n");
     unwind_walk(regs, do_dump_frame, &state);
 }
