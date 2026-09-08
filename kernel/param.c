@@ -185,6 +185,10 @@ static error_t do_parse_suboptions(
     struct suboption *opt;
     ssize_t eq;
     error_t ret;
+    u64 seen = 0;
+    size_t i;
+
+    BUG_ON(num_opts > BITS_PER_TYPE(seen));
 
     while (str_pop_token(&list, separator, &token)) {
         eq = str_find_one(token, '=', 0);
@@ -219,6 +223,20 @@ static error_t do_parse_suboptions(
             }
             return ret;
         }
+
+        seen |= BIT_U64(opt - opts);
+    }
+
+    for (i = 0; i < num_opts; i++) {
+        if (!(opts[i].flags & SUBOPTION_REQUIRED) || (seen & BIT_U64(i)))
+            continue;
+
+        if (!is_runtime)
+            pr_err(
+                "missing sub-option \"%pS\" in \"%pS\"\n", &opts[i].name,
+                &whole
+            );
+        return EINVAL;
     }
 
     return EOK;

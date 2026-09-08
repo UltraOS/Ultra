@@ -219,6 +219,12 @@ enum suboption_flags : u32 {
 
     // A bare key with no value is accepted, the setter sees an empty string
     SUBOPTION_ALLOWS_EMPTY_VALUE = BIT_U32(0),
+
+    /*
+     * The key must be given, the parse fails after the walk if it was not.
+     * A bare key counts as given where an empty value is allowed.
+     */
+    SUBOPTION_REQUIRED = BIT_U32(1),
 };
 
 // A sub-option of a parameter value, e.g. the "colored" in earlycon=e9,colored
@@ -264,6 +270,7 @@ struct suboption {
 #define suboption_with_flags(var, flags) \
     renamed_suboption_with_flags(var, var, flags)
 #define suboption(var) renamed_suboption(var, var)
+#define required_suboption(var) suboption_with_flags(var, SUBOPTION_REQUIRED)
 
 // An action sub-option has no value, fn is called with whatever it is given
 #define action_suboption(name, fn) \
@@ -289,8 +296,9 @@ struct string cmdline_parse(
 /*
  * Parses the sub-options of a parameter value, a list of key[=value] entries
  * separated by commas or the given separator, against the given table. An
- * unknown key, an empty entry or a bad value is an error. Entries before the
- * failing one have already been applied. Failures are logged at boot only.
+ * unknown key, an empty entry, a bad value or a missing required key is an
+ * error. Entries before the failing one have already been applied. Failures
+ * are logged at boot only.
  */
 error_t parse_suboptions_with_separator(
     struct string list, char separator, struct suboption *opts,
