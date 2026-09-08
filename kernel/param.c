@@ -172,9 +172,13 @@ static struct suboption *find_suboption(
     return nullptr;
 }
 
-error_t parse_suboptions(
+/*
+ * 'list' is the suboption we're parsing that came from 'whole'.
+ * The latter is only used for nicer error messages.
+ */
+static error_t do_parse_suboptions(
     struct string list, char separator, struct suboption *opts,
-    size_t num_opts, bool is_runtime
+    size_t num_opts, bool is_runtime, struct string whole
 )
 {
     struct string token, key, value;
@@ -193,17 +197,85 @@ error_t parse_suboptions(
         }
 
         opt = find_suboption(key, opts, num_opts);
-        if (opt == nullptr)
+        if (opt == nullptr) {
+            if (!is_runtime) {
+                pr_err(
+                    "unknown sub-option \"%pS\" in \"%pS\"\n", &key, &whole
+                );
+            }
             return EINVAL;
+        }
 
         ret = param_set_checked(
             opt->set, opt->flags & SUBOPTION_ALLOWS_EMPTY_VALUE, &opt->value,
             value, is_runtime
         );
-        if (is_error(ret))
+        if (is_error(ret)) {
+            if (!is_runtime) {
+                pr_err(
+                    "bad sub-option \"%pS\" value \"%pS\" in \"%pS\" (%pE)\n",
+                    &key, &value, &whole, &ret
+                );
+            }
             return ret;
+        }
     }
 
+    return EOK;
+}
+
+error_t parse_suboptions_with_separator(
+    struct string list, char separator, struct suboption *opts,
+    size_t num_opts, bool is_runtime
+)
+{
+    return do_parse_suboptions(
+        list, separator, opts, num_opts, is_runtime, list
+    );
+}
+
+error_t parse_suboptions(
+    struct string list, struct suboption *opts, size_t num_opts,
+    bool is_runtime
+)
+{
+    return parse_suboptions_with_separator(
+        list, ',', opts, num_opts, is_runtime
+    );
+}
+
+error_t parse_suboptions_by_head(
+    struct string value, const struct suboption_variant *variants,
+    size_t num_variants, size_t *out_variant, bool is_runtime
+)
+{
+    struct string rest = value, head;
+    error_t ret;
+    size_t i;
+
+    if (!str_pop_token(&rest, ',', &head) || str_empty(head)) {
+        if (!is_runtime)
+            pr_err("missing head in \"%pS\"\n", &value);
+        return EINVAL;
+    }
+
+    for (i = 0; i < num_variants; i++) {
+        if (str_equals_with_cb(variants[i].head, head, cmdline_name_compare))
+            break;
+    }
+    if (i == num_variants) {
+        if (!is_runtime)
+            pr_err("unknown \"%pS\" in \"%pS\"\n", &head, &value);
+        return EINVAL;
+    }
+
+    ret = do_parse_suboptions(
+        rest, ',', variants[i].opts, variants[i].num_opts, is_runtime, value
+    );
+    if (is_error(ret))
+        return ret;
+
+    *out_variant = i;
     return EOK;
 }
 
