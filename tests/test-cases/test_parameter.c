@@ -484,6 +484,46 @@ TEST_CASE(tables_are_searched_in_order)
     ASSERT_TRUE(b);
 }
 
+TEST_CASE(suboptions_required)
+{
+    u32 addr = 0;
+    bool fast = false;
+    struct suboption opts[] = { required_suboption(addr), suboption(fast) };
+
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("fast"), opts, ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions(
+            NULL_STR(), opts, ARRAY_SIZE(opts), false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions(
+            STR("addr=16,fast"), opts, ARRAY_SIZE(opts), false
+        ),
+        EOK
+    );
+    ASSERT_EQ(addr, 16);
+    ASSERT_TRUE(fast);
+}
+
+TEST_CASE(suboptions_required_bare_flag_counts)
+{
+    bool on = false;
+    struct suboption opts[] = { required_suboption(on) };
+
+    ASSERT_EQ(
+        parse_suboptions(STR("on"), opts, ARRAY_SIZE(opts), false),
+        EOK
+    );
+    ASSERT_TRUE(on);
+}
+
 TEST_CASE(by_head_selects_the_variant)
 {
     bool colored = false;
