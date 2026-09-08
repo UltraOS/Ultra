@@ -315,7 +315,7 @@ TEST_CASE(suboptions_flags_and_values)
 
     ASSERT_EQ(
         parse_suboptions(
-            STR("colored,baud=115200,name=ttyS0"), ',', opts,
+            STR("colored,baud=115200,name=ttyS0"), opts,
             ARRAY_SIZE(opts), false
         ),
         EOK
@@ -332,7 +332,7 @@ TEST_CASE(suboptions_null_is_empty)
 
     ASSERT_EQ(
         parse_suboptions(
-            NULL_STR(), ',', opts,
+            NULL_STR(), opts,
             ARRAY_SIZE(opts), false
         ),
         EOK
@@ -347,21 +347,21 @@ TEST_CASE(suboptions_rejects_empty_entries)
 
     ASSERT_EQ(
         parse_suboptions(
-            STR(""), ',', opts,
+            STR(""), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
     );
     ASSERT_EQ(
         parse_suboptions(
-            STR("colored,"), ',', opts,
+            STR("colored,"), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
     );
     ASSERT_EQ(
         parse_suboptions(
-            STR(",colored"), ',', opts,
+            STR(",colored"), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
@@ -376,21 +376,21 @@ TEST_CASE(suboptions_rejects_unknown_keys_and_bad_values)
 
     ASSERT_EQ(
         parse_suboptions(
-            STR("bogus"), ',', opts,
+            STR("bogus"), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
     );
     ASSERT_EQ(
         parse_suboptions(
-            STR("baud=fast"), ',', opts,
+            STR("baud=fast"), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
     );
     ASSERT_EQ(
         parse_suboptions(
-            STR("baud"), ',', opts,
+            STR("baud"), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
@@ -404,7 +404,7 @@ TEST_CASE(suboptions_stops_at_the_first_error)
 
     ASSERT_EQ(
         parse_suboptions(
-            STR("a,bogus,b"), ',', opts,
+            STR("a,bogus,b"), opts,
             ARRAY_SIZE(opts), false
         ),
         EINVAL
@@ -422,7 +422,7 @@ TEST_CASE(suboptions_names)
 
     ASSERT_EQ(
         parse_suboptions(
-            STR("no-color,vivid=on"), ',', opts, ARRAY_SIZE(opts), false
+            STR("no-color,vivid=on"), opts, ARRAY_SIZE(opts), false
         ),
         EOK
     );
@@ -450,7 +450,7 @@ TEST_CASE(suboptions_actions)
 
     g_action_calls = 0;
     ASSERT_EQ(
-        parse_suboptions(
+        parse_suboptions_with_separator(
             STR("tick,tick=x"), ';', opts, ARRAY_SIZE(opts), true
         ),
         EINVAL
@@ -458,11 +458,107 @@ TEST_CASE(suboptions_actions)
     ASSERT_EQ(g_action_calls, 0);
 
     ASSERT_EQ(
-        parse_suboptions(
+        parse_suboptions_with_separator(
             STR("tick;tick=x"), ';', opts, ARRAY_SIZE(opts), true
         ),
         EOK
     );
     ASSERT_EQ(g_action_calls, 11);
     ASSERT_TRUE(g_action_runtime);
+}
+
+TEST_CASE(by_head_selects_the_variant)
+{
+    bool colored = false;
+    u32 port = 0;
+    size_t variant = 99;
+    struct suboption e9_opts[] = { suboption(colored) };
+    struct suboption serial_opts[] = { suboption(port), suboption(colored) };
+    struct suboption_variant variants[] = {
+        SUBOPTION_VARIANT("none"),
+        SUBOPTION_VARIANT("e9", e9_opts),
+        SUBOPTION_VARIANT("serial", serial_opts),
+    };
+
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR("serial,port=3,colored"), variants, ARRAY_SIZE(variants),
+            &variant, false
+        ),
+        EOK
+    );
+    ASSERT_EQ(variant, 2);
+    ASSERT_EQ(port, 3);
+    ASSERT_TRUE(colored);
+
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR("e9"), variants, ARRAY_SIZE(variants), &variant, false
+        ),
+        EOK
+    );
+    ASSERT_EQ(variant, 1);
+}
+
+TEST_CASE(by_head_rejects_unknown_heads_and_options)
+{
+    bool colored = false;
+    size_t variant = 99;
+    struct suboption e9_opts[] = { suboption(colored) };
+    struct suboption_variant variants[] = {
+        SUBOPTION_VARIANT("none"),
+        SUBOPTION_VARIANT("e9", e9_opts),
+    };
+
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR("bogus,colored"), variants, ARRAY_SIZE(variants), &variant,
+            false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR("none,colored"), variants, ARRAY_SIZE(variants), &variant,
+            false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR(""), variants, ARRAY_SIZE(variants), &variant, false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR(",colored"), variants, ARRAY_SIZE(variants), &variant, false
+        ),
+        EINVAL
+    );
+    ASSERT_EQ(variant, 99);
+    ASSERT_FALSE(colored);
+}
+
+TEST_CASE(by_head_takes_a_pointer_and_count)
+{
+    bool colored = false;
+    size_t variant = 99;
+    struct suboption table[] = { suboption(colored) };
+    struct suboption *ptr = table;
+    struct suboption_variant variants[] = {
+        SUBOPTION_VARIANT("none"),
+        SUBOPTION_VARIANT("e9", ptr, ARRAY_SIZE(table)),
+    };
+
+    ASSERT_EQ(
+        parse_suboptions_by_head(
+            STR("e9,colored"), variants, ARRAY_SIZE(variants), &variant, false
+        ),
+        EOK
+    );
+    ASSERT_EQ(variant, 1);
+    ASSERT_TRUE(colored);
+    ASSERT_EQ(variants[0].num_opts, 0);
+    ASSERT_NULL(variants[0].opts);
 }

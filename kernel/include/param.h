@@ -115,6 +115,16 @@ PARAMETER_OPS_DECL(string)
     default: 0                                   \
 )
 
+#define SUBOPTION_VARIANT_TABLE(...) \
+    CONCAT(SUBOPTION_VARIANT_TABLE_, GET_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#define SUBOPTION_VARIANT_TABLE_0() nullptr, 0
+#define SUBOPTION_VARIANT_TABLE_1(table)                 \
+    (table), ARRAY_SIZE(table) + EMBED_STATIC_ASSERT(    \
+        !ARE_SAME_TYPE(table, &(table)[0]),              \
+        "a table given without a count must be an array" \
+    )
+#define SUBOPTION_VARIANT_TABLE_2(table, count) (table), (count)
+
 // The name of a parameter is that of its variable minus a g_ or s_ prefix
 #define PARAM_NAME(name)                                        \
     __builtin_choose_expr(                                      \
@@ -241,12 +251,52 @@ struct string cmdline_parse(
 );
 
 /*
- * Parses the sub-options of a parameter value, a separator delimited list of
- * key[=value] entries, against the given table. An unknown key, an empty
- * entry or a bad value is an error. Entries before the failing one have
- * already been applied.
+ * Parses the sub-options of a parameter value, a list of key[=value] entries
+ * separated by commas or the given separator, against the given table. An
+ * unknown key, an empty entry or a bad value is an error. Entries before the
+ * failing one have already been applied. Failures are logged at boot only.
  */
-error_t parse_suboptions(
+error_t parse_suboptions_with_separator(
     struct string list, char separator, struct suboption *opts,
     size_t num_opts, bool is_runtime
+);
+error_t parse_suboptions(
+    struct string list, struct suboption *opts, size_t num_opts,
+    bool is_runtime
+);
+
+/*
+ * A head value followed by a number of suboptions to parse.
+ * Example cmdline:
+ *     - "my-param=foo,bar=123": "foo" is the head, "bar" is a suboption
+ *     - "my-param=baz,x=1,y,z=2": "baz" is the head, "x", "y", and "z" are
+ *                                 suboptions
+ *
+ *    In both cases the parameter setter receives the string after the '=',
+ *    which it then parses via parse_suboptions_by_head() by giving it the
+ *    list of acceptable suboption variants.
+ */
+struct suboption_variant {
+    struct string head;
+    struct suboption *opts;
+    size_t num_opts;
+};
+
+/*
+ * One of:
+ * - SUBOPTION_VARIANT("foo")
+ * - SUBOPTION_VARIANT("foo", foo_static_suboptions)
+ * - SUBOPTION_VARIANT("foo", foo_runtime_suboptions, foo_num_suboptions)
+ */
+#define SUBOPTION_VARIANT(head, ...) \
+    { STR(head), SUBOPTION_VARIANT_TABLE(__VA_ARGS__) }
+
+/*
+ * Parses a value of the form head[,sub-options] against the variants.
+ * The index of the matching variant is returned through out_variant on
+ * success.
+ */
+error_t parse_suboptions_by_head(
+    struct string value, const struct suboption_variant *variants,
+    size_t num_variants, size_t *out_variant, bool is_runtime
 );
