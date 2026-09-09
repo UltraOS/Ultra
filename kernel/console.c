@@ -1,4 +1,5 @@
 #include <console.h>
+#include <log.h>
 
 struct console *g_consoles;
 
@@ -21,6 +22,8 @@ error_t register_console(struct console *con)
 
     con->next = g_consoles;
     g_consoles = con;
+
+    log_flush_console(con);
     return EOK;
 }
 
