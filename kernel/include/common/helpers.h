@@ -67,6 +67,7 @@
     EMBED_STATIC_ASSERT(CHOOSE_EXPR(IS_CONSTEXPR(expr), (expr), 1), msg)
 
 #define CEILING_DIVIDE(x, y) (!!(x) + (((x) - !!(x)) / (y)))
+#define CLOSEST_DIVIDE(x, y) (((x) + ((y) / 2)) / (y))
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
