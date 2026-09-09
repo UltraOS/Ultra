@@ -27,10 +27,10 @@
 #define UNSIGNED_MAX(type) \
     ((typeof(type))(UNSIGNED_HALF_MAX(type) + (UNSIGNED_HALF_MAX(type) - 1)))
 
-#define MAKE_BIT_MASK_OF_TYPE(end_bit, start_bit, type) ((type)                \
+#define MAKE_BIT_MASK_OF_TYPE(end_bit, start_bit, type) ((type)(               \
     STATIC_ASSERT_IF_CONSTEXPR((end_bit) > (start_bit), "incorrect bit order") \
     +  (((UNSIGNED_MAX(type) >> (BITS_PER_TYPE(type) - (end_bit) - 1))) &      \
-        ((UNSIGNED_MAX(type) << (start_bit)))))
+        ((UNSIGNED_MAX(type) << (start_bit))))))
 
 #define MAKE_BIT_MASK_U8(end_bit, start_bit) \
     MAKE_BIT_MASK_OF_TYPE(end_bit, start_bit, u8)
