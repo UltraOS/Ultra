@@ -2,6 +2,12 @@
 
 #define DO_CONCAT(x, y) x##y
 #define CONCAT(x, y) DO_CONCAT(x, y)
+
+// The number of arguments given, zero to eight
+#define DO_GET_NUM_ARGS(a1, a2, a3, a4, a5, a6, a7, a8, n, ...) n
+#define GET_NUM_ARGS(...) \
+    DO_GET_NUM_ARGS(__VA_OPT__(__VA_ARGS__,) 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
 #define UNIQUE(x) CONCAT(x, __COUNTER__)
 
 #define DO_TO_STR(x) #x
