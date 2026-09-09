@@ -88,8 +88,6 @@ enum earlycon_mode {
     EARLYCON_MODE_E9,
 };
 
-static enum earlycon_mode s_earlycon = EARLYCON_MODE_NONE;
-
 static error_t earlycon_set(
     struct string value, struct param_value *v, bool is_runtime
 )
@@ -102,7 +100,8 @@ static error_t earlycon_set(
         [EARLYCON_MODE_NONE] = SUBOPTION_VARIANT("none"),
         [EARLYCON_MODE_E9] = SUBOPTION_VARIANT("e9", options),
     };
-    enum earlycon_mode *cur = v->ptr;
+
+    UNREFERENCED_PARAMETER(v);
 
     ret = parse_suboptions_by_head(
         value, modes, ARRAY_SIZE(modes), &mode, is_runtime
@@ -120,7 +119,6 @@ static error_t earlycon_set(
             return ret;
     }
 
-    *cur = mode;
     if (mode == EARLYCON_MODE_NONE)
         return EOK;
 
@@ -130,8 +128,4 @@ static error_t earlycon_set(
     );
     return EOK;
 }
-
-static const struct param_ops s_earlycon_param_ops = {
-    .set = earlycon_set,
-};
-parameter_with_ops(s_earlycon, s_earlycon_param_ops);
+init_action_parameter(earlycon, earlycon_set);
