@@ -139,47 +139,50 @@ static void format_record(
         out_buf_append(out, "\n", 1);
 }
 
-static void print_flush(void)
+void log_flush_console(struct console *con)
 {
     static char msg_buf[512], out_data[512 + 128];
 
-    struct console *con;
     struct log_record rec;
     struct out_buf out;
     error_t ret;
     u64 sec, usec;
     int stamp_len;
     char stamp[32];
-    bool color;
+    bool color = con->flags & CONSOLE_FLAG_ANSI_COLOR;
 
-    for (con = g_consoles; con; con = con->next) {
-        color = con->flags & CONSOLE_FLAG_ANSI_COLOR;
+    for (;;) {
+        ret = log_ring_read(
+            &s_log_ring, con->log_seq_num, msg_buf, sizeof(msg_buf), &rec
+        );
+        if (ret != EOK)
+            break;
 
-        for (;;) {
-            ret = log_ring_read(
-                &s_log_ring, con->log_seq_num, msg_buf, sizeof(msg_buf), &rec
-            );
-            if (ret != EOK)
-                break;
+        sec = rec.timestamp_ns / NS_PER_SEC;
+        usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
+        stamp_len = snprintf(
+            stamp, sizeof(stamp), "[%5llu.%06llu] ", sec, usec
+        );
 
-            sec = rec.timestamp_ns / NS_PER_SEC;
-            usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
-            stamp_len = snprintf(
-                stamp, sizeof(stamp), "[%5llu.%06llu] ", sec, usec
-            );
+        out = (struct out_buf) {
+            .data = out_data,
+            .capacity = sizeof(out_data),
+        };
+        format_record(
+            &out, stamp, stamp_len, msg_buf, rec.length, rec.level, color
+        );
 
-            out = (struct out_buf) {
-                .data = out_data,
-                .capacity = sizeof(out_data),
-            };
-            format_record(
-                &out, stamp, stamp_len, msg_buf, rec.length, rec.level, color
-            );
-
-            con->write(con, out.data, out.size);
-            con->log_seq_num = rec.seq_num + 1;
-        }
+        con->write(con, out.data, out.size);
+        con->log_seq_num = rec.seq_num + 1;
     }
+}
+
+static void print_flush(void)
+{
+    struct console *con;
+
+    for (con = g_consoles; con; con = con->next)
+        log_flush_console(con);
 }
 
 static size_t extract_msg_level(const char *msg, enum log_level *out_level)
