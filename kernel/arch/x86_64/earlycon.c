@@ -11,12 +11,12 @@
 
 #include <memory/io.h>
 
-static io_window s_e9_iow;
+static io_window s_earlycon_iow;
 
 static void e9_write(struct console *con, const char *str, size_t count)
 {
     UNREFERENCED_PARAMETER(con);
-    iowrite8_relaxed_many(&s_e9_iow, 0, (const u8*)str, count);
+    iowrite8_relaxed_many(&s_earlycon_iow, 0, (const u8*)str, count);
 }
 
 static struct console e9_console = {
@@ -24,29 +24,62 @@ static struct console e9_console = {
     .write = e9_write,
 };
 
-static error_t e9_console_init(void)
+// The console currently registered, it owns s_earlycon_iow
+static struct console *s_active_console;
+
+static error_t earlycon_activate(struct console *con, bool colored)
 {
-    error_t ret = EOK;
+    error_t ret;
+
+    con->flags = colored ? CONSOLE_FLAG_ANSI_COLOR : CONSOLE_FLAG_NONE;
+
+    ret = register_console(con);
+    if (is_error(ret))
+        return ret;
+
+    s_active_console = con;
+    return EOK;
+}
+
+static error_t earlycon_destroy(void)
+{
+    error_t ret;
+
+    if (s_active_console == nullptr)
+        return EOK;
+
+    ret = unregister_console(s_active_console);
+    if (is_error(ret))
+        return ret;
+
+    io_window_unmap(&s_earlycon_iow);
+    s_active_console = nullptr;
+    return EOK;
+}
+
+static error_t e9_console_init(bool colored)
+{
+    error_t ret;
 
     if (!all_cpus_have(X86_FEATURE_HYPERVISOR))
         return ENODEV;
 
-    ret = io_window_map_pio(0xE9, 1, &s_e9_iow);
+    ret = io_window_map_pio(0xE9, 1, &s_earlycon_iow);
     if (is_error(ret))
         return ret;
 
     ret = ENODEV;
-    if (ioread8(&s_e9_iow, 0) != 0xE9)
+    if (ioread8(&s_earlycon_iow, 0) != 0xE9)
         goto unmap;
 
-    ret = register_console(&e9_console);
-    if (unlikely(ret))
+    ret = earlycon_activate(&e9_console, colored);
+    if (is_error(ret))
         goto unmap;
 
-    return ret;
+    return EOK;
 
 unmap:
-    io_window_unmap(&s_e9_iow);
+    io_window_unmap(&s_earlycon_iow);
     return ret;
 }
 
@@ -56,14 +89,6 @@ enum earlycon_mode {
 };
 
 static enum earlycon_mode s_earlycon = EARLYCON_MODE_NONE;
-
-static error_t earlycon_destroy(void)
-{
-    if (s_earlycon == EARLYCON_MODE_E9)
-        return unregister_console(&e9_console);
-
-    return EOK;
-}
 
 static error_t earlycon_set(
     struct string value, struct param_value *v, bool is_runtime
@@ -90,10 +115,7 @@ static error_t earlycon_set(
         return ret;
 
     if (mode == EARLYCON_MODE_E9) {
-        e9_console.flags =
-            colored ? CONSOLE_FLAG_ANSI_COLOR : CONSOLE_FLAG_NONE;
-
-        ret = e9_console_init();
+        ret = e9_console_init(colored);
         if (is_error(ret))
             return ret;
     }
