@@ -12,6 +12,9 @@
 #include <param.h>
 #include <arch/cpu_helpers.h>
 #include <arch/private/cpu.h>
+#include <arch/private/early_pci.h>
+
+#include <pci/address.h>
 
 #include <memory/io.h>
 
@@ -165,11 +168,13 @@ unmap:
 enum ns16550_source_kind {
     NS16550_SOURCE_NONE,
     NS16550_SOURCE_IO,
+    NS16550_SOURCE_PCI,
 };
 
 struct ns16550_source {
     enum ns16550_source_kind kind;
     u16 io_base;
+    struct pci_address pci;
 };
 
 static error_t INIT_CODE ns16550_source_claim(
@@ -202,6 +207,105 @@ static error_t INIT_CODE ns16550_io_source_set(
         return ret;
 
     src->io_base = io_base;
+    return EOK;
+}
+
+static error_t INIT_CODE ns16550_pci_source_set(
+    struct string value, struct param_value *v, bool is_runtime
+)
+{
+    error_t ret;
+    struct pci_address pci;
+    struct ns16550_source *src = v->ptr;
+
+    UNREFERENCED_PARAMETER(is_runtime);
+
+    ret = str_to_pci_address(value, &pci);
+    if (is_error(ret))
+        return ret;
+
+    ret = ns16550_source_claim(src, NS16550_SOURCE_PCI);
+    if (is_error(ret))
+        return ret;
+
+    src->pci = pci;
+    return EOK;
+}
+
+static bool INIT_CODE pci_class_is_16550(u32 class_code)
+{
+    u32 class, interface;
+
+    class = BIT_FIELD_READ(class_code, PCI_CLASS_CODE_CLASS_MASK);
+    interface = BIT_FIELD_READ(class_code, PCI_CLASS_CODE_INTERFACE_MASK);
+
+    if (class != PCI_CLASS_SERIAL_CONTROLLER && class != PCI_CLASS_MODEM)
+        return false;
+
+    return interface == PCI_SERIAL_INTERFACE_16550;
+}
+
+/*
+ * The function must be a 16550 compatible with its registers behind an I/O
+ * BAR0 that firmware has assigned, only the decode may be left disabled.
+ */
+static error_t INIT_CODE ns16550_pci_source_resolve(struct ns16550_source *src)
+{
+    error_t ret;
+    struct pci_address addr = src->pci;
+    u32 class_code, bar, base;
+    u16 vendor, command;
+
+    ret = early_pci_read16(addr, PCI_CONFIG_VENDOR_ID, &vendor);
+    if (is_error(ret))
+        return ret;
+
+    if (vendor == PCI_VENDOR_ID_NONE) {
+        pr_err("no function at %pPCI\n", &addr);
+        return ENODEV;
+    }
+
+    ret = early_pci_read32(addr, PCI_CONFIG_CLASS_CODE, &class_code);
+    if (is_error(ret))
+        return ret;
+
+    if (!pci_class_is_16550(class_code)) {
+        pr_err(
+            "%pPCI is not a 16550 compatible serial controller (class %06X)\n",
+            &addr, BIT_FIELD_READ(class_code, PCI_CLASS_CODE_MASK)
+        );
+        return ENODEV;
+    }
+
+    ret = early_pci_read32(addr, PCI_CONFIG_BAR0, &bar);
+    if (is_error(ret))
+        return ret;
+
+    if (!(bar & PCI_BAR_IO_SPACE)) {
+        pr_err(
+            "BAR0 of %pPCI is memory mapped, only I/O is supported\n", &addr
+        );
+        return ENOTSUP;
+    }
+
+    base = bar & PCI_BAR_IO_ADDRESS_MASK;
+    if (base == 0) {
+        pr_err("firmware assigned no I/O range to %pPCI\n", &addr);
+        return ENODEV;
+    }
+
+    ret = early_pci_read16(addr, PCI_CONFIG_COMMAND, &command);
+    if (is_error(ret))
+        return ret;
+
+    if (!(command & PCI_COMMAND_IO_ENABLE)) {
+        command |= PCI_COMMAND_IO_ENABLE;
+        ret = early_pci_write16(addr, PCI_CONFIG_COMMAND, command);
+        if (is_error(ret))
+            return ret;
+    }
+
+    src->io_base = base;
     return EOK;
 }
 
@@ -262,13 +366,18 @@ static error_t INIT_CODE ns16550_console_init(
     }
 
     switch (src->kind) {
+    case NS16550_SOURCE_PCI:
+        ret = ns16550_pci_source_resolve(src);
+        if (is_error(ret))
+            return ret;
+        FALLTHROUGH;
     case NS16550_SOURCE_IO:
         ret = io_window_map_pio(
             src->io_base, NS16550_NUM_REGS, &s_earlycon_iow
         );
         break;
     default:
-        pr_err("ns16550 needs an io= port\n");
+        pr_err("ns16550 needs an io= port or a pci= function\n");
         return EINVAL;
     }
     if (is_error(ret))
@@ -282,7 +391,15 @@ static error_t INIT_CODE ns16550_console_init(
         return ret;
     }
 
-    pr_info("ns16550 at I/O port 0x%04X, %u baud\n", src->io_base, baud);
+    if (src->kind == NS16550_SOURCE_PCI) {
+        pr_info(
+            "ns16550 at %pPCI, I/O port 0x%04X, %u baud\n", &src->pci,
+            src->io_base, baud
+        );
+    } else {
+        pr_info("ns16550 at I/O port 0x%04X, %u baud\n", src->io_base, baud);
+    }
+
     return EOK;
 }
 
@@ -305,6 +422,9 @@ static error_t INIT_CODE earlycon_set(
     struct suboption ns16550_options[] = {
         custom_suboption(
             io, source, ns16550_io_source_set, SUBOPTION_FLAG_NONE
+        ),
+        custom_suboption(
+            pci, source, ns16550_pci_source_set, SUBOPTION_FLAG_NONE
         ),
         suboption(baud),
         suboption(colored),
