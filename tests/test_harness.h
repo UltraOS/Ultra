@@ -31,6 +31,7 @@ void do_assert_str_eq(const char *lhs, const char *rhs,
 
 #define ASSERT_TRUE(val)  ASSERT(val)
 #define ASSERT_FALSE(val) do_assert_eq(!!(val), 0, __FILE__, __LINE__)
+#define ASSERT_NULL(ptr) do_assert_eq((uint64_t)(ptr), 0, __FILE__, __LINE__)
 
 void malloc_phys_range(uint64_t start, uint64_t size);
 

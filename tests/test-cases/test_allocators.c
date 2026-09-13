@@ -1537,7 +1537,7 @@ TEST_CASE(valloc_page_array_nesting)
     // Small arrays come from the heap, not the valloc window
     small = alloc_page_array(4, ALLOC_GENERIC);
     ASSERT(small != nullptr);
-    ASSERT(reserved_area_find((virt_addr_t)small) == nullptr);
+    ASSERT_NULL(reserved_area_find((virt_addr_t)small));
     free_page_array(small, 4);
 
     // 513 entries push the array just past one page, into valloc
@@ -1547,7 +1547,7 @@ TEST_CASE(valloc_page_array_nesting)
     ASSERT(valloc_range_mapped((virt_addr_t)large, 2 * PAGE_SIZE));
 
     free_page_array(large, 513);
-    ASSERT(reserved_area_find((virt_addr_t)large) == nullptr);
+    ASSERT_NULL(reserved_area_find((virt_addr_t)large));
 
     // The free arena must have coalesced back into a single hole
     root = s_free_ranges.root;

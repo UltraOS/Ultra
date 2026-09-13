@@ -100,9 +100,9 @@ TEST_CASE(rb_tree_empty)
 {
     struct rb_root root = RB_ROOT_INIT;
 
-    ASSERT(root.root == nullptr);
-    ASSERT(rb_first(&root) == nullptr);
-    ASSERT(rb_last(&root) == nullptr);
+    ASSERT_NULL(root.root);
+    ASSERT_NULL(rb_first(&root));
+    ASSERT_NULL(rb_last(&root));
     rb_validate(&root, 0);
 }
 
@@ -114,7 +114,7 @@ TEST_CASE(rb_tree_single_insert)
     rb_node_insert(&a.node, &root, item_less);
 
     ASSERT_EQ(root.root, &a.node);
-    ASSERT(rb_node_parent(&a.node) == nullptr);
+    ASSERT_NULL(rb_node_parent(&a.node));
     // The root is always black.
     ASSERT(rb_node_is_black(&a.node));
     ASSERT_EQ(rb_first(&root), &a.node);
@@ -167,9 +167,9 @@ TEST_CASE(rb_tree_find)
 
     // Odd keys were never inserted.
     key = 7;
-    ASSERT(rb_node_find(&key, &root, item_key_cmp) == nullptr);
+    ASSERT_NULL(rb_node_find(&key, &root, item_key_cmp));
     key = -1;
-    ASSERT(rb_node_find(&key, &root, item_key_cmp) == nullptr);
+    ASSERT_NULL(rb_node_find(&key, &root, item_key_cmp));
 }
 
 TEST_CASE(rb_tree_find_or_insert)
@@ -181,8 +181,8 @@ TEST_CASE(rb_tree_find_or_insert)
     struct rb_node *ret;
 
     // First insertion of a fresh key returns nullptr.
-    ASSERT(rb_node_find_or_insert(&a.node, &root, item_cmp) == nullptr);
-    ASSERT(rb_node_find_or_insert(&b.node, &root, item_cmp) == nullptr);
+    ASSERT_NULL(rb_node_find_or_insert(&a.node, &root, item_cmp));
+    ASSERT_NULL(rb_node_find_or_insert(&b.node, &root, item_cmp));
 
     // A duplicate key returns the already-present node and does not insert.
     ret = rb_node_find_or_insert(&dup.node, &root, item_cmp);
@@ -209,7 +209,7 @@ TEST_CASE(rb_tree_remove_leaf)
     rb_validate(&root, ARRAY_SIZE(keys) - 1);
 
     key = 1;
-    ASSERT(rb_node_find(&key, &root, item_key_cmp) == nullptr);
+    ASSERT_NULL(rb_node_find(&key, &root, item_key_cmp));
 }
 
 TEST_CASE(rb_tree_remove_root)
@@ -220,7 +220,7 @@ TEST_CASE(rb_tree_remove_root)
     rb_node_insert(&a.node, &root, item_less);
     rb_node_remove(&a.node, &root);
 
-    ASSERT(root.root == nullptr);
+    ASSERT_NULL(root.root);
     rb_validate(&root, 0);
 }
 
@@ -242,7 +242,7 @@ TEST_CASE(rb_tree_remove_two_children)
     rb_validate(&root, ARRAY_SIZE(keys) - 1);
 
     key = 4;
-    ASSERT(rb_node_find(&key, &root, item_key_cmp) == nullptr);
+    ASSERT_NULL(rb_node_find(&key, &root, item_key_cmp));
 
     // The successor (key 5) must still be reachable.
     key = 5;
@@ -270,7 +270,7 @@ TEST_CASE(rb_tree_remove_all_sequential)
         rb_validate(&root, N - i - 1);
     }
 
-    ASSERT(root.root == nullptr);
+    ASSERT_NULL(root.root);
 }
 
 TEST_CASE(rb_tree_replace)
@@ -399,7 +399,7 @@ TEST_CASE(rb_tree_randomized_stress)
             if (present[idx])
                 ASSERT_EQ(f, &items[idx].node);
             else
-                ASSERT(f == nullptr);
+                ASSERT_NULL(f);
         }
     }
 
@@ -413,7 +413,7 @@ TEST_CASE(rb_tree_randomized_stress)
     }
 
     rb_validate(&root, 0);
-    ASSERT(root.root == nullptr);
+    ASSERT_NULL(root.root);
 }
 
 /*
@@ -592,7 +592,7 @@ TEST_CASE(rb_aggregated_remove)
     for (i = 0; i < N; i += 2) {
         rb_node_remove_aggregated(&items[i].node, &root, &aug_ops);
         key = i;
-        ASSERT(rb_node_find(&key, &root, aug_key_cmp) == nullptr);
+        ASSERT_NULL(rb_node_find(&key, &root, aug_key_cmp));
     }
     aug_validate(&root, N / 2);
 
@@ -600,7 +600,7 @@ TEST_CASE(rb_aggregated_remove)
         rb_node_remove_aggregated(&items[i].node, &root, &aug_ops);
 
     aug_validate(&root, 0);
-    ASSERT(root.root == nullptr);
+    ASSERT_NULL(root.root);
 }
 
 TEST_CASE(rb_aggregated_replace)
@@ -710,5 +710,5 @@ TEST_CASE(rb_aggregated_randomized_stress)
     }
 
     aug_validate(&root, 0);
-    ASSERT(root.root == nullptr);
+    ASSERT_NULL(root.root);
 }

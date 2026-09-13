@@ -10,7 +10,7 @@ struct slist_item {
 TEST_CASE(slist_basics)
 {
     struct slist_head head = SLIST_INIT(head);
-    ASSERT(head.first == nullptr);
+    ASSERT_NULL(head.first);
     ASSERT(slist_is_empty(&head));
 }
 
@@ -21,7 +21,7 @@ TEST_CASE(slist_init_runtime)
     head.first = (struct slist_node*)0x1234;
 
     slist_init(&head);
-    ASSERT(head.first == nullptr);
+    ASSERT_NULL(head.first);
     ASSERT(slist_is_empty(&head));
 }
 
@@ -29,7 +29,7 @@ TEST_CASE(slist_head_macro)
 {
     SLIST_HEAD(head);
 
-    ASSERT(head.first == nullptr);
+    ASSERT_NULL(head.first);
     ASSERT(slist_is_empty(&head));
 }
 
@@ -42,7 +42,7 @@ TEST_CASE(slist_push_order)
     slist_push(&head, &a);
     ASSERT_FALSE(slist_is_empty(&head));
     ASSERT_EQ(head.first, &a);
-    ASSERT(a.next == nullptr);
+    ASSERT_NULL(a.next);
 
     slist_push(&head, &b);
     ASSERT_EQ(head.first, &b);
@@ -52,7 +52,7 @@ TEST_CASE(slist_push_order)
     ASSERT_EQ(head.first, &c);
     ASSERT_EQ(c.next, &b);
     ASSERT_EQ(b.next, &a);
-    ASSERT(a.next == nullptr);
+    ASSERT_NULL(a.next);
 }
 
 TEST_CASE(slist_pop_order)
@@ -76,7 +76,7 @@ TEST_CASE(slist_pop_empty)
 {
     SLIST_HEAD(head);
 
-    ASSERT(slist_pop(&head) == nullptr);
+    ASSERT_NULL(slist_pop(&head));
     ASSERT(slist_is_empty(&head));
 }
 
@@ -94,7 +94,7 @@ TEST_CASE(slist_push_pop_interleaved)
 
     ASSERT_EQ(slist_pop(&head), &c);
     ASSERT_EQ(slist_pop(&head), &a);
-    ASSERT(slist_pop(&head) == nullptr);
+    ASSERT_NULL(slist_pop(&head));
     ASSERT(slist_is_empty(&head));
 }
 
