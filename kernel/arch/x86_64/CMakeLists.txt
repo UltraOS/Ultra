@@ -23,6 +23,7 @@ ultra_sources(
     irq.c
     exceptions.c
     earlycon.c
+    pci_type1.c
     tsc.c
 )
 ultra_include_directories(include)
