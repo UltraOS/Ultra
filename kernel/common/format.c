@@ -8,6 +8,7 @@
 #include <common/error.h>
 
 #include <symbols.h>
+#include <pci/address.h>
 
 struct fmt_buf_state {
     char *buffer;
@@ -414,6 +415,20 @@ static MAYBE_NERR(int) do_vsnprintf(
                 len = snprintf(unknown, sizeof(unknown), "<errno %d>",
                                *err_ptr);
                 write_many(fb_state, unknown, len);
+                continue;
+            }
+
+            if (consume(&fmt, STR("PCI"))) {
+                char text[16];
+                struct pci_address *addr;
+                int len;
+
+                addr = va_arg(vlist, struct pci_address*);
+                len = snprintf(
+                    text, sizeof(text), "%04x:%02x:%02x.%x", addr->segment,
+                    addr->bus, addr->device, addr->function
+                );
+                write_many(fb_state, text, len);
                 continue;
             }
 
