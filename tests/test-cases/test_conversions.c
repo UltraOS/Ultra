@@ -48,3 +48,14 @@ TEST_CASE(conversions_bases)
     ASSERT_EQ(str_to_u64_with_base(STR("ff"), &value, 16), EOK);
     ASSERT_EQ(value, 255);
 }
+
+TEST_CASE(conversions_digits_outside_the_base)
+{
+    u64 value;
+
+    ASSERT_NE(str_to_u64(STR("1a"), &value), EOK);
+    ASSERT_NE(str_to_u64(STR("08"), &value), EOK);
+    ASSERT_NE(str_to_u64(STR("0b12"), &value), EOK);
+    ASSERT_NE(str_to_u64_with_base(STR("9"), &value, 8), EOK);
+    ASSERT_NE(str_to_u64(STR("12x"), &value), EOK);
+}

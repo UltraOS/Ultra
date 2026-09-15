@@ -48,6 +48,9 @@ static error_t do_str_to_u64_unchecked(
             next = 10 + l - 'a';
         }
 
+        if (next >= base)
+            return EINVAL;
+
         next = number * base + next;
         if (next / base != number)
             return ERANGE;
