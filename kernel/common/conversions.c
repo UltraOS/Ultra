@@ -16,7 +16,7 @@ static unsigned int consume_base(struct string *str)
         return 2;
     }
 
-    if (str_starts_with(*str, STR("0"))) {
+    if (str_starts_with(*str, STR("0")) && str->size > 1) {
         str_offset_by(str, 1);
         return 8;
     }
@@ -34,6 +34,9 @@ static error_t do_str_to_u64_unchecked(
     u64 number = 0;
     u64 next;
     char c;
+
+    if (str_empty(str))
+        return EINVAL;
 
     while (str_pop_one(&str, &c)) {
         if (isdigit(c)) {
