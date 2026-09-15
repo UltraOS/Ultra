@@ -15,4 +15,5 @@ add_test_cases(
     test_mutex.c
     test_vector_alloc.c
     test_irq.c
+    test_conversions.c
 )
