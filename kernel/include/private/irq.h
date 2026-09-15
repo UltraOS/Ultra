@@ -143,11 +143,6 @@ struct irq_domain {
     void *priv;
 };
 
-/*
- * Domains may be registered at any time. Whether one has to exist
- * before interrupts become requestable is the business of the
- * resolver that hands it out.
- */
 void irq_domain_register(struct irq_domain*, struct irq_domain *parent);
 
 enum irq_state : u32 {
@@ -178,13 +173,10 @@ struct irq {
 
     /*
      * The delivery discipline matching the line's trigger type,
-     * invoked by the arch dispatch for every occurrence. The set of
-     * flows is closed and core-owned, picked from the spec at
-     * request time.
+     * invoked by the arch dispatch for every occurrence.
      */
     irq_flow_t flow;
 
-    // Only the line-wide flags every requester must agree on
     enum irq_flags flags;
 
     // Protects state and the action list against the delivery path
@@ -193,8 +185,7 @@ struct irq {
 
     /*
      * Set under the lock by a delivery walk, which then runs with the
-     * lock dropped. Polled locklessly by the request path, so every
-     * access is a relaxed atomic.
+     * lock dropped. Polled locklessly by the request path.
      */
     bool in_progress;
 

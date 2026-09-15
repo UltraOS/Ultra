@@ -39,7 +39,7 @@ static inline error_t alloc_typed_blocks_bulk_or_fail(
     return EOK;
 
 out_fail:
-    // The whole array is one class, free it via the matching path
+    // We assume the whole array holds pages of the same type
     if (page_type_is_refcounted(type))
         free_blocks_bulk(blocks, count);
     else

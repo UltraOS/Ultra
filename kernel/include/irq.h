@@ -24,14 +24,6 @@ struct cpu_mask;
  */
 typedef u32 irq_line_t;
 
-/*
- * Interrupt triggering is described along two orthogonal axes, the
- * detection mode (edge or level) and the activation polarity. A well
- * formed trigger selects exactly one detection mode and at least one
- * polarity, only edge detection may select both polarities to fire
- * on either transition. Zero is reserved so that an unset trigger
- * stays detectable.
- */
 enum irq_trigger : u32 {
     IRQ_TRIGGER_EDGE = BIT_U32(0),
     IRQ_TRIGGER_LEVEL = BIT_U32(1),
@@ -66,10 +58,9 @@ static inline bool irq_trigger_is_active_low(enum irq_trigger trigger)
 }
 
 /*
- * The identity of an interrupt line: the controller it enters the
- * hierarchy through, the line number in that controller's own
- * namespace, and the way the hardware signals an occurrence. Produced
- * by resolvers, consumed by irq_request().
+ * The IRQ specification structure produced by domain-specific code, e.g.
+ * via isa_irq_get(). This is the only way for generic code to request an
+ * interrupt.
  */
 struct irq_spec {
     struct irq_domain *domain;

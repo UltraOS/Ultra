@@ -167,8 +167,6 @@ static struct spinlock s_valloc_lock;
 
 static pt_prot s_managed_mappings_prot;
 
-// Tree & list bookkeeping
-
 static bool varea_start_less(const struct rb_node *a, const struct rb_node *b)
 {
     return varea_of(a)->start < varea_of(b)->start;
@@ -261,10 +259,9 @@ static struct varea *reserved_area_get(virt_addr_t addr, const char *caller)
 }
 
 /*
- * Locate the tree position for a free area starting at 'start': the parent
- * node and the link to hook it onto. The address-ordered list position (the
- * link to insert after) falls out of the same walk, so the mirror list and
- * both merge neighbours come for free without a second descent.
+ * Find the parent as well as the link on the parent node where the free area
+ * starting at 'start' belongs. This also returns the s_free_areas list position
+ * where this area is to be inserted.
  */
 static struct list_link *free_tree_find_links(
     virt_addr_t start, struct rb_node **out_parent, struct rb_node ***out_link
@@ -324,12 +321,7 @@ static bool area_fits(
 
 /*
  * Find the lowest-address free area able to satisfy a 'size'-byte, 'align'-
- * aligned allocation within the [vstart, vend) window. The subtree-max
- * augmentation lets us prune whole subtrees that are too small to ever fit.
- *
- * This is the classic augmented-tree lowest-fit walk: descend left while a
- * fitting candidate may live there, otherwise try the node and its right
- * subtree, climbing back up when a branch is exhausted.
+ * aligned allocation within the [vstart, vend) window.
  */
 static struct varea *find_free_fit(
     virt_addr_t vstart, virt_addr_t vend, size_t size, size_t align,
@@ -377,8 +369,8 @@ static struct varea *find_free_fit(
                 vstart <= area->start) {
                 /*
                  * Raise the window floor past this subtree so that an
-                 * exhausted branch is never re-entered: a qualifying
-                 * hole lying beyond 'vend' would otherwise make this
+                 * exhausted branch is never re-entered, othewise a
+                 * qualifying hole lying beyond 'vend' would make this
                  * walk loop forever.
                  */
                 vstart = area->start + 1;
@@ -598,25 +590,14 @@ static phys_addr_t reserved_area_to_phys_addr(
 }
 
 /*
- * Mapping and unmapping run without any page-table lock:
- *
- *  - Leaf entries: a varea's VA range is exclusively owned by the
- *    thread mapping or unmapping it, the reservation itself is the
- *    exclusion. Two threads may write different leaf entries of the
- *    same pt1 concurrently, which is fine, entries are independent
- *    atomic cells.
- *
- *  - Intermediate entries: the only shared state is the installation of
- *    a missing table, resolved per entry by ptN_cmpxchg_populate(). The
- *    loser frees its table and descends into the winner's.
- *
- *  - Intermediate tables are never freed in the kernel address space,
- *    so there is no teardown race and no deferred-free machinery.
- *
- *  - A non-present to present transition needs no TLB invalidation,
- *    which is why only the unmap paths flush.
+ * All mapping/unmapping code below is lockess. We can afford that because:
+ * - Top level tables are pre-populated by the initialization code
+ * - Intermediate tables are installed via ptN_cmpxchg_populate() so the CPU
+ *   that loses the race simply frees the table page it allocated
+ * - Leaf tables can be populated concurrently by themselves without issues
+ *   since only one varea owns one specific virtual range so they never
+ *   collide and populate individual slots only.
  */
-
 static void valloc_map_pt1(
     struct pt1 *pt1, virt_addr_t virt, virt_addr_t end,
     struct varea *area, area_to_phys_addr_cb_t to_phys, pt_prot prot
@@ -889,8 +870,6 @@ static void varea_unmap(struct varea *area)
     info->flags &= ~VALLOC_MAPPED;
 }
 
-// Releasing & coalescing
-
 static void coalesce_and_insert_free(struct varea *area)
 {
     struct rb_node *parent, **link;
@@ -906,11 +885,6 @@ static void coalesce_and_insert_free(struct varea *area)
         sibling = list_entry(successor, struct varea, link);
 
         if (sibling->start == area->end) {
-            /*
-             * Extending the successor down to our start cannot break
-             * the tree ordering: the range in between was reserved, so
-             * no free node's key lives inside it.
-             */
             sibling->start = area->start;
             free_ranges_tree_propagate(&sibling->node, nullptr);
             free(area);
@@ -1057,8 +1031,6 @@ out_panic:
         "0x%016llX (%zu bytes): %s", caller, start, size, why
     );
 }
-
-// Public interface
 
 void *valloc(size_t size, enum alloc_behavior behavior)
 {

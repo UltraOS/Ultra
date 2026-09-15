@@ -104,7 +104,7 @@
  *
  * A table may be freed only once no live range intersects its span,
  * at which point it is empty by construction, since every entry
- * belonged to some range that has been*  torn down.
+ * belonged to some range that has been torn down.
  *
  * Invariants
  * ==========

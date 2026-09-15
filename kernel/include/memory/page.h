@@ -161,10 +161,9 @@ struct kheap_page {
 struct ptdesc_page {
     /*
      * Serializes racing installs into this table's entries (user
-     * address spaces only). Teardown never takes it: removal of an
-     * entry has a single owner, and a table is freed only once no
-     * live range intersects its span, at which point it is empty by
-     * construction.
+     * address spaces only). We don't need it for teardown since
+     * a table is only freed when there is not a single virtual area
+     * that intersects this table's span alive.
      */
     struct spinlock lock;
 };
