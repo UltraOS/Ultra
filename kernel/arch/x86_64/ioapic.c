@@ -370,8 +370,8 @@ static void ioapic_pin_eoi(struct ioapic *ioapic, u32 pin, u8 vector)
     }
 
     /*
-     * No EOI register: flipping the masked entry to edge and back
-     * drops the latch instead.
+     * There isn't an EOI register so the only way to drop the latch is to tell
+     * IOAPIC that this is an edge triggered IRQ for a brief moment.
      */
     reg = ioapic_rte_low_reg(pin);
     value = ioapic_read(ioapic, reg);
@@ -381,7 +381,6 @@ static void ioapic_pin_eoi(struct ioapic *ioapic, u32 pin, u8 vector)
     ioapic_write(ioapic, reg, value);
 }
 
-// The domain's private bookkeeping for one allocated pin
 struct ioapic_route {
     struct ioapic *ioapic;
 
@@ -525,9 +524,9 @@ static error_t ioapic_domain_activate(struct irq *irq, struct irq_level *level)
     irq_hw_compose_msi_route(irq, &msg);
 
     /*
-     * An RTE is the composed message in a different register layout,
-     * moved field by field since the bit positions differ. The
-     * vector and delivery mode occupy the same bits on both sides.
+     * A redirection table entry in an IOAPIC is basically the same as an MSI
+     * message, the only difference is the field layout differs. So here we
+     * have to do a little bit of careful field juggling.
      */
     low = msg.data & (X86_MSI_DATA_VECTOR_MASK | X86_MSI_DATA_DELIVERY_MASK);
     if (msg.address_low & X86_MSI_ADDR_DEST_MODE_LOGICAL)
@@ -541,7 +540,7 @@ static error_t ioapic_domain_activate(struct irq *irq, struct irq_level *level)
     );
     high |= BIT_FIELD_MAKE(IOAPIC_RTE_VIRT_DESTID_8_14_MASK, value);
 
-    // Trigger facts are the pin's own, layered on top of the message
+    // IRQ triggering comes to us from the specification directly
     if (irq_trigger_is_level(irq->spec.trigger))
         low |= IOAPIC_RTE_LEVEL;
     if (irq_trigger_is_active_low(irq->spec.trigger))
@@ -650,20 +649,22 @@ static void INIT_CODE ioapic_quiesce_pin(struct ioapic *ioapic, u32 pin)
         return;
 
     /*
-     * Remote IRR may still change until the mask lands, the entry
-     * read back afterwards is the settled one.
+     * If the pin wasn't masked before, its value may have changed while we
+     * were inspecting it. Mask, and then re-read. This serves as both a
+     * posted write barrier, as well as gives us the up-to-date register
+     * contents.
      */
     if (!(value & IOAPIC_RTE_MASKED)) {
         ioapic_write(ioapic, reg, value | IOAPIC_RTE_MASKED);
         value = ioapic_read(ioapic, reg);
     }
 
-    /*
-     * A Remote IRR left set by an interrupt the firmware never
-     * acknowledged blocks the pin forever. An explicit EOI only
-     * clears it in level mode, so force that first.
-     */
     if (value & IOAPIC_RTE_REMOTE_IRR) {
+        /*
+         * This pin is stuck in service because the firmware never acknowledged
+         * it. Fix it up here by doing an explicit EOI. An EOI only works if
+         * the pin is configured as level though.
+         */
         if (!(value & IOAPIC_RTE_LEVEL)) {
             value |= IOAPIC_RTE_LEVEL;
             ioapic_write(ioapic, reg, value);
@@ -692,7 +693,7 @@ static error_t INIT_CODE ioapic_domains_init(void)
     for (i = 0; i < s_num_ioapics; i++) {
         ioapic = &s_ioapics[i];
 
-        // Nothing may be live before the first request
+        // Quiesce all pins of this IOAPIC before we present it as a domain
         num_pins = ioapic_num_pins(ioapic);
         for (pin = 0; pin < num_pins; pin++)
             ioapic_quiesce_pin(ioapic, pin);
@@ -710,7 +711,6 @@ static error_t INIT_CODE ioapic_domains_init(void)
 }
 INIT_CALL_PRE(IRQS_AVAILABLE, ioapic_domains_init);
 
-// Nothing is behind the window if every register reads as all ones
 static bool INIT_CODE ioapic_is_absent(struct ioapic *ioapic)
 {
     u32 value;
@@ -719,6 +719,10 @@ static bool INIT_CODE ioapic_is_absent(struct ioapic *ioapic)
     value &= ioapic_read(ioapic, IOAPIC_REG_VER);
     value &= ioapic_read(ioapic, IOAPIC_REG_ARB);
 
+    /*
+     * All registers reading as 0xFF is a pretty good indicator this IOAPIC
+     * doesn't actually exist and is probably a bogus MADT entry.
+     */
     return value == 0xFFFFFFFF;
 }
 
@@ -729,7 +733,7 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     const char *why;
     u32 actual_id, version;
 
-    // GSI resolution relies on every IOAPIC being known by then
+    // All IOAPICs must be registered way earlier than IRQS_AVAILABLE
     BUG_ON_INIT_LEVEL_AT_OR_ABOVE(IRQS_AVAILABLE);
 
     new_ioapic = ioapic_next_empty_slot();

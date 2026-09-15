@@ -223,11 +223,10 @@ static void *cache_take_object(
         spin_unlock_irq_restore(&cache->lock, state);
 
         /*
-         * Provision the slab with the lock dropped: the buddy may
-         * eventually sleep or reclaim for ALLOC_GENERIC, and the
-         * freelist threading is O(num_objects). Racing allocators
-         * may publish a slab of their own meanwhile, an extra
-         * partial one is harmless.
+         * We must drop the lock for the allocation here since ALLOC_GENERIC
+         * may sleep and do other IO work. This doesn't matter much because
+         * worst case is we get an extra partial slab a racing allocation
+         * managed to install.
          */
         heap = slab_create(cache, behavior & ~ALLOC_ZEROED);
         if (unlikely(heap == nullptr))
@@ -327,8 +326,9 @@ void free(void *ptr)
     block = virt_to_block(ptr);
 
     /*
-     * This is the only validation an erroneous free of a foreign
-     * pointer ever gets, keep it on even in non-debug builds.
+     * Keep this enabled in non-MM_DEBUG builds as well, this is basically the
+     * only check the pointer being freed is not completely bogus because
+     * block_kheap() doesn't check in non-mm-debug builds.
      */
     BUG_ON(!block_is_kernel_heap(block));
 
@@ -349,7 +349,6 @@ void free(void *ptr)
 
     state = spin_lock_irq_save(&cache->lock);
 
-    // Catches an immediate double free, not a generic one
     MM_BUG_ON(node == heap->freelist.first);
     MM_BUG_ON(heap->num_allocated_objects == 0);
 

@@ -84,7 +84,7 @@ def main() -> None:
            old_values.get(sym.name, "") != value:
             touch(stamp)
 
-    # Touch (but never delete) stamps of symbols that no longer exist,
+    # Touch (but don't delete) stamps of symbols that no longer exist,
     # so that their dependents get rebuilt and drop the dependency
     for name in old_values:
         if name in new_values:
