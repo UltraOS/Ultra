@@ -6,7 +6,6 @@
 
 #include <memory/io.h>
 
-#define X86_PORT_IO_WINDOW_OFFSET 0x10000
 #define X86_PORT_IO_WINDOW_LEN 0xFFFF
 
 static inline error_t arch_map_pio(
@@ -16,7 +15,7 @@ static inline error_t arch_map_pio(
     if (unlikely((phys_base + length) > X86_PORT_IO_WINDOW_LEN))
         return EINVAL;
 
-    *out_addr = (pio_addr_t)(X86_PORT_IO_WINDOW_OFFSET + phys_base);
+    *out_addr = (pio_addr_t)phys_base;
     return EOK;
 }
 
@@ -35,7 +34,6 @@ static inline void arch_unmap_pio(phys_addr_t phys_base, size_t length)
     {                                                                \
         u##width val;                                                \
                                                                      \
-        port -= X86_PORT_IO_WINDOW_OFFSET;                           \
         asm volatile(                                                \
             "in" pio_suffix " %w1, %" io_suffix "0"                  \
             : "=a" (val) : "Nd" (port) asm_barrier                   \
@@ -48,7 +46,6 @@ static inline void arch_unmap_pio(phys_addr_t phys_base, size_t length)
         pio_addr_t port, u##width val                                \
     )                                                                \
     {                                                                \
-        port -= X86_PORT_IO_WINDOW_OFFSET;                           \
         asm volatile(                                                \
             "out" pio_suffix " %" io_suffix "0, %w1"                 \
             :: "a" (val), "Nd" (port) asm_barrier                    \
@@ -83,7 +80,6 @@ X86_MAKE_ARCH_PIO_RW("l",    , 32, _relaxed, ,)
         pio_addr_t port, u##width *buf, size_t count                \
     )                                                               \
     {                                                               \
-        port -= X86_PORT_IO_WINDOW_OFFSET;                          \
         asm volatile(                                               \
             "rep ins" pio_suffix                                    \
             : "+D" (buf), "+c" (count) : "d" ((u16)port) : "memory" \
@@ -94,7 +90,6 @@ X86_MAKE_ARCH_PIO_RW("l",    , 32, _relaxed, ,)
         pio_addr_t port, const u##width *buf, size_t count          \
     )                                                               \
     {                                                               \
-        port -= X86_PORT_IO_WINDOW_OFFSET;                          \
         asm volatile(                                               \
             "rep outs" pio_suffix                                   \
             : "+S" (buf), "+c" (count) : "d" ((u16)port) : "memory" \
