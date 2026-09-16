@@ -6,13 +6,13 @@
 
 #include <memory/io.h>
 
-#define X86_PORT_IO_WINDOW_LEN 0xFFFF
+#define X86_NUM_PORTS 0x10000
 
 static inline error_t arch_map_pio(
     phys_addr_t phys_base, size_t length, pio_addr_t *out_addr
 )
 {
-    if (unlikely((phys_base + length) > X86_PORT_IO_WINDOW_LEN))
+    if (unlikely((phys_base + length) > X86_NUM_PORTS))
         return EINVAL;
 
     *out_addr = (pio_addr_t)phys_base;
