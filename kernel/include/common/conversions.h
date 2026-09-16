@@ -28,3 +28,11 @@ STR_TO_N_DECL(32)
 STR_TO_N_DECL(64)
 
 error_t str_to_bool(struct string, bool *res);
+
+struct pci_address;
+
+/*
+ * Parses [segment:]bus:device.function, every number in hex, e.g. 0:16.3
+ * or 0000:00:16.3
+ */
+error_t str_to_pci_address(struct string, struct pci_address *out_addr);

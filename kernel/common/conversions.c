@@ -1,6 +1,8 @@
 #include <common/conversions.h>
 #include <common/ctype.h>
 
+#include <pci/address.h>
+
 static unsigned int consume_base(struct string *str)
 {
     if (unlikely(str_empty(*str)))
@@ -234,4 +236,54 @@ error_t str_to_bool(struct string str, bool *res)
     }
 
     return EINVAL;
+}
+
+error_t str_to_pci_address(struct string str, struct pci_address *out_addr)
+{
+    error_t ret;
+    ssize_t colon, dot;
+    struct string part;
+
+    out_addr->segment = 0;
+
+    colon = str_find_one(str, ':', 0);
+    if (colon < 0)
+        return EINVAL;
+
+    // An optional segment comes first, the way lspci prints it
+    if (str_find_one(str, ':', colon + 1) >= 0) {
+        part = str_substring(str, 0, colon);
+        ret = str_to_u16_with_base(part, &out_addr->segment, 16);
+        if (is_error(ret))
+            return ret;
+
+        str = str_substring(str, colon + 1, str.size);
+        colon = str_find_one(str, ':', 0);
+    }
+
+    dot = str_find_one(str, '.', colon);
+    if (dot < 0)
+        return EINVAL;
+
+    part = str_substring(str, 0, colon);
+    ret = str_to_u8_with_base(part, &out_addr->bus, 16);
+    if (is_error(ret))
+        return ret;
+
+    part = str_substring(str, colon + 1, dot);
+    ret = str_to_u8_with_base(part, &out_addr->device, 16);
+    if (is_error(ret))
+        return ret;
+
+    part = str_substring(str, dot + 1, str.size);
+    ret = str_to_u8_with_base(part, &out_addr->function, 16);
+    if (is_error(ret))
+        return ret;
+
+    if (out_addr->device >= PCI_DEVICES_PER_BUS)
+        return EINVAL;
+    if (out_addr->function >= PCI_FUNCTIONS_PER_DEVICE)
+        return EINVAL;
+
+    return EOK;
 }
