@@ -427,59 +427,72 @@ def main() -> None:
     ww.relaunch_in_wsl_if_windows()
     pg.set_project_root(os.path.dirname(os.path.abspath(__file__)))
 
-    parser = argparse.ArgumentParser("Build & run the UltraOS kernel")
-    ta.add_base_args(parser)
-    parser.add_argument("--arch", default="auto",
-                        choices=["auto", "x86_64", "aarch64"],
-                        help="CPU architecture to build the kernel for "
-                             "(auto implies x86_64 or the config setting if "
-                             "--config is specified)")
-    parser.add_argument("--skip-generic-dependencies", action="store_true",
-                        help="don't attempt to fetch the generic dependencies")
-    parser.add_argument("--make-image", action="store_true",
-                        help="Produce a bootable image after building")
-    parser.add_argument("--image-type", choices=["iso", "raw"], default="iso",
-                        help="Image type to produce (with --make-image)")
-    parser.add_argument("--run", action="store_true",
-                        help="Automatically run in QEMU after building")
-    parser.add_argument("--kvm", action="store_true",
-                        help="Run QEMU with KVM enabled (implies --run)")
-    parser.add_argument("--la57", action="store_true",
-                        help="Run QEMU with LA57 support (x86_64 only)")
-    parser.add_argument("--dry", action="store_true",
-                        help="Dump the QEMU command line instead of running")
-    parser.add_argument("--uefi", action="store_true",
-                        help="Boot in UEFI mode")
-    parser.add_argument("--uefi-firmware-path",
-                        help="Path to UEFI firmware to use with QEMU")
-    parser.add_argument("--debug", action="store_true",
-                        help="Start a debugging session after building "
-                             "(implies --run)")
-    parser.add_argument("--ide-debug", action="store_true",
-                        help="Start QEMU in debug mode but don't start "
-                             "a debugger")
-    parser.add_argument("--hyper-installer", type=str,
-                        help="Path to the hyper installer")
-    parser.add_argument("--hyper-iso-loader", type=str,
-                        help="Path to the hyper iso boot record "
-                             "(hyper_iso_boot)")
-    parser.add_argument("--hyper-uefi-binary-paths", nargs='+',
-                        help="Paths to the hyper UEFI binaries "
-                             "(BOOT{X64,AA64}.EFI)")
-    parser.add_argument("--toolchain-only", action="store_true",
-                        help="build the toolchain and exit")
-    parser.add_argument("--no-build", action="store_true",
-                        help="Assume the kernel is already built")
-    parser.add_argument("--reconfigure", action="store_true",
-                        help="Reconfigure cmake before building")
-    parser.add_argument("--unit-tests", action="store_true",
-                        help="Run the userspace test suite")
-    parser.add_argument("--config",
-                        help="Configuration file to use for this build")
-    parser.add_argument("--menuconfig", action="store_true",
-                        help="Run menuconfig to edit the current config file")
-    parser.add_argument("--guiconfig", action="store_true",
-                        help="Run guiconfig to edit the current config file")
+    parser = argparse.ArgumentParser(
+        description="Build, image and run the Ultra kernel"
+    )
+
+    build = parser.add_argument_group("Build")
+    build.add_argument("--arch", default="auto",
+                       choices=["auto", "x86_64", "aarch64"],
+                       help="CPU architecture to build the kernel for "
+                            "(auto implies x86_64 or the config setting if "
+                            "--config is specified)")
+    build.add_argument("--config",
+                       help="Configuration file to use for this build")
+    build.add_argument("--menuconfig", action="store_true",
+                       help="Run menuconfig to edit the current config file")
+    build.add_argument("--guiconfig", action="store_true",
+                       help="Run guiconfig to edit the current config file")
+    build.add_argument("--reconfigure", action="store_true",
+                       help="Reconfigure cmake before building")
+    build.add_argument("--no-build", action="store_true",
+                       help="Assume the kernel is already built")
+    build.add_argument("--skip-generic-dependencies", action="store_true",
+                       help="Don't attempt to fetch the generic dependencies")
+
+    toolchain = parser.add_argument_group("Toolchain")
+    ta.add_base_args(toolchain)
+    toolchain.add_argument("--toolchain-only", action="store_true",
+                           help="Build the toolchain and exit")
+
+    image = parser.add_argument_group("Image")
+    image.add_argument("--make-image", action="store_true",
+                       help="Produce a bootable image after building")
+    image.add_argument("--image-type", choices=["iso", "raw"], default="iso",
+                       help="Image type to produce (with --make-image)")
+    image.add_argument("--hyper-installer", type=str,
+                       help="Path to the hyper installer")
+    image.add_argument("--hyper-iso-loader", type=str,
+                       help="Path to the hyper iso boot record "
+                            "(hyper_iso_boot)")
+    image.add_argument("--hyper-uefi-binary-paths", nargs='+',
+                       help="Paths to the hyper UEFI binaries "
+                            "(BOOT{X64,AA64}.EFI)")
+
+    qemu = parser.add_argument_group("QEMU")
+    qemu.add_argument("--run", action="store_true",
+                      help="Run in QEMU after building")
+    qemu.add_argument("--kvm", action="store_true",
+                      help="Run QEMU with KVM enabled (implies --run)")
+    qemu.add_argument("--la57", action="store_true",
+                      help="Run QEMU with LA57 support (x86_64 only)")
+    qemu.add_argument("--uefi", action="store_true",
+                      help="Boot in UEFI mode")
+    qemu.add_argument("--uefi-firmware-path",
+                      help="Path to UEFI firmware to use with QEMU")
+    qemu.add_argument("--debug", action="store_true",
+                      help="Start a debugging session after building "
+                           "(implies --run)")
+    qemu.add_argument("--ide-debug", action="store_true",
+                      help="Start QEMU in debug mode but don't start "
+                           "a debugger")
+    qemu.add_argument("--dry", action="store_true",
+                      help="Dump the QEMU command line instead of running")
+
+    tests = parser.add_argument_group("Tests")
+    tests.add_argument("--unit-tests", action="store_true",
+                       help="Run the userspace test suite")
+
     args = parser.parse_args()
 
     this_os = platform.system()
