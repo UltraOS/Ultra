@@ -7,6 +7,8 @@
 #include <boot/boot.h>
 #include <boot/ultra_protocol.h>
 
+#include <arch/cpu_helpers.h>
+
 #include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
@@ -136,5 +138,6 @@ void INIT_CODE entry(struct ultra_boot_context *ctx)
 
     init_level_raise(INIT_LEVEL_IRQS_AVAILABLE);
 
-    for (;;);
+    print(LOG_NOTICE"Nothing left to do, halting!\n");
+    arch_cpu_halt();
 }

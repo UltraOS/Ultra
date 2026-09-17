@@ -1,6 +1,7 @@
 #include <boot/ultra_protocol.h>
 #include <boot/boot.h>
 
+#include <arch/cpu_helpers.h>
 #include <arch/private/descriptors.h>
 #include <arch/private/idt.h>
 #include <arch/private/cpu.h>
@@ -73,7 +74,7 @@ INIT_CALL_AT(X86_PLATFORM_INFO_AVAILABLE, x86_platform_init);
 ULTRA_ENTRYPOINT(x86)
 {
     if (magic != ULTRA_MAGIC)
-        for (;;);
+        arch_cpu_halt();
 
     entry(ctx);
 }
