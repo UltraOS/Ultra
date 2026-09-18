@@ -71,7 +71,7 @@ static void INIT_CODE xapic_setup(void)
     apic_base_msr = rdmsr_or_die(MSR_IA32_APIC_BASE);
     s_xapic_phys_base = apic_base_msr & IA32_APIC_BASE_ADDRESS_MASK;
 
-    pr_info("base set at 0x%016llX\n", s_xapic_phys_base);
+    pr_info("base set at 0x%llX\n", s_xapic_phys_base);
 
     ret = io_window_map(s_xapic_phys_base, PAGE_SIZE, &s_xapic_io);
     BUG_ON(ret != EOK);
