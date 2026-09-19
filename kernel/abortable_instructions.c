@@ -15,7 +15,7 @@ static const struct abortable_instruction *find_abortable_instruction(reg_t ip)
     for (i = 0; i < SECTION_ARRAY_SIZE(ABORTABLE_INSTRUCTIONS_SECTION); i++) {
         ai = &SECTION_ARRAY_BEGIN(ABORTABLE_INSTRUCTIONS_SECTION)[i];
 
-        if (ai->try_pc == ip)
+        if (SELF_RELATIVE_TARGET(ai->try_pc_disp) == ip)
             return ai;
     }
 
@@ -44,7 +44,7 @@ bool handle_abortable_instruction(struct registers *regs)
     else if (ai->flags & ABORTABLE_INSTRUCTION_EFAULT_ON_ERROR)
         registers_set_return_value(regs, EFAULT);
 
-    registers_set_pc(regs, ai->abort_pc);
+    registers_set_pc(regs, SELF_RELATIVE_TARGET(ai->abort_pc_disp));
     return true;
 }
 
