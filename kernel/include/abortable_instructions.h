@@ -18,8 +18,8 @@
 #include <arch/registers.h>
 
 struct abortable_instruction {
-    reg_t try_pc;
-    reg_t abort_pc;
+    i32 try_pc_disp;
+    i32 abort_pc_disp;
 
     u32 flags;
     u32 arch_flags;

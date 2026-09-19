@@ -16,11 +16,11 @@
                                           flags=0 x86_flags=0
 \resume_label_name:
 
-.pushsection SECTION_NAME(ABORTABLE_INSTRUCTIONS_SECTION)
+.pushsection SECTION_NAME(ABORTABLE_INSTRUCTIONS_SECTION), "a"
 
-.balign 8
-.quad \insn_label
-.quad \resume_label_name\()b
+.balign 4
+.long \insn_label - .
+.long \resume_label_name\()b - .
 .long \flags
 .long \x86_flags
 
