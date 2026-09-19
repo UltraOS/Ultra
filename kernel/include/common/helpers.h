@@ -99,6 +99,15 @@
     (typeof(ptr))(laundered_ptr + count);                \
 })
 
+/*
+ * Resolve a self-relative reference (which is a signed 32-bit field),
+ * as emitted by e.g. ".long target - ." in assembly.
+ */
+#define SELF_RELATIVE_TARGET(field) ({               \
+    BUILD_BUG_ON(!ARE_SAME_TYPE(field, i32))         \
+    (virt_addr_t)PTR_ADD_HIDE_UB(&(field), (field)); \
+})
+
 #define IS_SIGNED_TYPE(x) (((typeof(x))-1) < ((typeof(x))1))
 #define IS_UNSIGNED_TYPE(x) (!IS_SIGNED_TYPE(x))
 
