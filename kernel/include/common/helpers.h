@@ -50,7 +50,7 @@
 #define EMBED_STATIC_ASSERT(expr, msg) \
     sizeof(struct {STATIC_ASSERT((expr), msg);})
 
-#define BUILD_BUG_ON_EMBED_WITH_MSG(expr) EMBED_STATIC_ASSERT(!(expr), msg)
+#define BUILD_BUG_ON_EMBED_WITH_MSG(expr, msg) EMBED_STATIC_ASSERT(!(expr), msg)
 #define BUILD_BUG_ON_EMBED(expr) \
     BUILD_BUG_ON_EMBED_WITH_MSG(expr, "BUILD BUG: " #expr " evaluated to true")
 
