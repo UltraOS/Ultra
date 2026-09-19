@@ -60,6 +60,9 @@ GENERIC_DEPS = {
     ],
 }
 
+# How long --run-for waits for the first output before giving up
+QEMU_SILENT_BOOT_SECONDS = 30
+
 ARCH_TO_CONFIG_KEY = {
     "x86_64": "ARCH_X86_64",
     "aarch64": "ARCH_AARCH64",
@@ -321,14 +324,20 @@ def qemu_watch_run_for(qp: subprocess.Popen, run_for: float) -> None:
     sel = selectors.DefaultSelector()
     sel.register(qp.stdout, selectors.EVENT_READ)
     deadline = None
+    silent_deadline = time.monotonic() + run_for + QEMU_SILENT_BOOT_SECONDS
 
     while qp.poll() is None:
-        timeout = None
         if deadline is not None:
             timeout = deadline - time.monotonic()
-            if timeout <= 0:
-                qp.terminate()
-                break
+        else:
+            timeout = silent_deadline - time.monotonic()
+        if timeout <= 0:
+            if deadline is None:
+                print(
+                    "No output from the kernel, giving up", file=sys.stderr
+                )
+            qp.terminate()
+            break
         if not sel.select(timeout):
             continue
         data = os.read(qp.stdout.fileno(), 65536)
@@ -537,8 +546,10 @@ def main() -> None:
     qemu.add_argument("--dry", action="store_true",
                       help="Dump the QEMU command line instead of running")
     qemu.add_argument("--run-for", type=float, metavar="SECONDS",
-                      help="Stop this many seconds after boot, also works for"
-                           " --baremetal")
+                      help="Stop this many seconds after the first"
+                           " output, or after"
+                           f" {QEMU_SILENT_BOOT_SECONDS} more if there is"
+                           " none, also works for --baremetal")
 
     baremetal = parser.add_argument_group(
         "Baremetal",
