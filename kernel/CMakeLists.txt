@@ -97,6 +97,7 @@ ultra_include_directories(
 ultra_compile_options(
     -fno-pic
     -fno-pie
+    -fmacro-prefix-map=${CMAKE_SOURCE_DIR}/=
     -std=gnu23
     -ffreestanding
     -fasynchronous-unwind-tables
