@@ -291,15 +291,16 @@ struct dump_state {
     size_t depth;
 };
 
+#define FRAME_FMT(symbol) "    #%zu in <0x%016zX> at " symbol "\n"
+
 static bool do_dump_frame(void *user, ptr_t addr, bool addr_after_call)
 {
     struct dump_state *state = user;
-    ptr_t lookup_addr;
 
-    lookup_addr = addr_after_call ? addr - 1 : addr;
-    pr_lvl(
-        state->level, "    #%zu in %pSM\n", state->depth++, &lookup_addr
-    );
+    if (addr_after_call)
+        pr_lvl(state->level, FRAME_FMT("%pRSM"), state->depth++, addr, &addr);
+    else
+        pr_lvl(state->level, FRAME_FMT("%pSM"), state->depth++, addr, &addr);
 
     return true;
 }
