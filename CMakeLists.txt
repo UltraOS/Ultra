@@ -86,15 +86,6 @@ set(ULTRA_SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/scripts")
 
 project(Ultra ${ULTRA_LANGUAGES})
 
-execute_process(
-    COMMAND
-    git describe --always --dirty
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    OUTPUT_VARIABLE ULTRA_GIT_SHA
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if (NOT ULTRA_GIT_SHA)
-    set(ULTRA_GIT_SHA "0000000")
-endif ()
+set(ULTRA_VERSION "0.0.1")
 
 add_subdirectory(kernel)
