@@ -3,6 +3,7 @@
 #include <free_after_init.h>
 #include <init_level.h>
 #include <bug.h>
+#include <panic.h>
 #include <config.h>
 #include <log.h>
 

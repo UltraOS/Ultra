@@ -6,6 +6,7 @@
 #include <per_cpu.h>
 #include <log.h>
 #include <bug.h>
+#include <panic.h>
 #include <free_after_init.h>
 #include <config.h>
 

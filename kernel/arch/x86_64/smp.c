@@ -12,6 +12,7 @@
 
 #include <config.h>
 #include <bug.h>
+#include <panic.h>
 #include <per_cpu.h>
 #include <free_after_init.h>
 #include <init_level.h>

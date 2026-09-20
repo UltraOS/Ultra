@@ -9,6 +9,7 @@
 #include <common/bit.h>
 
 #include <bug.h>
+#include <panic.h>
 
 #include <memory/alloc.h>
 #include <memory/alloc_cache.h>
