@@ -28,6 +28,7 @@ struct unwind_state {
 
     bool end;
     bool signal_frame;
+    bool next_signal_frame;
 
     u8 fde_encoding;
 

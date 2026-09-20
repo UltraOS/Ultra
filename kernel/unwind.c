@@ -408,7 +408,7 @@ static error_t parse_cie(struct unwind_state *state, struct eh_data *cie)
              *     S: signal frame (PC points to the instruction before call)
              */
             if (likely(aug_ch == 'S')) {
-                state->signal_frame = true;
+                state->next_signal_frame = true;
 
                 // Skip this char, pretend it never happened
                 aug_idx--;
@@ -746,6 +746,8 @@ error_t unwind_next_frame(struct unwind_state *state)
         return ret;
     }
 
+    state->next_signal_frame = false;
+
     ret = prepare_unwind_state(state);
     if (is_error(ret))
         goto out_error;
@@ -757,7 +759,6 @@ error_t unwind_next_frame(struct unwind_state *state)
         }
         reg_rules[i].rule = DW_CFA_same_value;
     }
-    state->signal_frame = false;
 
     ret = dwarf_exec(state, reg_rules, &state->cie_code);
     if (is_error(ret))
@@ -772,6 +773,7 @@ error_t unwind_next_frame(struct unwind_state *state)
         goto out_error;
 
     memcpy(state->frame, new_frame, sizeof(state->frame));
+    state->signal_frame = state->next_signal_frame;
     return EOK;
 
 out_error:
