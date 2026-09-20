@@ -89,3 +89,13 @@ void warn_report(const char *file, u32 line);
         WARN_ONCE();             \
     unlikely(true_cond);         \
 })
+
+#define WARN_ON_ONCE_WITH_MSG(expr, msg, ...) ({ \
+    static bool s_warned;                        \
+    bool true_cond = !!((expr));                 \
+    if (unlikely(true_cond) && !s_warned) {      \
+        s_warned = true;                         \
+        WARN_WITH_MSG(msg, ##__VA_ARGS__);       \
+    }                                            \
+    unlikely(true_cond);                         \
+})
