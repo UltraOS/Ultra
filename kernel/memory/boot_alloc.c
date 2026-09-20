@@ -12,6 +12,7 @@
 #include <log.h>
 #include <init_level.h>
 #include <bug.h>
+#include <panic.h>
 #include <free_after_init.h>
 
 #include <memory/io.h>
