@@ -12,6 +12,7 @@
 #include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
+#include <build_banner.h>
 #include <param.h>
 #include <config.h>
 #include <init_level.h>
@@ -129,10 +130,7 @@ INIT_CALL_AT(BOOT_INFO_AVAILABLE, boot_info_init);
 
 void INIT_CODE entry(struct ultra_boot_context *ctx)
 {
-    print(
-        LOG_INFO"Starting ultra kernel v0.0.1 on %s (@%s, built on %s %s)\n",
-        ULTRA_ARCH, ULTRA_GIT_SHA, __DATE__, __TIME__
-    );
+    print(LOG_INFO"%s\n", g_build_banner);
 
     s_loader_ctx = ctx;
 

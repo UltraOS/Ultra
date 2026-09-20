@@ -1,5 +1,6 @@
 include(symbols.cmake)
 include(free_after_init.cmake)
+include(build_stamp.cmake)
 include(target_helpers.cmake)
 include(module.cmake)
 include(ld_template.cmake)
@@ -53,6 +54,7 @@ ultra_compile_definitions(
     ULTRA_ARCH_WIDTH=${CONFIG_ARCH_WIDTH}
     ULTRA_ARCH_PHYS_ADDR_WIDTH=${CONFIG_ARCH_PHYS_ADDR_WIDTH}
     ULTRA_ARCH="${CONFIG_ARCH_STRING}"
+    ULTRA_VERSION="${ULTRA_VERSION}"
 )
 
 # A list of all kernel object libraries (kernel itself + compiled-in modules)
@@ -111,6 +113,7 @@ ultra_compile_options(
     -Wmissing-prototypes
     -Wimplicit-fallthrough
     -fomit-frame-pointer
+    -Wdate-time
 )
 
 if (CONFIG_LTO)
@@ -128,8 +131,6 @@ ultra_link_options(
     -Wl,-z,noexecstack
 )
 
-ultra_compile_definitions(ULTRA_GIT_SHA="${ULTRA_GIT_SHA}")
-
 add_subdirectory(arch/${ULTRA_ARCH})
 add_subdirectory(common)
 add_subdirectory(irq)
@@ -144,4 +145,5 @@ foreach(obj IN LISTS ULTRA_OBJECT_TARGETS_FINAL)
     list(APPEND ULTRA_ALL_OBJECTS "$<TARGET_OBJECTS:${obj}>")
 endforeach()
 
+setup_build_stamp()
 setup_free_after_init_check()
