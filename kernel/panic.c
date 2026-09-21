@@ -8,7 +8,7 @@
 #include <panic.h>
 #include <log.h>
 
-static bool g_in_panic;
+static bool s_in_panic;
 
 #undef panic
 void panic(const char *fmt, ...)
@@ -16,7 +16,7 @@ void panic(const char *fmt, ...)
     va_list vlist;
     struct nested_printf npf;
 
-    if (atomic_xchg(&g_in_panic, true, MO_ACQ_REL))
+    if (atomic_xchg(&s_in_panic, true, MO_ACQ_REL))
         goto hang;
 
     va_start(vlist, fmt);

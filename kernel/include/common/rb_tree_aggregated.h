@@ -367,6 +367,7 @@ static ALWAYS_INLINE void rb_node_replace_aggregated_cached(
  * maintained up to date via a set of callbacks that are defined by this macro.
  *
  * 'ops_prefix'            - Prefix used for the ops struct (e.g., static)
+ * 'ops_name'              - Name of the ops struct
  * 'name'                  - Name of the aggregated red-black tree
  * 'container_struct'      - Parent struct holding both the rb_node & value
  * 'rb_node_field'         - Field name of the rb_node structure inside parent
@@ -376,7 +377,7 @@ static ALWAYS_INLINE void rb_node_replace_aggregated_cached(
  *                           stayed the same (triggering the early-abort).
  */
 #define AGGREGATED_RB_TREE_OPS(                                               \
-    ops_prefix, name, container_struct, rb_node_field,                        \
+    ops_prefix, ops_name, name, container_struct, rb_node_field,              \
     aggregated_field, aggregated_compute_fn                                   \
 )                                                                             \
 static inline void name##_propagate(                                          \
@@ -416,7 +417,7 @@ static inline void name##_copy(struct rb_node *from, struct rb_node *to)      \
     to_node->aggregated_field = from_node->aggregated_field;                  \
 }                                                                             \
                                                                               \
-ops_prefix const struct rb_tree_aggregated_ops name##_ops = {                 \
+ops_prefix const struct rb_tree_aggregated_ops ops_name = {                   \
     .propagate = name##_propagate,                                            \
     .rotate = name##_rotate,                                                  \
     .copy = name##_copy,                                                      \
@@ -428,8 +429,8 @@ ops_prefix const struct rb_tree_aggregated_ops name##_ops = {                 \
  * interval trees or similar
  */
 #define AGGREGATED_SUBTREE_MAX_RBTREE_OPS(                                    \
-    ops_prefix, name, container_struct, rb_node_field, subtree_max_field,     \
-    compute_for_this_node_fn                                                  \
+    ops_prefix, ops_name, name, container_struct, rb_node_field,              \
+    subtree_max_field, compute_for_this_node_fn                               \
 )                                                                             \
 static inline bool name##_compute_subtree_max(container_struct *node)         \
 {                                                                             \
@@ -457,6 +458,6 @@ static inline bool name##_compute_subtree_max(container_struct *node)         \
 }                                                                             \
                                                                               \
 AGGREGATED_RB_TREE_OPS(                                                       \
-    ops_prefix, name, container_struct, rb_node_field,                        \
+    ops_prefix, ops_name, name, container_struct, rb_node_field,              \
     subtree_max_field, name##_compute_subtree_max                             \
 )

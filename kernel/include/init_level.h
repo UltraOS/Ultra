@@ -25,7 +25,7 @@ typedef error_t (*init_call_t)(void);
         INIT_LEVEL_CB_SECTION(level, type),                \
         static const, init_call_t                          \
     )                                                      \
-    init_call_hook_##func = func
+    s_init_call_hook_##func = func
 
 /*
  * Every init level names a promise about kernel state (e.g. the heap

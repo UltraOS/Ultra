@@ -151,7 +151,7 @@ static inline bool varea_is_permanent(const struct varea *area)
 }
 
 AGGREGATED_SUBTREE_MAX_RBTREE_OPS(
-    static, free_ranges_tree, struct varea, node,
+    static, s_free_ranges_tree_ops, free_ranges_tree, struct varea, node,
     max_subtree_size, varea_size
 );
 static struct rb_root s_free_ranges = RB_ROOT_INIT;
@@ -199,14 +199,14 @@ static void free_tree_insert(struct varea *area)
 {
     area->type = VAREA_FREE;
     rb_node_insert_aggregated(
-        &area->node, &s_free_ranges, varea_start_less, &free_ranges_tree_ops
+        &area->node, &s_free_ranges, varea_start_less, &s_free_ranges_tree_ops
     );
 }
 
 static void free_tree_remove(struct varea *area)
 {
     rb_node_remove_aggregated(
-        &area->node, &s_free_ranges, &free_ranges_tree_ops
+        &area->node, &s_free_ranges, &s_free_ranges_tree_ops
     );
 }
 
@@ -455,7 +455,7 @@ static bool clip_free_area(
 
         rb_node_insert_aggregated(
             &spare->node, &s_free_ranges, varea_start_less,
-            &free_ranges_tree_ops
+            &s_free_ranges_tree_ops
         );
         list_insert_prev(&fa->link, &spare->link);
     }
@@ -918,7 +918,7 @@ static void coalesce_and_insert_free(struct varea *area)
 
     area->type = VAREA_FREE;
     rb_node_insert_at_aggregated(
-        &area->node, parent, link, &s_free_ranges, &free_ranges_tree_ops
+        &area->node, parent, link, &s_free_ranges, &s_free_ranges_tree_ops
     );
     list_insert_next(pos, &area->link);
 }

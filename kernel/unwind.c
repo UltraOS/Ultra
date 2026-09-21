@@ -42,12 +42,12 @@ enum DW_EH_PE {
     DW_EH_PE_aligned = 0x50,
 };
 
-static bool g_unwinder_available;
+static bool s_unwinder_available;
 
-static const u8 *g_fde_binary_search_table;
-static u8 g_fde_table_encoding;
-static u8 g_fde_table_entry_width;
-static u64 g_num_fdes;
+static const u8 *s_fde_binary_search_table;
+static u8 s_fde_table_encoding;
+static u8 s_fde_table_entry_width;
+static u64 s_num_fdes;
 
 #define EH_CONSUME_RAW_UNACCOUNTED(eh, dst, num_bytes) do { \
     memcpy(&(dst), (eh)->cursor, num_bytes);                \
@@ -248,7 +248,7 @@ static error_t INIT_CODE unwind_init(void)
     if (is_error(ret))
         return ret;
 
-    ret = eh_consume(&data, g_fde_table_encoding);
+    ret = eh_consume(&data, s_fde_table_encoding);
     if (is_error(ret))
         return ret;
 
@@ -259,13 +259,13 @@ static error_t INIT_CODE unwind_init(void)
     if (unlikely((ptr_t)LINKER_SYMBOL(eh_frame_begin) != value))
         return EINVAL;
 
-    ret = decode_value(&data, fde_count_encoding, &g_num_fdes);
+    ret = decode_value(&data, fde_count_encoding, &s_num_fdes);
     if (is_error(ret))
         return ret;
 
-    g_fde_binary_search_table = data.cursor;
+    s_fde_binary_search_table = data.cursor;
 
-    ret = decode_value(&data, g_fde_table_encoding, &value);
+    ret = decode_value(&data, s_fde_table_encoding, &value);
     if (is_error(ret))
         return ret;
 
@@ -274,13 +274,13 @@ static error_t INIT_CODE unwind_init(void)
      * do here that would make sense). Simply check how many bytes were
      * consumed to decode the first value in the table.
      */
-    g_fde_table_entry_width = data.cursor - g_fde_binary_search_table;
+    s_fde_table_entry_width = data.cursor - s_fde_binary_search_table;
 
     // Multiply by 2 because each entry is made up of two values
-    g_fde_table_entry_width *= 2;
+    s_fde_table_entry_width *= 2;
 
     pr_info("stack traces are available!\n");
-    g_unwinder_available = true;
+    s_unwinder_available = true;
     return EOK;
 }
 INIT_CALL_POST(BOOT_INFO_AVAILABLE, unwind_init);
@@ -289,17 +289,17 @@ static error_t find_fde(ptr_t pc, void **out_fde)
 {
     error_t ret;
     u64 sym_addr, fde_addr;
-    u64 i, begin = 0, end = g_num_fdes;
+    u64 i, begin = 0, end = s_num_fdes;
     struct eh_data data;
 
     while (end - begin > 1) {
         i = begin + ((end - begin) / 2);
 
         data = (struct eh_data) {
-            .cursor = &g_fde_binary_search_table[i * g_fde_table_entry_width],
-            .bytes_left = g_fde_table_entry_width,
+            .cursor = &s_fde_binary_search_table[i * s_fde_table_entry_width],
+            .bytes_left = s_fde_table_entry_width,
         };
-        ret = decode_value(&data, g_fde_table_encoding, &sym_addr);
+        ret = decode_value(&data, s_fde_table_encoding, &sym_addr);
         if (is_error(ret))
             return ret;
 
@@ -310,11 +310,11 @@ static error_t find_fde(ptr_t pc, void **out_fde)
     }
 
     data = (struct eh_data) {
-        .cursor = &g_fde_binary_search_table[begin * g_fde_table_entry_width]
-                  + g_fde_table_entry_width / 2,
-        .bytes_left = g_fde_table_entry_width / 2,
+        .cursor = &s_fde_binary_search_table[begin * s_fde_table_entry_width]
+                  + s_fde_table_entry_width / 2,
+        .bytes_left = s_fde_table_entry_width / 2,
     };
-    ret = decode_value(&data, g_fde_table_encoding, &fde_addr);
+    ret = decode_value(&data, s_fde_table_encoding, &fde_addr);
     if (is_error(ret))
         return ret;
 
@@ -346,7 +346,7 @@ error_t unwind_begin(
 {
     error_t ret = EOK;
 
-    if (unlikely(!g_unwinder_available))
+    if (unlikely(!s_unwinder_available))
         return ENODEV;
 
     memzero(state, sizeof(*state));

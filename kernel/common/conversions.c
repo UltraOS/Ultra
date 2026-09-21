@@ -212,7 +212,7 @@ error_t str_to_bool(struct string str, bool *res)
 {
     size_t i;
 
-    static const struct string options[] = {
+    static const struct string s_options[] = {
         // True options
         STR_CONSTEXPR("y"),
         STR_CONSTEXPR("t"),
@@ -227,8 +227,8 @@ error_t str_to_bool(struct string str, bool *res)
         STR_CONSTEXPR("0"),
     };
 
-    for (i = 0; i < ARRAY_SIZE(options); i++) {
-        if (!str_equals_caseless(str, options[i]))
+    for (i = 0; i < ARRAY_SIZE(s_options); i++) {
+        if (!str_equals_caseless(str, s_options[i]))
             continue;
 
         *res = i < NUM_TRUE_OPTIONS;

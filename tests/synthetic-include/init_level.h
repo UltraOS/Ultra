@@ -27,7 +27,7 @@ enum init_level : u32 {
 
 #define MAKE_INIT_CALL(func, level, type)                  \
     VALIDATE_INIT_LEVEL(level);                            \
-    static const init_call_t init_call_hook_##func = func
+    static const init_call_t s_init_call_hook_##func = func
 
 #define INIT_CALL_AT(level, func) MAKE_INIT_CALL(func, level, at)
 #define INIT_CALL_PRE(level, func) MAKE_INIT_CALL(func, level, pre)
