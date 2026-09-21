@@ -11,6 +11,7 @@
 #include <arch/private/abortable_instructions.h>
 
 #include <private/arch/abortable_instructions.h>
+#include <private/arch/bug.h>
 
 // Ensure both ASM and C code have the same idea about register layout
 BUILD_BUG_ON(R15_OFFSET != offsetof(struct registers, r15));
@@ -48,7 +49,6 @@ STUB_EXCEPTION(X86_EXCEPTION_NMI)
 STUB_EXCEPTION(X86_EXCEPTION_BP)
 STUB_EXCEPTION(X86_EXCEPTION_OF)
 STUB_EXCEPTION(X86_EXCEPTION_BR)
-STUB_EXCEPTION(X86_EXCEPTION_UD)
 STUB_EXCEPTION(X86_EXCEPTION_NM)
 STUB_EXCEPTION(X86_EXCEPTION_DF)
 STUB_EXCEPTION(X86_EXCEPTION_CSO)
@@ -65,6 +65,17 @@ STUB_EXCEPTION(X86_EXCEPTION_HV)
 STUB_EXCEPTION(X86_EXCEPTION_VC)
 STUB_EXCEPTION(X86_EXCEPTION_SX)
 STUB_EXCEPTION(X86_EXCEPTION_RSVD)
+
+EXCEPTION_HANDLER(X86_EXCEPTION_UD)
+{
+    if (bug_handle_trap(regs))
+        return;
+
+    if (handle_abortable_instruction(regs))
+        return;
+
+    panic("Invalid opcode at 0x%016llX", regs->rip);
+}
 
 EXCEPTION_HANDLER(X86_EXCEPTION_PF)
 {
