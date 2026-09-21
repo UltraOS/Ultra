@@ -24,6 +24,7 @@ IGNORED_PREFIXES: Tuple[str, ...] = (
     '.debug_',
     '.eh_frame',
     '.discard',
+    '.bug_table',
 )
 
 SymMap = Dict[int, List[Dict[str, Any]]]

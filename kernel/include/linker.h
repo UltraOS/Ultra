@@ -17,6 +17,7 @@
     SECTION_ARRAY_BEGIN(x), SECTION_ARRAY_SIZE(x)
 
 #define ABORTABLE_INSTRUCTIONS_SECTION abortable_instructions
+#define BUG_TABLE_SECTION bug_table
 #define PARAMETERS_SECTION parameters
 #define PER_CPU_SECTION per_cpu
 
