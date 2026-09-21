@@ -4,6 +4,8 @@
 #include <linker.h>
 
 #define BUG_FLAG_WARNING (1 << 0)
+#define BUG_FLAG_ONCE (1 << 1)
+#define BUG_FLAG_DONE (1 << 2)
 
 #define BUG_TRAP(trap_flags)                                    \
     asm volatile(                                               \
