@@ -99,6 +99,8 @@
     (typeof(ptr))(laundered_ptr + count);                \
 })
 
+#define RETURN_ADDRESS() ((ptr_t)__builtin_return_address(0))
+
 /*
  * Resolve a self-relative reference (which is a signed 32-bit field),
  * as emitted by e.g. ".long target - ." in assembly.
