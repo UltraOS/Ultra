@@ -76,3 +76,7 @@ jobs:
 
       - name: Run the userspace unit tests
         run: "${{ github.workspace }}/build.py --unit-tests"
+
+      - if: ${{ matrix.toolchain == 'clang' && matrix.os == 'ubuntu-latest' }}
+        name: Check the coding conventions
+        run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/${{ matrix.arch }}-ci.config --toolchain ${{ matrix.toolchain }} --no-build --lint"
