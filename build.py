@@ -27,6 +27,7 @@ try:
     import scripts.image_utils.uefi as uefi
     import scripts.image_utils.path_guesser as pg
     import scripts.baremetal_ci.client as bmc
+    import scripts.lint as lint
 except ImportError:
     print("Unable to import one of submodule libraries!")
     print("Please run 'git submodule update --init' to initialize submodules")
@@ -440,6 +441,13 @@ def hyper_pxe_loaders() -> Tuple[str, str]:
     return bootx64, pxe
 
 
+def run_lint(args: argparse.Namespace, build_dir: str) -> int:
+    if args.toolchain != "clang":
+        sys.exit("--lint only works with --toolchain clang")
+
+    return lint.run(build_dir)
+
+
 def run_unit_tests(args: argparse.Namespace, this_os: str) -> int:
     dir = get_tests_build_dir(this_os)
 
@@ -568,6 +576,9 @@ def main() -> None:
     tests = parser.add_argument_group("Tests")
     tests.add_argument("--unit-tests", action="store_true",
                        help="Run the userspace test suite")
+    tests.add_argument("--lint", action="store_true",
+                       help="Check the coding conventions after building,"
+                            " needs the clang toolchain")
 
     args = parser.parse_args()
 
@@ -631,6 +642,9 @@ def main() -> None:
 
     if not args.no_build:
         build_ultra(args, build_dir)
+
+    if args.lint:
+        sys.exit(run_lint(args, build_dir))
 
     rc = bmc.run_from_args(args, args.arch,
                            get_kernel_path(args.arch, build_dir), build_dir)
