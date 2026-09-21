@@ -314,7 +314,7 @@ static error_t log_descriptor_read(
     ret = log_descriptor_acquire_for_reading(
         desc_ring, id, seq_num, &local_desc
     );
-    if (ret != EOK || out_rec == NULL)
+    if (ret != EOK || out_rec == nullptr)
         return ret;
 
     info = log_info_record_from_id(desc_ring, id);
@@ -393,7 +393,7 @@ static void update_last_published_sequence_number(struct log_ring *ring)
         for (;;) {
             new_id++;
 
-            ret = do_log_ring_read(ring, &new_id, NULL);
+            ret = do_log_ring_read(ring, &new_id, nullptr);
             if (ret != EOK)
                 break;
             cur_id = new_id;
@@ -468,7 +468,7 @@ static bool data_invalidate(
         rec = log_data_record_from_position(data_ring, begin);
         id = atomic_load_acquire(&rec->id);
 
-        state = log_descriptor_acquire(desc_ring, id, &desc, NULL);
+        state = log_descriptor_acquire(desc_ring, id, &desc, nullptr);
         switch (state) {
         case DESCRIPTOR_STATE_PUBLISHED:
         case DESCRIPTOR_STATE_FREE:
@@ -548,7 +548,7 @@ static error_t descriptor_tail_advance(struct log_ring *ring, u64 tail_id)
     u64 new_tail_id;
     error_t ret;
 
-    state = log_descriptor_acquire(desc_ring, tail_id, &desc, NULL);
+    state = log_descriptor_acquire(desc_ring, tail_id, &desc, nullptr);
     switch (state) {
     case DESCRIPTOR_STATE_RESERVED:
     case DESCRIPTOR_STATE_COMMITTED:
@@ -577,7 +577,7 @@ static error_t descriptor_tail_advance(struct log_ring *ring, u64 tail_id)
         return ret;
 
     new_tail_id = DESC_ID(tail_id + 1);
-    state = log_descriptor_acquire(desc_ring, new_tail_id, &desc, NULL);
+    state = log_descriptor_acquire(desc_ring, new_tail_id, &desc, nullptr);
 
     // Check the state of the tail here so that we can safely push it below
     if (state != DESCRIPTOR_STATE_PUBLISHED && state != DESCRIPTOR_STATE_FREE) {
@@ -677,11 +677,11 @@ error_t log_ring_read(
 {
     error_t ret;
 
-    if (out_rec != NULL)
+    if (out_rec != nullptr)
         out_rec->data = MAKE_STR(out_buf, buf_size);
 
     ret = do_log_ring_read(ring, &seq_num, out_rec);
-    if (ret == EOK && out_rec != NULL)
+    if (ret == EOK && out_rec != nullptr)
         out_rec->data.size = MIN(buf_size, out_rec->length);
 
     return ret;
@@ -689,7 +689,7 @@ error_t log_ring_read(
 
 error_t log_ring_readable(struct log_ring *ring, u64 seq_num)
 {
-    return do_log_ring_read(ring, &seq_num, NULL);
+    return do_log_ring_read(ring, &seq_num, nullptr);
 }
 
 u64 log_ring_first_readable_sequence_number(struct log_ring *ring)
@@ -701,7 +701,7 @@ u64 log_ring_first_readable_sequence_number(struct log_ring *ring)
     for (;;) {
         tail_id = atomic_load_acquire(&desc_ring->tail_id);
 
-        state = log_descriptor_acquire(desc_ring, tail_id, NULL, &seq_num);
+        state = log_descriptor_acquire(desc_ring, tail_id, nullptr, &seq_num);
         if (state == DESCRIPTOR_STATE_PUBLISHED ||
             state == DESCRIPTOR_STATE_FREE)
             return seq_num;
@@ -788,7 +788,7 @@ static char *log_data_alloc(
 
     if (size == 0) {
         make_empty_data_position(out_position);
-        return NULL;
+        return nullptr;
     }
     size = data_record_size(size);
 
@@ -807,7 +807,7 @@ static char *log_data_alloc(
         ret = data_tail_advance(ring, new_head - DATA_RING_SIZE(data_ring));
         if (is_error(ret)) {
             make_oom_data_position(out_position);
-            return NULL;
+            return nullptr;
         }
     } while (!atomic_cmpxchg_acq_rel(&data_ring->head, &head, new_head));
 
@@ -849,7 +849,7 @@ static char *log_data_alloc_extend(
 
     head = atomic_load_acquire(&data_ring->head);
     if (in_out_position->end != head)
-        return NULL;
+        return nullptr;
 
     was_same_generation = fit_same_data_position_generation(
         data_ring, in_out_position->begin, in_out_position->end
@@ -868,10 +868,10 @@ static char *log_data_alloc_extend(
 
     ret = data_tail_advance(ring, new_head - DATA_RING_SIZE(data_ring));
     if (is_error(ret))
-        return NULL;
+        return nullptr;
 
     if (!atomic_cmpxchg_acq_rel(&data_ring->head, &head, new_head))
-        return NULL;
+        return nullptr;
 
     is_same_generation = fit_same_data_position_generation(
         data_ring, in_out_position->begin, new_head
@@ -952,7 +952,7 @@ static error_t log_data_alloc_for_reservation(
     res->reserved_data = log_data_alloc(
         res->details.ring, length, &desc->position, res->details.id
     );
-    if (unlikely(res->reserved_data == NULL)) {
+    if (unlikely(res->reserved_data == nullptr)) {
         res->resident_length = 0;
         log_ring_commit(res);
         return ENOSPC;
@@ -1087,7 +1087,7 @@ error_t log_ring_reserve_extend(
             res->details.ring, data.size + extra_bytes_needed,
             &desc->position, res->details.id
         );
-        if (unlikely(res->reserved_data == NULL)) {
+        if (unlikely(res->reserved_data == nullptr)) {
             ret = ENOSPC;
             goto out_error;
         }

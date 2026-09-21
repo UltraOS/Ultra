@@ -18,7 +18,7 @@ error_t vector_alloc(
     const struct cpu_mask *allowed, u32 *out_cpu, u8 *out_vector
 )
 {
-    struct vector_pool *pool, *best_pool = NULL;
+    struct vector_pool *pool, *best_pool = nullptr;
     u32 cpu, best_cpu = 0;
     reg_t bit;
 
@@ -32,14 +32,14 @@ error_t vector_alloc(
         if (pool->num_allocated == NUM_DYNAMIC_VECTORS)
             continue;
 
-        if (best_pool == NULL ||
+        if (best_pool == nullptr ||
             pool->num_allocated < best_pool->num_allocated) {
             best_cpu = cpu;
             best_pool = pool;
         }
     }
 
-    if (best_pool == NULL) {
+    if (best_pool == nullptr) {
         spin_unlock(&s_lock);
         return ENOSPC;
     }

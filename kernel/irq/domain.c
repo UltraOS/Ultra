@@ -9,11 +9,11 @@ void irq_domain_register(struct irq_domain *domain, struct irq_domain *parent)
     struct irq_domain *cur;
     u32 depth = 1;
 
-    BUG_ON(domain->ops == NULL || domain->ops->alloc == NULL);
+    BUG_ON(domain->ops == nullptr || domain->ops->alloc == nullptr);
 
     domain->parent = parent;
 
-    for (cur = parent; cur != NULL; cur = cur->parent)
+    for (cur = parent; cur != nullptr; cur = cur->parent)
         depth++;
 
     BUG_ON(depth > MAX_NESTED_IRQ_DOMAINS);

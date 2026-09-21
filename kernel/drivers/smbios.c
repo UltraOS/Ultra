@@ -48,7 +48,7 @@ bool smbios_get_id(enum smbios_id_type id, struct smbios_id *out_id)
     if (!saved_id->present)
         return false;
 
-    if (out_id != NULL)
+    if (out_id != nullptr)
         memcpy(out_id, &saved_id->id, sizeof(*out_id));
 
     return true;
@@ -142,7 +142,7 @@ static INIT_CODE void smbios_save_string(
     size_t bytes_needed;
 
     str = smbios_get_string(hdr, str_value);
-    if (str == NULL)
+    if (str == nullptr)
         return;
 
     bytes_needed = strlen(str) + 1;

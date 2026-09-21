@@ -27,7 +27,7 @@ static struct irq *irq_find(const struct irq_spec *spec)
         return irq;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static bool trigger_is_valid(enum irq_trigger trigger)
@@ -61,7 +61,7 @@ static error_t validate_request(
     if (flags & IRQ_FLAG_SHARED) {
         if (!irq_trigger_is_level(spec->trigger))
             return EINVAL;
-        if (user == NULL)
+        if (user == nullptr)
             return EINVAL;
 
         /*
@@ -110,7 +110,7 @@ static error_t irq_levels_alloc(
             return ret;
         }
 
-        BUG_ON(level->chip == NULL);
+        BUG_ON(level->chip == nullptr);
     }
 
     return EOK;
@@ -139,7 +139,7 @@ static error_t irq_levels_activate(struct irq *irq)
     while (i--) {
         level = &irq->levels[i];
 
-        if (level->domain->ops->activate == NULL)
+        if (level->domain->ops->activate == nullptr)
             continue;
 
         ret = level->domain->ops->activate(irq, level);
@@ -167,7 +167,7 @@ static error_t irq_object_create(
     BUG_ON(depth == 0 || depth > MAX_NESTED_IRQ_DOMAINS);
 
     irq = alloc(sizeof(*irq), ALLOC_GENERIC_ZEROED);
-    if (irq == NULL)
+    if (irq == nullptr)
         return ENOMEM;
 
     irq->spec = desc->spec;
@@ -230,7 +230,7 @@ static error_t irq_action_add(
     irq_state_t irq_state;
 
     action = alloc(sizeof(*action), ALLOC_GENERIC_ZEROED);
-    if (action == NULL)
+    if (action == nullptr)
         return ENOMEM;
 
     action->handler = handler;
@@ -256,7 +256,7 @@ error_t irq_request_with_affinity(
     error_t ret;
 
     BUG_ON_INIT_LEVEL_BELOW(IRQS_AVAILABLE);
-    BUG_ON(handler == NULL);
+    BUG_ON(handler == nullptr);
 
     ret = validate_request(spec, flags, user);
     if (is_error(ret))
@@ -265,14 +265,14 @@ error_t irq_request_with_affinity(
     mutex_lock(&s_request_mutex);
 
     irq = irq_find(spec);
-    if (irq != NULL) {
+    if (irq != nullptr) {
         ret = EBUSY;
         if (!(flags & IRQ_FLAG_SHARED) || !(irq->flags & IRQ_FLAG_SHARED))
             goto out;
 
         // A sharer may not change line-wide properties
         ret = EINVAL;
-        if (irq->spec.trigger != spec->trigger || affinity != NULL)
+        if (irq->spec.trigger != spec->trigger || affinity != nullptr)
             goto out;
 
         ret = irq_action_add(irq, handler, user, name);
@@ -325,7 +325,7 @@ out_free_levels:
 
 void irq_free(struct irq *irq, void *user)
 {
-    struct irq_action *action, *found = NULL;
+    struct irq_action *action, *found = nullptr;
     irq_state_t irq_state;
 
     mutex_lock(&s_request_mutex);
@@ -345,7 +345,7 @@ void irq_free(struct irq *irq, void *user)
         break;
     }
 
-    BUG_ON(found == NULL);
+    BUG_ON(found == nullptr);
 
     list_remove(&found->node);
     irq->num_actions--;

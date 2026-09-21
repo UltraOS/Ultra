@@ -130,13 +130,13 @@ static INIT_CODE void merge_ranges(
 
 static INIT_CODE struct memory_range *range_before(size_t mr_idx)
 {
-    return mr_idx ? &s_buffer[mr_idx - 1] : NULL;
+    return mr_idx ? &s_buffer[mr_idx - 1] : nullptr;
 }
 
 static INIT_CODE struct memory_range *range_after(size_t mr_idx)
 {
     if (mr_idx == s_entry_count - 1)
-        return NULL;
+        return nullptr;
 
     return &s_buffer[mr_idx + 1];
 }
@@ -272,7 +272,7 @@ static INIT_CODE void allocate_out_of(
     merge_ranges(mr_after, new_mr);
 
 out_case4:
-    if (mr_after != NULL) {
+    if (mr_after != nullptr) {
         memmove(
             current_mr, mr_after,
             ((s_buffer + s_entry_count) - mr_after) * sizeof(*mr_after)
@@ -340,7 +340,7 @@ static INIT_CODE error_t allocate_within(
     phys_addr_t range_begin;
     size_t bytes_to_allocate;;
     ssize_t mr_idx;
-    struct memory_range *picked_mr = NULL;
+    struct memory_range *picked_mr = nullptr;
     struct memory_range allocated_mr;
 
     bytes_to_allocate = page_count * PAGE_SIZE;

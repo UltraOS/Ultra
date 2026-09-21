@@ -78,7 +78,7 @@ error_t symbol_lookup_by_address(
     }
 
     symbol_base = g_symbol_relative_addresses[begin];
-    if (out_offset_within != NULL)
+    if (out_offset_within != nullptr)
         *out_offset_within = rel_address - symbol_base;
 
     uncompress_symbol(

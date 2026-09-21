@@ -11,7 +11,7 @@ error_t cpu_mask_handle_alloc(cpu_mask_handle *out_mask)
     BUG_ON(g_num_present_cpus == 0);
 
     *out_mask = alloc(CPU_MASK_NUM_BYTES, ALLOC_GENERIC_ZEROED);
-    if (*out_mask == NULL)
+    if (*out_mask == nullptr)
         return ENOMEM;
 
     return EOK;

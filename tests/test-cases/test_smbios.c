@@ -68,7 +68,7 @@ TEST_CASE(smbios_match_exact_and_first)
     ASSERT_EQ(s_match_callback_calls, (size_t)1);
 
     first = smbios_first_match(table);
-    ASSERT_NE(first, NULL);
+    ASSERT_NOT_NULL(first);
     ASSERT_STR_EQ(first->name, "qemu-strict");
 }
 
@@ -105,7 +105,7 @@ TEST_CASE(smbios_match_fuzzy_and_exact)
     ASSERT_EQ(smbios_match_system(table), (size_t)2);
 
     first = smbios_first_match(table);
-    ASSERT_NE(first, NULL);
+    ASSERT_NOT_NULL(first);
     ASSERT_STR_EQ(first->name, "vmware");
 }
 
@@ -138,7 +138,7 @@ TEST_CASE(smbios_match_byte_and_mixed_entries)
     ASSERT_EQ(smbios_match_system(table), (size_t)1);
 
     first = smbios_first_match(table);
-    ASSERT_NE(first, NULL);
+    ASSERT_NOT_NULL(first);
     ASSERT_STR_EQ(first->name, "chassis-ok");
 }
 
@@ -161,7 +161,7 @@ TEST_CASE(smbios_match_requires_all_entries)
     };
 
     ASSERT_EQ(smbios_match_system(table), (size_t)0);
-    ASSERT_EQ(smbios_first_match(table), NULL);
+    ASSERT_NULL(smbios_first_match(table));
 }
 
 TEST_CASE(smbios_match_type_mismatch_fails)
@@ -183,7 +183,7 @@ TEST_CASE(smbios_match_type_mismatch_fails)
     };
 
     ASSERT_EQ(smbios_match_system(table), (size_t)0);
-    ASSERT_EQ(smbios_first_match(table), NULL);
+    ASSERT_NULL(smbios_first_match(table));
 }
 
 TEST_CASE(smbios_match_all_four_entries)
@@ -212,7 +212,7 @@ TEST_CASE(smbios_match_all_four_entries)
 
     ASSERT_EQ(smbios_match_system(table), (size_t)1);
     first = smbios_first_match(table);
-    ASSERT_NE(first, NULL);
+    ASSERT_NOT_NULL(first);
     ASSERT_STR_EQ(first->name, "all-four");
 
     // Now drop one of the IDs and verify the rule no longer matches
@@ -223,7 +223,7 @@ TEST_CASE(smbios_match_all_four_entries)
     // SYSTEM_SERIAL_NUMBER intentionally left unset
 
     ASSERT_EQ(smbios_match_system(table), (size_t)0);
-    ASSERT_EQ(smbios_first_match(table), NULL);
+    ASSERT_NULL(smbios_first_match(table));
 }
 
 TEST_CASE(smbios_match_smbios_unavailable)
@@ -246,7 +246,7 @@ TEST_CASE(smbios_match_smbios_unavailable)
 
     ASSERT_EQ(smbios_match_system(table), (size_t)0);
     ASSERT_EQ(s_match_callback_calls, (size_t)0);
-    ASSERT_EQ(smbios_first_match(table), NULL);
+    ASSERT_NULL(smbios_first_match(table));
 }
 
 TEST_CASE(smbios_get_and_has_id)

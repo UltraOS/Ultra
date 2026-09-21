@@ -28,7 +28,7 @@ void *cpu_mask_test_alloc(size_t size, enum alloc_behavior behavior)
     s_last_alloc_size = size;
 
     ptr = malloc(size);
-    if (ptr != NULL && (behavior & ALLOC_ZEROED))
+    if (ptr != nullptr && (behavior & ALLOC_ZEROED))
         memset(ptr, 0, size);
 
     return ptr;

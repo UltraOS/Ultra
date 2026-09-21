@@ -133,7 +133,7 @@ static struct param *find_param(
             return p;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static void cmdline_trim(struct string *cmdline)
@@ -383,7 +383,7 @@ struct string cmdline_parse_tables(
             return cmdline;
 
         p = find_param_in_tables(key, tables, num_tables);
-        if (p == NULL) {
+        if (p == nullptr) {
             warn_unknown_param(key, value);
             goto do_next;
         }

@@ -13,7 +13,7 @@ void irq_hw_mask(struct irq *irq)
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->mask == NULL)
+        if (chip->mask == nullptr)
             continue;
 
         chip->mask(&irq->levels[i]);
@@ -28,7 +28,7 @@ void irq_hw_unmask(struct irq *irq)
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->unmask == NULL)
+        if (chip->unmask == nullptr)
             continue;
 
         chip->unmask(&irq->levels[i]);
@@ -43,7 +43,7 @@ error_t irq_hw_retrigger(struct irq *irq)
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->retrigger == NULL)
+        if (chip->retrigger == nullptr)
             continue;
 
         return chip->retrigger(&irq->levels[i]);
@@ -59,7 +59,7 @@ void irq_hw_ack(struct irq *irq)
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->ack == NULL)
+        if (chip->ack == nullptr)
             continue;
 
         chip->ack(&irq->levels[i]);
@@ -73,7 +73,7 @@ void irq_hw_eoi(struct irq *irq)
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->eoi == NULL)
+        if (chip->eoi == nullptr)
             continue;
 
         chip->eoi(&irq->levels[i]);
@@ -93,7 +93,7 @@ void irq_hw_compose_msi_route(
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->compose_msi_route == NULL)
+        if (chip->compose_msi_route == nullptr)
             continue;
 
         chip->compose_msi_route(&irq->levels[i], out);
@@ -110,7 +110,7 @@ bool irq_hw_is_outstanding(struct irq *irq)
     for (i = 0; i < irq->num_levels; i++) {
         const struct irq_chip *chip = irq->levels[i].chip;
 
-        if (chip->is_outstanding == NULL)
+        if (chip->is_outstanding == nullptr)
             continue;
         if (chip->is_outstanding(&irq->levels[i]))
             return true;
