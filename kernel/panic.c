@@ -3,6 +3,8 @@
 #include <common/atomic.h>
 #include <common/format.h>
 
+#include <arch/cpu_helpers.h>
+
 #include <panic.h>
 #include <log.h>
 
@@ -27,5 +29,5 @@ void panic(const char *fmt, ...)
     dump_stack(LOG_LEVEL_EMERG, NULL);
 
 hang:
-    for (;;);
+    arch_cpu_halt();
 }
