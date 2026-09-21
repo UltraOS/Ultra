@@ -135,13 +135,14 @@
     MARKED_SECTION(PER_CPU_SECTION) \
     *(.FREE_AFTER_INIT_DATA_SECTION)
 
-#define DATA_OUTPUT                      \
-    .data : VIRTUAL_BASE_RELATIVE(.data) \
-    {                                    \
-        DATA                             \
-        DATA_FREE_AFTER_INIT_BEGIN       \
-        DATA_FREE_AFTER_INIT             \
-        DATA_FREE_AFTER_INIT_END         \
+#define DATA_OUTPUT                                         \
+    .data : VIRTUAL_BASE_RELATIVE(.data)                    \
+    {                                                       \
+        DATA                                                \
+        NATURALLY_ALIGNED_MARKED_SECTION(BUG_TABLE_SECTION) \
+        DATA_FREE_AFTER_INIT_BEGIN                          \
+        DATA_FREE_AFTER_INIT                                \
+        DATA_FREE_AFTER_INIT_END                            \
     } :data
 
 #define BSS_OUTPUT                     \

@@ -5,8 +5,21 @@
 #include <common/types.h>
 #include <log.h>
 
+#include <private/bug.h>
+
 #if HAS_INCLUDE(<arch/bug.h>)
 #include <arch/bug.h>
+#endif
+
+#ifdef ARCH_BUG_TRAP_INSTRUCTION
+
+#define BUG() do {               \
+        BUG_TRAP(0);             \
+        __builtin_unreachable(); \
+    } while (0)
+
+#define WARN() BUG_TRAP(BUG_FLAG_WARNING)
+
 #endif
 
 #ifndef BUG
