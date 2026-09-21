@@ -788,7 +788,7 @@ error_t unwind_walk(struct registers *regs, unwind_cb_t callback, void *user)
     struct unwind_state state;
 
     if (regs == NULL)
-        starting_pc = (ptr_t)__builtin_return_address(0);
+        starting_pc = RETURN_ADDRESS();
 
     ret = unwind_begin(&state, regs, starting_pc);
     if (is_error(ret))

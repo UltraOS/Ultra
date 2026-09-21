@@ -52,7 +52,7 @@ struct vallocation {
     enum valloc_flags flags;
 
     union {
-        void *caller;
+        ptr_t caller;
         const char *what;
     };
 
@@ -1068,7 +1068,7 @@ void *valloc(size_t size, enum alloc_behavior behavior)
     info = area->info;
     area->type = VAREA_MANAGED;
     info->pages = pages;
-    info->caller = __builtin_return_address(0);
+    info->caller = RETURN_ADDRESS();
 
     ret = varea_map(area, s_managed_mappings_prot, behavior);
     if (is_error(ret)) {
@@ -1137,7 +1137,7 @@ void *vreserve_and_map(size_t size, phys_addr_t phys, pt_prot prot)
 
     info = area->info;
     info->phys_addr = phys;
-    info->caller = __builtin_return_address(0);
+    info->caller = RETURN_ADDRESS();
 
     ret = varea_map(area, prot, ALLOC_GENERIC);
     if (is_error(ret)) {
@@ -1158,7 +1158,7 @@ virt_addr_t vreserve_aligned_within(
     if (unlikely(area == nullptr))
         return 0;
 
-    area->info->caller = __builtin_return_address(0);
+    area->info->caller = RETURN_ADDRESS();
     return area->start;
 }
 
