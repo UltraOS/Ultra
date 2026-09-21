@@ -352,7 +352,7 @@ def qemu_watch_run_for(qp: subprocess.Popen, run_for: float) -> None:
 
 def run_qemu(
     arch: str, image_path: str, image_type: str, debug: bool, uefi_boot: bool,
-    uefi_firmware: str, kvm: bool, la57: bool, dry: bool,
+    uefi_firmware: str, kvm: bool, la57: bool, headless: bool, dry: bool,
     run_for: Optional[float] = None
 ) -> Optional[subprocess.Popen]:
     extra_args = []
@@ -381,6 +381,9 @@ def run_qemu(
 
     if la57:
         extra_args.extend(["-cpu", "qemu64,la57=on"])
+
+    if headless:
+        extra_args.extend(["-display", "none"])
 
     args = [
         f"qemu-system-{arch}",
@@ -533,6 +536,8 @@ def main() -> None:
                       help="Run QEMU with KVM enabled (implies --run)")
     qemu.add_argument("--la57", action="store_true",
                       help="Run QEMU with LA57 support (x86_64 only)")
+    qemu.add_argument("--headless", action="store_true",
+                      help="Run QEMU without a display window (implies --run)")
     qemu.add_argument("--uefi", action="store_true",
                       help="Boot in UEFI mode")
     qemu.add_argument("--uefi-firmware-path",
@@ -630,8 +635,8 @@ def main() -> None:
         sys.exit(rc)
 
     is_debug = args.debug or args.ide_debug
-    should_run = (args.run or args.kvm or args.la57 or is_debug or
-                  args.run_for is not None)
+    should_run = (args.run or args.kvm or args.la57 or args.headless or
+                  is_debug or args.run_for is not None)
 
     if args.run_for is not None and is_debug:
         sys.exit("--run-for cannot be combined with a debug run")
@@ -680,7 +685,7 @@ def main() -> None:
 
         qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
                       uefi_boot, args.uefi_firmware_path, args.kvm, args.la57,
-                      args.dry, args.run_for)
+                      args.headless, args.dry, args.run_for)
 
     if args.debug:
         assert qp
