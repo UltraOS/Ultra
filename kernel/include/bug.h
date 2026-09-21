@@ -19,6 +19,7 @@
     } while (0)
 
 #define WARN() BUG_TRAP(BUG_FLAG_WARNING)
+#define WARN_ONCE() BUG_TRAP(BUG_FLAG_WARNING | BUG_FLAG_ONCE)
 
 #endif
 
@@ -33,6 +34,17 @@ void bug_report(const char *file, u32 line);
 void warn_report(const char *file, u32 line);
 
 #define WARN() warn_report(__FILE__, __LINE__)
+#endif
+
+#ifndef WARN_ONCE
+#define WARN_ONCE() do {      \
+        static bool s_warned; \
+                              \
+        if (!s_warned) {      \
+            s_warned = true;  \
+            WARN();           \
+        }                     \
+    } while (0)
 #endif
 
 #define BUG_WITH_MSG(msg, ...) do {        \
@@ -68,5 +80,12 @@ void warn_report(const char *file, u32 line);
     bool true_cond = !!((expr)); \
     if (unlikely(true_cond))     \
         WARN();                  \
+    unlikely(true_cond);         \
+})
+
+#define WARN_ON_ONCE(expr) ({    \
+    bool true_cond = !!((expr)); \
+    if (unlikely(true_cond))     \
+        WARN_ONCE();             \
     unlikely(true_cond);         \
 })

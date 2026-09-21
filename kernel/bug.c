@@ -96,6 +96,13 @@ bool bug_handle_trap(struct registers *regs)
     if (!(entry->flags & BUG_FLAG_WARNING))
         panic("BUG at %s:%u in %pSM", file, entry->line, &pc);
 
+    if (entry->flags & BUG_FLAG_ONCE) {
+        if (entry->flags & BUG_FLAG_DONE)
+            return resume_after_trap(regs, pc);
+
+        entry->flags |= BUG_FLAG_DONE;
+    }
+
     pr_warn("WARNING at %s:%u in %pSM\n", file, entry->line, &pc);
     finish_warn_report(regs);
     return resume_after_trap(regs, pc);
