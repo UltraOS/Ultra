@@ -15,7 +15,7 @@ struct string {
 };
 
 #define MAKE_STR(ptr, size) (struct string) { { (ptr) }, (size) }
-#define NULL_STR() MAKE_STR(NULL, 0)
+#define NULL_STR() MAKE_STR(nullptr, 0)
 #define STR_CONSTEXPR(str) MAKE_STR(str, sizeof((str)) - 1)
 #define STR_RUNTIME(str) MAKE_STR(str, (str) ? strlen((str)) : 0)
 
@@ -106,7 +106,7 @@ static inline void str_extend_by(struct string *str, size_t value)
 
 static inline void str_clear(struct string *str)
 {
-    str->text = NULL;
+    str->text = nullptr;
     str->size = 0;
 }
 

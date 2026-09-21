@@ -108,7 +108,7 @@ static inline error_t irq_request(
 )
 {
     return irq_request_with_affinity(
-        spec, NULL, handler, user, flags, name, out_irq
+        spec, nullptr, handler, user, flags, name, out_irq
     );
 }
 

@@ -353,7 +353,7 @@ error_t unwind_begin(
 
     state->ret_reg_idx = ARCH_DWARF_PC_REG;
 
-    if (regs == NULL) {
+    if (regs == nullptr) {
         ret = arch_unwind_current_begin(state, starting_pc);
     } else {
         arch_registers_to_dwarf_registers(regs, state->frame);
@@ -787,7 +787,7 @@ error_t unwind_walk(struct registers *regs, unwind_cb_t callback, void *user)
     ptr_t starting_pc = 0;
     struct unwind_state state;
 
-    if (regs == NULL)
+    if (regs == nullptr)
         starting_pc = RETURN_ADDRESS();
 
     ret = unwind_begin(&state, regs, starting_pc);

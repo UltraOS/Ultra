@@ -79,7 +79,7 @@ static error_t read_one(
     } while (0)
 
 #define READ_ONE_EXPECT(msg) READ_ONE_EXPECT_ERRNO(EOK, msg)
-#define READ_ONE_EXPECT_EINVAL() READ_ONE_EXPECT_ERRNO(EINVAL, NULL)
+#define READ_ONE_EXPECT_EINVAL() READ_ONE_EXPECT_ERRNO(EINVAL, nullptr)
 
 #define DO_WRITE_ONE_EXPECT(msg, ret, extend, publish) \
     ASSERT_EQ(write_one(ring, msg, extend, publish), ret)
@@ -369,14 +369,14 @@ static void *writer_thread(void *user)
     struct writer_thread_context *ctx = user;
     worker_ctx = ctx;
 
-    ctx->seed = (unsigned int)time(NULL);
+    ctx->seed = (unsigned int)time(nullptr);
 
     atomic_add_fetch(&g_num_alive_threads, 1, MO_RELAXED);
 
     while (!atomic_load_relaxed(&g_should_stop))
         do_writer_work(ctx, false);
 
-    return NULL;
+    return nullptr;
 }
 
 static void do_reader_work(struct reader_thread_context *ctx, bool is_nmi)
@@ -433,7 +433,7 @@ static void *reader_thread(void *user)
     while (!atomic_load_relaxed(&g_should_stop))
         do_reader_work(user, false);
 
-    return NULL;
+    return nullptr;
 }
 
 void handle_nmi(int sig)
@@ -457,7 +457,7 @@ static void signals_setup(void)
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     sa.sa_handler = handle_nmi;
-    ASSERT_EQ(sigaction(NMI_SIGNAL, &sa, NULL), 0);
+    ASSERT_EQ(sigaction(NMI_SIGNAL, &sa, nullptr), 0);
 
     setup = true;
 }
@@ -514,7 +514,7 @@ static void report_mt_stats(void)
             if (i & 1) {                                                 \
                 g_reader_contexts[idx].ring = ring;                      \
                 ret = pthread_create(                                    \
-                    &reader_threads[idx], NULL, reader_thread,           \
+                    &reader_threads[idx], nullptr, reader_thread,        \
                     &g_reader_contexts[idx]                              \
                 );                                                       \
                 ASSERT_EQ(ret, 0);                                       \
@@ -523,7 +523,7 @@ static void report_mt_stats(void)
                 g_writer_contexts[idx].id = idx;                         \
                                                                          \
                 ret = pthread_create(                                    \
-                    &writer_threads[idx], NULL, writer_thread,           \
+                    &writer_threads[idx], nullptr, writer_thread,        \
                     &g_writer_contexts[idx]                              \
                 );                                                       \
                 ASSERT_EQ(ret, 0);                                       \
@@ -533,10 +533,10 @@ static void report_mt_stats(void)
         while (atomic_load_relaxed(&g_num_alive_threads) != NUM_THREADS) \
             usleep(500);                                                 \
                                                                          \
-        start = time(NULL);                                              \
+        start = time(nullptr);                                           \
         srand(start);                                                    \
                                                                          \
-        while ((time(NULL) - start) < duration) {                        \
+        while ((time(nullptr) - start) < duration) {                     \
             int thread_idx;                                              \
                                                                          \
             thread_idx = rand() % NUM_READER_THREADS;                    \
@@ -551,9 +551,9 @@ static void report_mt_stats(void)
                                                                          \
         for (i = 0; i < NUM_THREADS; i++) {                              \
             if (i & 1)                                                   \
-                pthread_join(writer_threads[i / 2], NULL);               \
+                pthread_join(writer_threads[i / 2], nullptr);            \
             else                                                         \
-                pthread_join(reader_threads[i / 2], NULL);               \
+                pthread_join(reader_threads[i / 2], nullptr);            \
         }                                                                \
                                                                          \
         report_mt_stats();                                               \

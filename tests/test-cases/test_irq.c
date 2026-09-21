@@ -15,7 +15,7 @@ void *irq_test_alloc(size_t size, enum alloc_behavior behavior)
     void *ptr;
 
     ptr = malloc(size);
-    if (ptr != NULL && (behavior & ALLOC_ZEROED))
+    if (ptr != nullptr && (behavior & ALLOC_ZEROED))
         memset(ptr, 0, size);
 
     return ptr;
@@ -250,7 +250,7 @@ static void reset_state(void)
     list_init(&s_requested_irqs);
 
     s_test_init_level = INIT_LEVEL_VALLOC_AVAILABLE;
-    irq_domain_register(&s_parent_domain, NULL);
+    irq_domain_register(&s_parent_domain, nullptr);
     irq_domain_register(&s_leaf_domain, &s_parent_domain);
     s_test_init_level = NUM_INIT_LEVELS;
 }
@@ -407,7 +407,7 @@ TEST_CASE(irq_request_validation)
 
     spec = make_spec(1, IRQ_TRIGGER_LEVEL_ACTIVE_HIGH);
     ASSERT_EQ(
-        irq_request(&spec, count_handler, NULL, IRQ_FLAG_SHARED, "t", &irq),
+        irq_request(&spec, count_handler, nullptr, IRQ_FLAG_SHARED, "t", &irq),
         EINVAL
     );
 
@@ -534,7 +534,7 @@ TEST_CASE(irq_synchronize_waits_out_walk)
     ASSERT_EQ(irq->disable_depth, 2);
     atomic_store_relaxed(&irq->in_progress, false);
 
-    g_cpu_relax_hook = NULL;
+    g_cpu_relax_hook = nullptr;
     irq_enable(irq);
     irq_enable(irq);
     irq_free(irq, &counter);
@@ -568,7 +568,7 @@ TEST_CASE(irq_free_drains_outstanding)
     s_num_relaxes = 0;
     g_cpu_relax_hook = count_relax;
     irq_free(irq, &counter);
-    g_cpu_relax_hook = NULL;
+    g_cpu_relax_hook = nullptr;
 
     ASSERT_OPS(
         "mask", "outstanding", "outstanding", "leaf-deactivate",

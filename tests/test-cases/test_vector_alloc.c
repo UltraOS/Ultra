@@ -30,21 +30,21 @@ TEST_CASE(vector_alloc_sequential_and_exhaustion)
     reset_state();
     cpu_mask_set(&g_online_cpus, 0);
 
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 0);
     ASSERT_EQ(vector, VECTOR_DYNAMIC_FIRST);
     first_vector = vector;
 
     for (i = 1; i < NUM_DYNAMIC_VECTORS; i++) {
-        ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+        ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
         ASSERT_EQ(cpu, 0);
         ASSERT_EQ(vector, VECTOR_DYNAMIC_FIRST + i);
     }
 
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), ENOSPC);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), ENOSPC);
 
     vector_free(0, first_vector);
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 0);
     ASSERT_EQ(vector, first_vector);
 }
@@ -59,21 +59,21 @@ TEST_CASE(vector_alloc_least_busy)
     cpu_mask_set(&g_online_cpus, 3);
     cpu_mask_set(&g_online_cpus, 100);
 
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 0);
 
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 3);
 
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 100);
 
     // All equally loaded again, the earliest online CPU wins ties
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 0);
 
     vector_free(3, VECTOR_DYNAMIC_FIRST);
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 3);
 }
 
@@ -100,7 +100,7 @@ TEST_CASE(vector_alloc_mask_filter_is_strict)
      */
     ASSERT_EQ(vector_alloc(&allowed, &cpu, &vector), ENOSPC);
 
-    ASSERT_EQ(vector_alloc(NULL, &cpu, &vector), EOK);
+    ASSERT_EQ(vector_alloc(nullptr, &cpu, &vector), EOK);
     ASSERT_EQ(cpu, 0);
 }
 

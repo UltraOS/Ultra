@@ -368,7 +368,7 @@ static MAYBE_NERR(int) do_vsnprintf(
             const char *string = va_arg(vlist, char*);
             size_t len = 0;
 
-            if (unlikely(string == NULL))
+            if (unlikely(string == nullptr))
                 string = "<null>";
 
             while ((!fm.has_precision || len < fm.precision) && string[len])
@@ -399,7 +399,7 @@ static MAYBE_NERR(int) do_vsnprintf(
                 size_t size;
                 struct string *string = va_arg(vlist, struct string*);
 
-                if (WARN_ON(string == NULL)) {
+                if (WARN_ON(string == nullptr)) {
                     static struct string s_null_string = STR("<null-string>");
                     string = &s_null_string;
                 }

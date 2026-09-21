@@ -26,7 +26,7 @@ void panic(const char *fmt, ...)
     pr_emerg("Kernel panic: %pV\n", &npf);
     va_end(vlist);
 
-    dump_stack(LOG_LEVEL_EMERG, NULL);
+    dump_stack(LOG_LEVEL_EMERG, nullptr);
 
 hang:
     arch_cpu_halt();

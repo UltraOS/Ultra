@@ -496,7 +496,7 @@ static error_t ioapic_domain_alloc(
         return EINVAL;
 
     route = alloc(sizeof(*route), ALLOC_GENERIC_ZEROED);
-    if (route == NULL)
+    if (route == nullptr)
         return ENOMEM;
 
     route->ioapic = ioapic;
@@ -627,7 +627,7 @@ error_t ioapic_gsi_to_pin(
     struct ioapic *ioapic;
 
     ioapic = find_ioapic_for_gsi(gsi);
-    if (ioapic == NULL)
+    if (ioapic == nullptr)
         return ENOENT;
 
     *out_domain = &ioapic->domain;

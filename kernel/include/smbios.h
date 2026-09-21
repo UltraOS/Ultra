@@ -133,7 +133,7 @@ bool smbios_get_id(enum smbios_id_type id, struct smbios_id *out_id);
 
 static inline bool smbios_has_id(enum smbios_id_type id)
 {
-    return smbios_get_id(id, NULL);
+    return smbios_get_id(id, nullptr);
 }
 
 static inline bool bios_version_check(const char *prefix)

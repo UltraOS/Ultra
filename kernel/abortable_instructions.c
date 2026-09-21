@@ -19,7 +19,7 @@ static const struct abortable_instruction *find_abortable_instruction(reg_t ip)
             return ai;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 bool handle_abortable_instruction(struct registers *regs)
@@ -32,7 +32,7 @@ bool handle_abortable_instruction(struct registers *regs)
         return false;
 
     ai = find_abortable_instruction(pc);
-    if (ai == NULL)
+    if (ai == nullptr)
         return false;
 
     if ((ai->flags & ABORTABLE_INSTRUCTION_HAS_ARCH_HANDLER) &&

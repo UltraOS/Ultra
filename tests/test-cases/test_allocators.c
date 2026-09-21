@@ -624,7 +624,7 @@ TEST_CASE(buddy_alloc_order_too_large)
         FREE_RANGE(0x0000, 0x1000),
     );
 
-    ASSERT_EQ(alloc_block(BUDDY_MAX_ORDER + 1, ALLOC_GENERIC), NULL);
+    ASSERT_NULL(alloc_block(BUDDY_MAX_ORDER + 1, ALLOC_GENERIC));
 
     // The valid memory is untouched.
     ASSERT_ORDER_FREE(0, 1);
@@ -649,7 +649,7 @@ TEST_CASE(buddy_alloc_exhaustion)
                       page_to_pfn(block_to_page(blocks[j])));
     }
 
-    ASSERT_EQ(alloc_block(0, ALLOC_GENERIC), NULL);
+    ASSERT_NULL(alloc_block(0, ALLOC_GENERIC));
 }
 
 /*
@@ -663,7 +663,7 @@ TEST_CASE(buddy_alloc_no_merge_for_higher_order)
     );
 
     ASSERT_ORDER_FREE(0, 1);
-    ASSERT_EQ(alloc_block(1, ALLOC_GENERIC), NULL);
+    ASSERT_NULL(alloc_block(1, ALLOC_GENERIC));
     ASSERT_ORDER_FREE(0, 1);
 }
 
@@ -751,7 +751,7 @@ TEST_CASE(slab_alloc_zero_size)
         FREE_RANGE(0x0000, 0x1000),
     );
 
-    ASSERT_EQ(alloc(0, ALLOC_GENERIC), NULL);
+    ASSERT_NULL(alloc(0, ALLOC_GENERIC));
 }
 
 // Sizes beyond the largest buddy block are refused up front.
@@ -764,8 +764,8 @@ TEST_CASE(slab_alloc_too_large)
     );
 
     size = BUDDY_MAX_SIZE + 1;
-    ASSERT_EQ(alloc(size, ALLOC_GENERIC), NULL);
-    ASSERT_EQ(alloc((size_t)-1, ALLOC_GENERIC), NULL);
+    ASSERT_NULL(alloc(size, ALLOC_GENERIC));
+    ASSERT_NULL(alloc((size_t)-1, ALLOC_GENERIC));
 }
 
 // Allocations are refused before the heap has been brought online.
@@ -776,7 +776,7 @@ TEST_CASE(slab_alloc_offline)
     );
 
     s_test_init_level = INIT_LEVEL_BUDDY_AVAILABLE;
-    ASSERT_EQ(alloc(SLAB_2K, ALLOC_GENERIC), NULL);
+    ASSERT_NULL(alloc(SLAB_2K, ALLOC_GENERIC));
     s_test_init_level = NUM_INIT_LEVELS;
 }
 
@@ -1067,7 +1067,7 @@ TEST_CASE(slab_alloc_out_of_memory)
     ASSERT_ORDER_FREE(0, 0);
 
     obj = alloc(SLAB_2K, ALLOC_GENERIC);
-    ASSERT_EQ(obj, NULL);
+    ASSERT_NULL(obj);
 }
 
 /*

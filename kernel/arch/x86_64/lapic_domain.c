@@ -34,7 +34,7 @@ IRQ_HANDLER {
     hard_irq_enter();
 
     irq = this_cpu_read(s_dynamic_vectors[vector - VECTOR_DYNAMIC_FIRST]);
-    if (irq == NULL) {
+    if (irq == nullptr) {
         this_cpu_inc(s_num_unexpected);
         pr_warn(
             "unexpected vector 0x%02X on CPU%u\n",
@@ -126,7 +126,7 @@ static error_t lapic_domain_alloc(
     UNREFERENCED_PARAMETER(irq);
 
     route = alloc(sizeof(*route), ALLOC_GENERIC_ZEROED);
-    if (route == NULL)
+    if (route == nullptr)
         return ENOMEM;
 
     ret = vector_alloc(desc->affinity, &route->cpu, &route->vector);
@@ -159,7 +159,7 @@ static error_t lapic_domain_activate(struct irq *irq, struct irq_level *level)
     struct irq **slot;
 
     slot = dynamic_vector_slot(route->cpu, route->vector);
-    BUG_ON(*slot != NULL);
+    BUG_ON(*slot != nullptr);
 
     *slot = irq;
     return EOK;
@@ -173,9 +173,9 @@ static void lapic_domain_deactivate(struct irq *irq, struct irq_level *level)
     UNREFERENCED_PARAMETER(irq);
 
     slot = dynamic_vector_slot(route->cpu, route->vector);
-    BUG_ON(*slot == NULL);
+    BUG_ON(*slot == nullptr);
 
-    *slot = NULL;
+    *slot = nullptr;
 }
 
 static const struct irq_domain_ops s_lapic_domain_ops = {
@@ -196,7 +196,7 @@ struct irq_domain g_x86_lapic_domain = {
  */
 static error_t INIT_CODE x86_irqs_init(void)
 {
-    irq_domain_register(&g_x86_lapic_domain, NULL);
+    irq_domain_register(&g_x86_lapic_domain, nullptr);
     return EOK;
 }
 INIT_CALL_AT(IRQS_AVAILABLE, x86_irqs_init);

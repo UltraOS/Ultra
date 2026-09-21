@@ -271,7 +271,7 @@ static error_t CODE_REFERENCES_INIT_DATA io_window_map_with_prot(
     void *mapping;
 
     mapping = io_window_do_map(phys_base, length, prot);
-    if (mapping == NULL)
+    if (mapping == nullptr)
         return ENOMEM;
 
     out_iow->mmio_address = mapping;

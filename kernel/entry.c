@@ -25,7 +25,7 @@ ptr_t g_direct_map_base;
 static struct ultra_boot_context* INIT_DATA s_loader_ctx;
 
 #define UATTR_EXTRACT(ctx_field, hdr) do {                     \
-    WARN_ON(ctx_field != NULL);                                \
+    WARN_ON(ctx_field != nullptr);                             \
     ctx_field = container_of(hdr, typeof(*ctx_field), header); \
 } while (0)
 
@@ -74,9 +74,9 @@ static INIT_CODE void boot_context_init(struct ultra_boot_context *ctx)
 
     // Verify that all mandatory attributes are provided
     BUG_ON(
-        g_boot_ctx.kernel_info == NULL ||
-        g_boot_ctx.platform_info == NULL ||
-        g_boot_ctx.memory_map == NULL
+        g_boot_ctx.kernel_info == nullptr ||
+        g_boot_ctx.platform_info == nullptr ||
+        g_boot_ctx.memory_map == nullptr
     );
 }
 
