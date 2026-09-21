@@ -8,13 +8,26 @@
 #include <linker.h>
 #include <log.h>
 #include <panic.h>
+#include <param.h>
 #include <symbols.h>
 
 #include <private/arch/bug.h>
 #include <private/bug.h>
 
+static bool s_panic_on_warn;
+parameter_with_flags(s_panic_on_warn, PARAM_RUNTIME_WRITABLE);
+
 static void finish_warn_report(struct registers *regs)
 {
+    if (s_panic_on_warn) {
+        /*
+         * Disarm this here so we don't go into recursive panic in case
+         * the panic call itself triggers a warning.
+         */
+        s_panic_on_warn = false;
+        panic("Warnings are configured as deadly (panic_on_warn)");
+    }
+
     dump_stack(LOG_LEVEL_WARN, regs);
 }
 
