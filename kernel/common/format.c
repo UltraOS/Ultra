@@ -170,6 +170,27 @@ static void write_integer(
     }
 }
 
+static void write_symbol(struct fmt_buf_state *fb_state, reg_t pc)
+{
+    char sym[MAX_SYMBOL_LENGTH];
+    size_t offset;
+    error_t ret;
+    int len;
+
+    ret = symbol_lookup_by_address(pc, sym, &offset);
+    if (is_error(ret)) {
+        len = snprintf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
+        write_many(fb_state, sym, len);
+        return;
+    }
+
+    write_cstr(fb_state, sym);
+    if (offset) {
+        len = snprintf(sym, sizeof(sym), "+%zu", offset);
+        write_many(fb_state, sym, len);
+    }
+}
+
 static void consume_digits(struct string *fmt, struct string *out_digits)
 {
     out_digits->text = fmt->text;
@@ -355,27 +376,7 @@ static MAYBE_NERR(int) do_vsnprintf(
 
         if (consume(&fmt, STR("p"))) {
             if (consume(&fmt, STR("SM"))) {
-                char sym[MAX_SYMBOL_LENGTH];
-                reg_t *pc_ptr;
-                size_t offset;
-                int len;
-
-                pc_ptr = va_arg(vlist, reg_t*);
-
-                if (is_error(symbol_lookup_by_address(*pc_ptr, sym, &offset))) {
-                    len = snprintf(
-                        sym, sizeof(sym), "unknown/garbage <0x%016zX>",
-                        *pc_ptr
-                    );
-                    write_many(fb_state, sym, len);
-                } else {
-                    write_cstr(fb_state, sym);
-                    if (offset) {
-                        len = snprintf(sym, sizeof(sym), "+%zu", offset);
-                        write_many(fb_state, sym, len);
-                    }
-                }
-
+                write_symbol(fb_state, *va_arg(vlist, reg_t*));
                 continue;
             }
 
