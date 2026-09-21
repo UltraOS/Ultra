@@ -83,10 +83,10 @@ static void write_many(
 
 static char hex_char(bool upper, u64 value)
 {
-    static const char upper_hex[] = "0123456789ABCDEF";
-    static const char lower_hex[] = "0123456789abcdef";
+    static const char s_upper_hex[] = "0123456789ABCDEF";
+    static const char s_lower_hex[] = "0123456789abcdef";
 
-    return (upper ? upper_hex : lower_hex)[value];
+    return (upper ? s_upper_hex : s_lower_hex)[value];
 }
 
 static void write_padding(
@@ -400,8 +400,8 @@ static MAYBE_NERR(int) do_vsnprintf(
                 struct string *string = va_arg(vlist, struct string*);
 
                 if (WARN_ON(string == NULL)) {
-                    static struct string null_string = STR("<null-string>");
-                    string = &null_string;
+                    static struct string s_null_string = STR("<null-string>");
+                    string = &s_null_string;
                 }
 
                 size = string->size;

@@ -26,7 +26,7 @@ static void e9_write(struct console *con, const char *str, size_t count)
     iowrite8_relaxed_many(&s_earlycon_iow, 0, (const u8*)str, count);
 }
 
-static struct console e9_console = {
+static struct console s_e9_console = {
     .name = "E9 debugcon",
     .write = e9_write,
 };
@@ -101,7 +101,7 @@ static void ns16550_console_write(
     ns16550_wait_lsr(NS16550_LSR_TEMT);
 }
 
-static struct console ns16550_console = {
+static struct console s_ns16550_console = {
     .name = "ns16550",
     .write = ns16550_console_write,
 };
@@ -154,7 +154,7 @@ static error_t INIT_CODE e9_console_init(bool colored)
     if (ioread8(&s_earlycon_iow, 0) != 0xE9)
         goto unmap;
 
-    ret = earlycon_activate(&e9_console, colored);
+    ret = earlycon_activate(&s_e9_console, colored);
     if (is_error(ret))
         goto unmap;
 
@@ -385,7 +385,7 @@ static error_t INIT_CODE ns16550_console_init(
 
     ns16550_setup(divisor);
 
-    ret = earlycon_activate(&ns16550_console, colored);
+    ret = earlycon_activate(&s_ns16550_console, colored);
     if (is_error(ret)) {
         io_window_unmap(&s_earlycon_iow);
         return ret;

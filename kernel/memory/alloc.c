@@ -33,7 +33,7 @@
 #define MIN_CACHE_SHIFT 3
 #define MIN_CACHE_SIZE 8
 
-struct alloc_cache s_builtin_caches[NUM_BUILTIN_CACHES];
+static struct alloc_cache s_builtin_caches[NUM_BUILTIN_CACHES];
 
 static const char *const INIT_RODATA
 s_builtin_cache_names[NUM_BUILTIN_CACHES] = {

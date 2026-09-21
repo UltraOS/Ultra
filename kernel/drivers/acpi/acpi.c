@@ -8,11 +8,13 @@
 
 #include <uacpi/uacpi.h>
 
-INIT_DATA ALIGN(ULTRA_ARCH_WIDTH) u8 early_table_buf[PAGE_SIZE];
+static INIT_DATA ALIGN(ULTRA_ARCH_WIDTH) u8 s_early_table_buf[PAGE_SIZE];
 
 static error_t INIT_CODE acpi_setup_tables(void)
 {
-    uacpi_setup_early_table_access(early_table_buf, sizeof(early_table_buf));
+    uacpi_setup_early_table_access(
+        s_early_table_buf, sizeof(s_early_table_buf)
+    );
     return EOK;
 }
 INIT_CALL_AT(PLATFORM_INFO_AVAILABLE, acpi_setup_tables);

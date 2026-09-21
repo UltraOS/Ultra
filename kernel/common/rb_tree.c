@@ -27,7 +27,7 @@ static void rb_no_aggregation_copy(struct rb_node *from, struct rb_node *to)
     UNREFERENCED_PARAMETER(to);
 }
 
-static const struct rb_tree_aggregated_ops rb_no_aggregation_ops = {
+static const struct rb_tree_aggregated_ops s_rb_no_aggregation_ops = {
     .propagate = rb_no_aggregation_propagate,
     .rotate = rb_no_aggregation_rotate,
     .copy = rb_no_aggregation_copy,
@@ -292,7 +292,7 @@ void rb_node_remove(struct rb_node *node, struct rb_root *root)
     struct rb_node *rebalance;
 
     rebalance = rb_node_remove_and_compute_rebalance(
-        node, root, &rb_no_aggregation_ops
+        node, root, &s_rb_no_aggregation_ops
     );
     if (!rebalance)
         return;

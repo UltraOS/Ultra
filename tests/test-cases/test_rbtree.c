@@ -445,7 +445,8 @@ static bool aug_compute(struct aug_item *n)
 }
 
 AGGREGATED_RB_TREE_OPS(
-    static, aug, struct aug_item, node, subtree_size, aug_compute
+    static, s_aug_ops, aug, struct aug_item, node, subtree_size,
+    aug_compute
 );
 
 static bool aug_less(const struct rb_node *a, const struct rb_node *b)
@@ -546,7 +547,7 @@ TEST_CASE(rb_aggregated_subtree_sizes)
     for (i = 0; i < ARRAY_SIZE(keys); i++) {
         items[i].key = keys[i];
         items[i].subtree_size = 0;
-        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &aug_ops);
+        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &s_aug_ops);
         aug_validate(&root, i + 1);
     }
 
@@ -565,7 +566,7 @@ TEST_CASE(rb_aggregated_order_statistic)
     for (i = N - 1; i >= 0; i--) {
         items[i].key = i;
         items[i].subtree_size = 0;
-        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &aug_ops);
+        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &s_aug_ops);
     }
     aug_validate(&root, N);
 
@@ -584,20 +585,20 @@ TEST_CASE(rb_aggregated_remove)
     for (i = 0; i < N; i++) {
         items[i].key = i;
         items[i].subtree_size = 0;
-        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &aug_ops);
+        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &s_aug_ops);
     }
     aug_validate(&root, N);
 
     // Remove every other node and confirm sizes stay consistent.
     for (i = 0; i < N; i += 2) {
-        rb_node_remove_aggregated(&items[i].node, &root, &aug_ops);
+        rb_node_remove_aggregated(&items[i].node, &root, &s_aug_ops);
         key = i;
         ASSERT_NULL(rb_node_find(&key, &root, aug_key_cmp));
     }
     aug_validate(&root, N / 2);
 
     for (i = 1; i < N; i += 2)
-        rb_node_remove_aggregated(&items[i].node, &root, &aug_ops);
+        rb_node_remove_aggregated(&items[i].node, &root, &s_aug_ops);
 
     aug_validate(&root, 0);
     ASSERT_NULL(root.root);
@@ -616,12 +617,12 @@ TEST_CASE(rb_aggregated_replace)
     for (i = 0; i < ARRAY_SIZE(keys); i++) {
         items[i].key = keys[i];
         items[i].subtree_size = 0;
-        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &aug_ops);
+        rb_node_insert_aggregated(&items[i].node, &root, aug_less, &s_aug_ops);
     }
 
     // items[2] holds key 4 with two children, so it caches a subtree size > 1.
     rb_node_replace_aggregated(&items[2].node, &replacement.node, &root,
-                               &aug_ops);
+                               &s_aug_ops);
 
     ASSERT_EQ(replacement.subtree_size, items[2].subtree_size);
     aug_validate(&root, ARRAY_SIZE(keys));
@@ -642,7 +643,7 @@ TEST_CASE(rb_aggregated_cached)
         items[i].key = keys[i];
         items[i].subtree_size = 0;
         rb_node_insert_aggregated_cached(&items[i].node, &root, aug_less,
-                                         &aug_ops);
+                                         &s_aug_ops);
         ASSERT_EQ(rb_first_cached(&root), rb_first(&root.base));
     }
 
@@ -650,7 +651,7 @@ TEST_CASE(rb_aggregated_cached)
     ASSERT_EQ(aug_item_key(rb_first_cached(&root)), 0);
 
     // Removing the cached left-most keeps both the cache and sizes correct.
-    rb_node_remove_aggregated_cached(rb_first_cached(&root), &root, &aug_ops);
+    rb_node_remove_aggregated_cached(rb_first_cached(&root), &root, &s_aug_ops);
     ASSERT_EQ(aug_item_key(rb_first_cached(&root)), 1);
     aug_validate(&root.base, ARRAY_SIZE(keys) - 1);
 }
@@ -675,11 +676,11 @@ TEST_CASE(rb_aggregated_randomized_stress)
 
         if (!present[idx]) {
             rb_node_insert_aggregated(&items[idx].node, &root, aug_less,
-                                      &aug_ops);
+                                      &s_aug_ops);
             present[idx] = true;
             live++;
         } else {
-            rb_node_remove_aggregated(&items[idx].node, &root, &aug_ops);
+            rb_node_remove_aggregated(&items[idx].node, &root, &s_aug_ops);
             present[idx] = false;
             live--;
         }
@@ -703,7 +704,7 @@ TEST_CASE(rb_aggregated_randomized_stress)
 
     for (i = 0; i < N; i++) {
         if (present[i]) {
-            rb_node_remove_aggregated(&items[i].node, &root, &aug_ops);
+            rb_node_remove_aggregated(&items[i].node, &root, &s_aug_ops);
             present[i] = false;
             live--;
         }

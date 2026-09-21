@@ -155,7 +155,7 @@ static void format_record(
 
 void log_flush_console(struct console *con)
 {
-    static char msg_buf[512], out_data[512 + 128];
+    static char s_msg_buf[512], s_out_data[512 + 128];
 
     struct log_record rec;
     struct out_buf out;
@@ -166,7 +166,7 @@ void log_flush_console(struct console *con)
 
     for (;;) {
         ret = log_ring_read(
-            &s_log_ring, con->log_seq_num, msg_buf, sizeof(msg_buf), &rec
+            &s_log_ring, con->log_seq_num, s_msg_buf, sizeof(s_msg_buf), &rec
         );
         if (ret != EOK)
             break;
@@ -178,11 +178,11 @@ void log_flush_console(struct console *con)
         );
 
         out = (struct out_buf) {
-            .data = out_data,
-            .capacity = sizeof(out_data),
+            .data = s_out_data,
+            .capacity = sizeof(s_out_data),
         };
         format_record(
-            &out, stamp, stamp_len, msg_buf, rec.length, rec.level,
+            &out, stamp, stamp_len, s_msg_buf, rec.length, rec.level,
             con->flags
         );
 
