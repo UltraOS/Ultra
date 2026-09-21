@@ -170,19 +170,29 @@ static void write_integer(
     }
 }
 
-static void write_symbol(struct fmt_buf_state *fb_state, reg_t pc)
+/*
+ * %pSM:  pc is exact, e.g. a trap or an interrupted context
+ * %pRSM: pc is a return address. A call may be the last instruction of
+ *        its function, so the symbol is resolved from the byte before
+ *        it, while the offset printed is that of the address itself.
+ */
+static void write_symbol(
+    struct fmt_buf_state *fb_state, reg_t pc, bool is_return_address
+)
 {
     char sym[MAX_SYMBOL_LENGTH];
     size_t offset;
     error_t ret;
     int len;
 
-    ret = symbol_lookup_by_address(pc, sym, &offset);
+    ret = symbol_lookup_by_address(pc - is_return_address, sym, &offset);
     if (is_error(ret)) {
         len = snprintf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
         write_many(fb_state, sym, len);
         return;
     }
+
+    offset += is_return_address;
 
     write_cstr(fb_state, sym);
     if (offset) {
@@ -375,8 +385,13 @@ static MAYBE_NERR(int) do_vsnprintf(
         }
 
         if (consume(&fmt, STR("p"))) {
+            if (consume(&fmt, STR("RSM"))) {
+                write_symbol(fb_state, *va_arg(vlist, reg_t*), true);
+                continue;
+            }
+
             if (consume(&fmt, STR("SM"))) {
-                write_symbol(fb_state, *va_arg(vlist, reg_t*));
+                write_symbol(fb_state, *va_arg(vlist, reg_t*), false);
                 continue;
             }
 
