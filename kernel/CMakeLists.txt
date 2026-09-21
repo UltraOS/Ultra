@@ -74,6 +74,7 @@ ultra_properties(
 ultra_sources(
     entry.c
     panic.c
+    bug.c
     console.c
     log.c
     symbols.c

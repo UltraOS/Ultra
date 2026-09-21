@@ -1,14 +1,31 @@
 #pragma once
 
 #include <common/attributes.h>
-#include <panic.h>
+#include <common/helpers.h>
+#include <common/types.h>
 #include <log.h>
 
-#define BUG() \
-    panic("BUG! At %s() in file %s:%d", __func__, __FILE__, __LINE__)
+#if HAS_INCLUDE(<arch/bug.h>)
+#include <arch/bug.h>
+#endif
 
-#define BUG_WITH_MSG(msg, ...) \
-    panic("BUG! " msg, ##__VA_ARGS__)
+#ifndef BUG
+NORETURN
+void bug_report(const char *file, u32 line);
+
+#define BUG() bug_report(__FILE__, __LINE__)
+#endif
+
+#ifndef WARN
+void warn_report(const char *file, u32 line);
+
+#define WARN() warn_report(__FILE__, __LINE__)
+#endif
+
+#define BUG_WITH_MSG(msg, ...) do {        \
+        pr_emerg(msg "\n", ##__VA_ARGS__); \
+        BUG();                             \
+    } while (0)
 
 #define BUG_ON(expr)        \
     do {                    \
@@ -22,24 +39,15 @@
             BUG_WITH_MSG(msg, ##__VA_ARGS__); \
     } while (0)
 
-#ifdef ULTRA_DEADLY_WARNINGS
-#define DIE_IF_DEADLY_WARNINGS() panic("Warnings are configured as deadly")
-#else
-#define DIE_IF_DEADLY_WARNINGS()
-#endif
-
-#define WARN() do {                                           \
-        pr_warn("WARNING: At %s() in file %s:%d\n", __func__, \
-                __FILE__, __LINE__);                          \
-        DIE_IF_DEADLY_WARNINGS();                             \
+#define WARN_WITH_MSG(msg, ...) do {      \
+        pr_warn(msg "\n", ##__VA_ARGS__); \
+        WARN();                           \
     } while (0)
 
 #define WARN_ON_WITH_MSG(expr, msg, ...) ({ \
     bool true_cond = !!((expr));            \
-    if (unlikely(true_cond)) {              \
-        pr_warn(msg, ##__VA_ARGS__);        \
-        DIE_IF_DEADLY_WARNINGS();           \
-    }                                       \
+    if (unlikely(true_cond))                \
+        WARN_WITH_MSG(msg, ##__VA_ARGS__);  \
     unlikely(true_cond);                    \
 })
 
