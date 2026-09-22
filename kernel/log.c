@@ -10,12 +10,59 @@
 #include <symbols.h>
 #include <unwind.h>
 #include <log_ring.h>
+#include <param.h>
 
 #include <time/units.h>
 
 #include <arch/constants.h>
 
 MAKE_LOG_RING(s_log_ring, PAGE_SHIFT + 3, 6);
+
+static const struct suboption_variant s_log_level_variants[] = {
+    [LOG_LEVEL_EMERG]  = SUBOPTION_VARIANT("emergency"),
+    [LOG_LEVEL_ALERT]  = SUBOPTION_VARIANT("alert"),
+    [LOG_LEVEL_CRIT]   = SUBOPTION_VARIANT("critical"),
+    [LOG_LEVEL_ERR]    = SUBOPTION_VARIANT("error"),
+    [LOG_LEVEL_WARN]   = SUBOPTION_VARIANT("warning"),
+    [LOG_LEVEL_NOTICE] = SUBOPTION_VARIANT("notice"),
+    [LOG_LEVEL_INFO]   = SUBOPTION_VARIANT("info"),
+    [LOG_LEVEL_DEBUG]  = SUBOPTION_VARIANT("debug"),
+};
+static enum log_level s_log_level = LOG_LEVEL_CONSOLE_DEFAULT;
+
+static error_t log_level_set(
+    struct string value, struct param_value *v, bool is_runtime
+)
+{
+    error_t ret;
+    enum log_level *cur = v->ptr;
+    size_t log_level_idx;
+
+    ret = parse_suboptions_by_head(
+        value, s_log_level_variants, ARRAY_SIZE(s_log_level_variants),
+        &log_level_idx, is_runtime
+    );
+    if (is_error(ret))
+        return ret;
+
+    *cur = log_level_idx;
+    return EOK;
+}
+
+static size_t log_level_get(struct string *out, const struct param_value *val)
+{
+    enum log_level *cur = val->ptr;
+
+    return param_write_string(out, s_log_level_variants[*cur].head);
+}
+
+static struct param_ops s_log_level_ops = {
+    .set = log_level_set,
+    .get = log_level_get,
+};
+parameter_with_ops_and_flags(
+    s_log_level, s_log_level_ops, PARAM_RUNTIME_WRITABLE
+);
 
 static char s_hw_id[256] = "Unknown Hardware";
 
@@ -171,6 +218,11 @@ void log_flush_console(struct console *con)
         if (ret != EOK)
             break;
 
+        con->log_seq_num = rec.seq_num + 1;
+
+        if (rec.level > s_log_level)
+            continue;
+
         sec = rec.timestamp_ns / NS_PER_SEC;
         usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
         stamp_len = snprintf(
@@ -187,7 +239,6 @@ void log_flush_console(struct console *con)
         );
 
         con->write(con, out.data, out.size);
-        con->log_seq_num = rec.seq_num + 1;
     }
 }
 
