@@ -1,0 +1,2 @@
+config FLANTERM_CONSOLE
+    bool "Enable flanterm-based framebuffer log console"
