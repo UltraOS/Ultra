@@ -632,17 +632,17 @@ static void INIT_CODE memory_map_populate_pt2(
         if (next < virt || next > end)
             next = end;
 
-        if (!pt2_can_be_leaf())
-            goto do_small_pages;
-        if (!IS_ALIGNED(virt, PT2_SIZE) || (next - virt) != PT2_SIZE)
-            goto do_small_pages;
-
         if (pt2_present(pt2)) {
             if (pt2_is_leaf(pt2))
                 continue;
 
             goto do_small_pages;
         }
+
+        if (!pt2_can_be_leaf())
+            goto do_small_pages;
+        if (!IS_ALIGNED(virt, PT2_SIZE) || (next - virt) != PT2_SIZE)
+            goto do_small_pages;
 
         ret = boot_alloc_aligned(PT2_SIZE / PAGE_SIZE, PT2_SIZE, &huge_pt);
         if (is_error(ret))
