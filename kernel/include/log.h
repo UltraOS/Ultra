@@ -37,6 +37,12 @@ enum log_level {
      * one explicitly. (e.g. logs that come from bare print() calls)
      */
     LOG_LEVEL_MSG_DEFAULT = LOG_LEVEL_NOTICE,
+
+    /*
+     * The least severe log level that is flushed to attached kernel consoles
+     * by default.
+     */
+    LOG_LEVEL_CONSOLE_DEFAULT = LOG_LEVEL_INFO,
 };
 
 // Ascii SOH (Start Of Heading)

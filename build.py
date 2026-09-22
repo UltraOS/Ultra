@@ -231,7 +231,7 @@ page-table:
     levels = 5
     constraint = maximum
 
-cmdline = "earlycon=e9,colored"
+cmdline = "log-level=debug earlycon=e9,colored"
 
 # Hardcode a resolution that's good enough for local testing,
 # we don't need a huge QEMU window.
