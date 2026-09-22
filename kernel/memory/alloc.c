@@ -148,14 +148,14 @@ static error_t INIT_CODE kernel_heap_init(void)
         size *= 2;
     }
 
-    pr_info("now online, builtin caches listed below\n");
-    pr_info("  %-12s %-12s %-8s %-12s\n",
-            "Name", "Object Size", "Order", "Max Retained");
+    pr_debug("now online, builtin caches listed below\n");
+    pr_debug("  %-12s %-12s %-8s %-12s\n",
+             "Name", "Object Size", "Order", "Max Retained");
 
     for (i = 0; i < NUM_BUILTIN_CACHES; i++) {
         cache = &s_builtin_caches[i];
 
-        pr_info(
+        pr_debug(
             "  %-12s %-12zu %-8u %-12zu\n",
             cache->name, cache->object_size, cache->order,
             cache->max_empty_slabs

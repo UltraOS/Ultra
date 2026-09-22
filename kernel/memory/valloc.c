@@ -1359,12 +1359,12 @@ static void INIT_CODE dump_one_area(
     size_to_human(end - start, &size);
 
     if (size.hundredths) {
-        pr_info(
+        pr_debug(
             "  [0x%016zX - 0x%016zX] %3zu.%02zu %-3s  %s\n",
             start, end, size.value, size.hundredths, size.unit, what
         );
     } else {
-        pr_info(
+        pr_debug(
             "  [0x%016zX - 0x%016zX] %6zu %-3s  %s\n",
             start, end, size.value, size.unit, what
         );
@@ -1408,7 +1408,7 @@ static error_t INIT_CODE dump_initial_permanent_areas(void)
     struct rb_node *node;
     struct varea *area;
 
-    pr_info("initial kernel address space layout:\n");
+    pr_debug("initial kernel address space layout:\n");
 
     for (node = rb_first(&s_reserved_ranges); node; node = rb_next(node)) {
         area = varea_of(node);
