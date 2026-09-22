@@ -31,7 +31,12 @@ enum log_level {
     LOG_LEVEL_INFO    = SYSLOG_INFO,
     LOG_LEVEL_DEBUG   = SYSLOG_DEBUG,
     LOG_LEVEL_COUNT,
-    LOG_LEVEL_DEFAULT = LOG_LEVEL_NOTICE,
+
+    /*
+     * The log level a message gets assigned by default unless it provides
+     * one explicitly. (e.g. logs that come from bare print() calls)
+     */
+    LOG_LEVEL_MSG_DEFAULT = LOG_LEVEL_NOTICE,
 };
 
 // Ascii SOH (Start Of Heading)
