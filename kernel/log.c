@@ -222,7 +222,7 @@ void vprint(const char *msg, va_list vlist)
     char prefix_buf[4];
     va_list vlist_copy;
     error_t ret;
-    enum log_level level = LOG_LEVEL_DEFAULT;
+    enum log_level level = LOG_LEVEL_MSG_DEFAULT;
     size_t write_offset = 0, prefix_len = 0;
     bool had_newline = false, is_extended = false;
 
@@ -259,7 +259,7 @@ void vprint(const char *msg, va_list vlist)
              * extend it. Do a new one from scratch so it's not lost
              * completely.
              */
-            level = LOG_LEVEL_DEFAULT;
+            level = LOG_LEVEL_MSG_DEFAULT;
         }
     }
 
