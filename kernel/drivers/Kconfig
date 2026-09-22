@@ -4,4 +4,5 @@ config SMBIOS
 menu "Drivers"
 rsource "time/Kconfig"
 rsource "acpi/Kconfig"
+rsource "console/Kconfig"
 endmenu

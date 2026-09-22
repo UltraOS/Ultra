@@ -10,3 +10,6 @@
 [submodule "scripts/kconfiglib"]
 	path = scripts/kconfiglib
 	url = https://github.com/UltraOS/Kconfiglib
+[submodule "kernel/drivers/console/flanterm/flanterm"]
+	path = kernel/drivers/console/flanterm/flanterm
+	url = https://github.com/mintsuki/flanterm

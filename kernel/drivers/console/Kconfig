@@ -1,0 +1,4 @@
+
+menu "Consoles"
+rsource "flanterm/Kconfig"
+endmenu

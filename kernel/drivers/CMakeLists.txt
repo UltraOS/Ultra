@@ -5,3 +5,4 @@ ultra_sources_if(
 
 add_subdirectory(acpi)
 add_subdirectory(time)
+add_subdirectory(console)

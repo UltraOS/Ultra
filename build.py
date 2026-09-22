@@ -232,8 +232,11 @@ page-table:
 
 cmdline = "earlycon=e9,colored"
 
-# We don't really need video for now
-video-mode = unset
+# Hardcode a resolution that's good enough for local testing,
+# we don't need a huge QEMU window.
+video-mode:
+    width = 1024
+    height = 768
 
 [ultra-aarch64]
 protocol = ultra
