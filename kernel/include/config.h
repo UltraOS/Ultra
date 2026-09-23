@@ -10,4 +10,3 @@
 #else
 #define ULTRA_MAX_CPUS 1
 #endif
-
