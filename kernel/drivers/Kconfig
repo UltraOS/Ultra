@@ -1,5 +1,7 @@
 config SMBIOS
     bool
 
+menu "Drivers"
 rsource "time/Kconfig"
 rsource "acpi/Kconfig"
+endmenu
