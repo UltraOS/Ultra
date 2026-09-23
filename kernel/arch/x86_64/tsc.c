@@ -204,7 +204,7 @@ static error_t INIT_CODE x86_early_tsc_setup(void)
         return EOK;
 
     if (unlikely(!all_cpus_have(X86_FEATURE_TSC))) {
-        pr_warn("not supported on this CPU(?)");
+        pr_warn("not supported on this CPU(?)\n");
         return EOK;
     }
 
