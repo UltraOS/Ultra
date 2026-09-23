@@ -27,8 +27,8 @@ extern "C" {
     void memory_map_reset(void);
 }
 
-#include "test_harness.h"
-#include "test_helpers.h"
+#include <test_harness.h>
+#include <test_helpers.h>
 
 class phys_range {
 public:

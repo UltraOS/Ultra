@@ -2,9 +2,9 @@
 #include <string>
 #include <vector>
 
-#include "arg_parser.h"
-#include "test_helpers.h"
-#include "test_harness.h"
+#include <arg_parser.h>
+#include <test_helpers.h>
+#include <test_harness.h>
 
 auto get_test_group(const std::string& name)
 {
