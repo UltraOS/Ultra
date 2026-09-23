@@ -1,4 +1,4 @@
-#define MSG_FMT(x) "valloc: " x
+#define MSG_FMT(msg) "valloc: " msg
 
 #include <common/rb_tree_aggregated.h>
 #include <common/list.h>
