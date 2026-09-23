@@ -346,7 +346,7 @@ TEST_CASE(rb_tree_replace_cached_leftmost)
     rb_validate(&root.base, ARRAY_SIZE(keys));
 }
 
-/* Deterministic xorshift so the stress test is reproducible across runs. */
+// Deterministic xorshift so the stress test is reproducible across runs.
 static u32 g_rng = 0x9e3779b9u;
 
 static u32 rng_next(void)
@@ -516,7 +516,7 @@ static void aug_validate(struct rb_root *root, size_t expect)
     ASSERT_EQ(count, expect);
 }
 
-/* Order-statistic lookup of the 'k'-th (0-indexed) smallest via cached sizes. */
+// Order-statistic lookup of the 'k'-th (0-indexed) smallest via cached sizes.
 static struct rb_node *aug_select(struct rb_root *root, size_t k)
 {
     struct rb_node *n = root->root;
