@@ -590,7 +590,7 @@ static error_t INIT_CODE kernel_address_space_setup(void)
     g_kernel_address_space.pt = ctx.pt;
     pr_lvl(
         s_max_ram_addr <= MAX_PHYS_ADDR ? LOG_LEVEL_INFO : LOG_LEVEL_WARN,
-        "max RAM address: %llX, max supported: %llX",
+        "max RAM address: %llX, max supported: %llX\n",
         s_max_ram_addr, MAX_PHYS_ADDR
     );
     return EOK;
