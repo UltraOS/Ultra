@@ -1,4 +1,4 @@
-#define MSG_FMT(x) "memory: " x
+#define MSG_FMT(msg) "memory: " msg
 
 #include <common/types.h>
 #include <common/align.h>

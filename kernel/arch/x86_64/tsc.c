@@ -1,5 +1,4 @@
-#include "arch/registers.h"
-#define MSG_FMT(x) "tsc: " x
+#define MSG_FMT(msg) "tsc: " msg
 
 #include <arch/private/cpu.h>
 #include <arch/private/tsc.h>
