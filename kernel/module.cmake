@@ -3,7 +3,7 @@ function(add_ultra_module)
         MODULE
         ""
         "NAME;CONFIG"
-        "SOURCES;PUBLIC_CFLAGS;PRIVATE_CFLAGS;PUBLIC_DEFINITIONS;PRIVATE_DEFINITIONS;PUBLIC_INCLUDE_DIRS;PRIVATE_INCLUDE_DIRS"
+        "SOURCES;SUBMODULES;PUBLIC_CFLAGS;PRIVATE_CFLAGS;PUBLIC_DEFINITIONS;PRIVATE_DEFINITIONS;PUBLIC_INCLUDE_DIRS;PRIVATE_INCLUDE_DIRS"
         ${ARGN}
     )
 
@@ -15,6 +15,10 @@ function(add_ultra_module)
     if (NOT ${MODULE_CONFIG})
         return()
     endif ()
+
+    foreach (SUBMODULE ${MODULE_SUBMODULES})
+        ultra_require_submodule(${SUBMODULE})
+    endforeach ()
 
     set(MODULE_OBJECT_TARGET "${MODULE_NAME}-objects")
     add_library(
@@ -99,5 +103,22 @@ function(add_ultra_module)
             ${MODULE_OBJECT_TARGET}
         )
         ultra_link_libraries(${MODULE_OBJECT_TARGET})
+    endif ()
+endfunction()
+
+function(ultra_require_submodule DIR)
+    set(SUBMODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/${DIR}")
+    file(GLOB SUBMODULE_ENTRIES "${SUBMODULE_PATH}/*")
+
+    if (NOT SUBMODULE_ENTRIES)
+        file(
+            RELATIVE_PATH SUBMODULE_REL
+            "${CMAKE_SOURCE_DIR}" "${SUBMODULE_PATH}"
+        )
+        message(
+            FATAL_ERROR
+            "${SUBMODULE_REL} is empty, please clone it first:\n"
+            "  git submodule update --init ${SUBMODULE_REL}"
+        )
     endif ()
 endfunction()

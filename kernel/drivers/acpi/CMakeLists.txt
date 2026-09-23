@@ -1,8 +1,9 @@
-include(uacpi/uacpi.cmake)
+include(uacpi/uacpi.cmake OPTIONAL)
 
 add_ultra_module(
     NAME acpi
     CONFIG ACPI
+    SUBMODULES uacpi
     SOURCES
         acpi.c
         ${UACPI_SOURCES}
