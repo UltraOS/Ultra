@@ -11,6 +11,12 @@ enum console_flags : u32 {
      * log output written to it is colored
      */
     CONSOLE_FLAG_ANSI_COLOR = BIT_U32(0),
+
+    /*
+     * The sink ignores the faint attribute (SGR 2), dim text is
+     * sent to it as dark grey instead
+     */
+    CONSOLE_FLAG_ANSI_NO_DIM = BIT_U32(1),
 };
 
 struct console {

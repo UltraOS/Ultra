@@ -35,6 +35,7 @@ void log_set_hardware_identity_string(const char *fmt, ...)
 #define FG_RED "31"
 #define FG_YELLOW "33"
 #define FG_BLUE "34"
+#define FG_BRIGHT_BLACK "90"
 #define FG_BRIGHT_WHITE "97"
 #define BG_RED "41"
 
@@ -52,6 +53,17 @@ static const char *const s_level_sgr[LOG_LEVEL_COUNT] = {
     [LOG_LEVEL_NOTICE] = SGR(ATTR_BOLD),
     [LOG_LEVEL_DEBUG] = SGR(ATTR_DIM),
 };
+
+static const char *level_sgr(u8 level, enum console_flags flags)
+{
+    if (level >= LOG_LEVEL_COUNT)
+        return nullptr;
+
+    if (level == LOG_LEVEL_DEBUG && (flags & CONSOLE_FLAG_ANSI_NO_DIM))
+        return SGR(FG_BRIGHT_BLACK);
+
+    return s_level_sgr[level];
+}
 
 #define MAX_LOG_PREFIX_LENGTH 16
 
@@ -100,15 +112,16 @@ static void out_buf_append_cstr(struct out_buf *buf, const char *str)
 
 static void format_record(
     struct out_buf *out, const char *stamp, size_t stamp_len,
-    const char *msg, size_t len, u8 level, bool color
+    const char *msg, size_t len, u8 level, enum console_flags flags
 )
 {
     size_t prefix_len;
     bool has_newline;
+    const char *sgr;
 
     out_buf_append(out, stamp, stamp_len);
 
-    if (!color) {
+    if (!(flags & CONSOLE_FLAG_ANSI_COLOR)) {
         out_buf_append(out, msg, len);
         return;
     }
@@ -129,8 +142,9 @@ static void format_record(
     has_newline = len && msg[len - 1] == '\n';
     len -= has_newline;
 
-    if (level < LOG_LEVEL_COUNT && s_level_sgr[level])
-        out_buf_append_cstr(out, s_level_sgr[level]);
+    sgr = level_sgr(level, flags);
+    if (sgr)
+        out_buf_append_cstr(out, sgr);
     out_buf_append(out, msg, len);
 
     out->capacity += sizeof(SGR_RESET);
@@ -149,7 +163,6 @@ void log_flush_console(struct console *con)
     u64 sec, usec;
     int stamp_len;
     char stamp[32];
-    bool color = con->flags & CONSOLE_FLAG_ANSI_COLOR;
 
     for (;;) {
         ret = log_ring_read(
@@ -169,7 +182,8 @@ void log_flush_console(struct console *con)
             .capacity = sizeof(out_data),
         };
         format_record(
-            &out, stamp, stamp_len, msg_buf, rec.length, rec.level, color
+            &out, stamp, stamp_len, msg_buf, rec.length, rec.level,
+            con->flags
         );
 
         con->write(con, out.data, out.size);
