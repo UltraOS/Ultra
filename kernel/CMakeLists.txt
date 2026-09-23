@@ -1,4 +1,5 @@
 include(symbols.cmake)
+include(free_after_init.cmake)
 include(target_helpers.cmake)
 include(module.cmake)
 include(ld_template.cmake)
@@ -143,23 +144,4 @@ foreach(obj IN LISTS ULTRA_OBJECT_TARGETS_FINAL)
     list(APPEND ULTRA_ALL_OBJECTS "$<TARGET_OBJECTS:${obj}>")
 endforeach()
 
-set(
-    ULTRA_COMBINED_OBJ
-    "${CMAKE_CURRENT_BINARY_DIR}/combined_${ULTRA_KERNEL_OBJECTS}.o"
-)
-set(
-    FAI_CHECK_SCRIPT
-    "${CMAKE_SOURCE_DIR}/scripts/check_free_after_init_references.py"
-)
-
-add_custom_command(
-    TARGET ${ULTRA_KERNEL_BASE} PRE_LINK
-
-    COMMAND ${CMAKE_LINKER} -r ${ULTRA_ALL_OBJECTS} -o ${ULTRA_COMBINED_OBJ}
-    COMMAND Python3::Interpreter ${FAI_CHECK_SCRIPT} ${ULTRA_COMBINED_OBJ}
-
-    COMMENT
-        "Verifying there are no illegal references to free-after-init data..."
-    VERBATIM
-    COMMAND_EXPAND_LISTS
-)
+setup_free_after_init_check()
