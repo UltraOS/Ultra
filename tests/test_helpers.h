@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "test_harness.h"
+#include <test_harness.h>
 
 template <typename ExprT>
 class ScopeGuard
