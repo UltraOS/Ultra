@@ -139,13 +139,17 @@ static INIT_CODE void smbios_save_string(
 {
     const char *str;
     char *str_copy;
-    size_t bytes_needed;
+    size_t len, bytes_needed;
 
     str = smbios_get_string(hdr, str_value);
     if (str == nullptr)
         return;
 
-    bytes_needed = strlen(str) + 1;
+    len = strlen(str);
+    while (len && str[len - 1] == ' ')
+        len--;
+
+    bytes_needed = len + 1;
     if (s_bytes_left < bytes_needed) {
         phys_addr_t page;
         error_t ret;
@@ -172,7 +176,8 @@ static INIT_CODE void smbios_save_string(
     s_pool += bytes_needed;
     s_bytes_left -= bytes_needed;
 
-    memcpy(str_copy, str, bytes_needed);
+    memcpy(str_copy, str, len);
+    str_copy[len] = '\0';
     s_saved_ids[type - 1] = (struct saved_smbios_id) {
         .id = {
             .str = str_copy,
