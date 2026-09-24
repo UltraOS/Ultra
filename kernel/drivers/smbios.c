@@ -297,23 +297,41 @@ static INIT_CODE error_t smbios_parse(
         non_empty = true;                                     \
     } while (0)
 
+static INIT_CODE bool smbios_name_starts_with_vendor(
+    const char *name, const char *vendor
+)
+{
+    struct string name_str, vendor_str;
+
+    name_str = STR(name);
+    vendor_str = STR(vendor);
+
+    if (name_str.size > vendor_str.size &&
+        name_str.text[vendor_str.size] != ' ')
+        return false;
+
+    return str_starts_with_caseless(name_str, vendor_str);
+}
+
 static INIT_CODE void smbios_setup_hardware_identity_string(void)
 {
     char ident_str[256];
     char *cursor;
     int this_write, bytes_left = sizeof(ident_str);
-    struct smbios_id id;
-    bool non_empty = false;
+    struct smbios_id id, name;
+    bool has_name, non_empty = false;
 
     cursor = ident_str;
+    has_name = smbios_get_id(SMBIOS_ID_SYSTEM_NAME, &name);
 
-    if (smbios_get_id(SMBIOS_ID_SYSTEM_MANUFACTURER, &id))
+    if (smbios_get_id(SMBIOS_ID_SYSTEM_MANUFACTURER, &id) &&
+        !(has_name && smbios_name_starts_with_vendor(name.str, id.str)))
         SMBIOS_ID_PRINT_ONE("%s", id.str);
 
-    if (smbios_get_id(SMBIOS_ID_SYSTEM_NAME, &id)) {
+    if (has_name) {
         if (non_empty)
             SMBIOS_ID_PRINT_ONE(" ");
-        SMBIOS_ID_PRINT_ONE("%s", id.str);
+        SMBIOS_ID_PRINT_ONE("%s", name.str);
     }
 
     if (smbios_get_id(SMBIOS_ID_BOARD_PRODUCT, &id)) {
