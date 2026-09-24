@@ -39,6 +39,17 @@ static inline bool str_equals_caseless(struct string lhs, struct string rhs)
 }
 
 bool str_starts_with(struct string str, struct string prefix);
+bool str_starts_with_with_cb(
+    struct string str, struct string prefix,
+    bool (*are_equal)(char, char)
+);
+
+static inline bool str_starts_with_caseless(
+    struct string str, struct string prefix
+)
+{
+    return str_starts_with_with_cb(str, prefix, chars_caseless_compare);
+}
 
 ssize_t str_find_with_cb(
     struct string str, bool (*is_match)(struct string str), size_t starting_at
