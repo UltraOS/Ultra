@@ -76,3 +76,12 @@ TEST_CASE(pop_token_null_string_has_no_tokens)
 
     ASSERT_EXHAUSTED(str);
 }
+
+TEST_CASE(starts_with_caseless)
+{
+    ASSERT_TRUE(str_starts_with_caseless(STR("Asus X"), STR("ASUS")));
+    ASSERT_TRUE(str_starts_with_caseless(STR("asus"), STR("ASUS")));
+    ASSERT_TRUE(str_starts_with_caseless(STR("asus"), STR("")));
+    ASSERT_FALSE(str_starts_with_caseless(STR("ASU"), STR("ASUS")));
+    ASSERT_FALSE(str_starts_with_caseless(STR("BSUS X"), STR("ASUS")));
+}

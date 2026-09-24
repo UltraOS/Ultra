@@ -51,6 +51,24 @@ bool str_starts_with(struct string str, struct string prefix)
     return true;
 }
 
+bool str_starts_with_with_cb(
+    struct string str, struct string prefix,
+    bool (*are_equal)(char, char)
+)
+{
+    size_t i;
+
+    if (prefix.size > str.size)
+        return false;
+
+    for (i = 0; i < prefix.size; ++i) {
+        if (!are_equal(str.text[i], prefix.text[i]))
+            return false;
+    }
+
+    return true;
+}
+
 ssize_t str_find_with_cb(
     struct string str, bool (*is_match)(struct string str), size_t offset
 )
