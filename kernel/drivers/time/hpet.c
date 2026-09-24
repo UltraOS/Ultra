@@ -65,6 +65,7 @@ static error_t hpet_init(void)
     error_t ret;
     uacpi_table tbl;
     struct acpi_hpet *hpet;
+    struct acpi_gas gas;
     phys_addr_t address;
     u64 capid, period, config;
     u8 bitness = 32;
@@ -77,14 +78,14 @@ static error_t hpet_init(void)
         return ENXIO;
 
     hpet = tbl.ptr;
-    if (hpet->address.address_space_id != ACPI_AS_ID_SYS_MEM) {
-        pr_warn(
-            "timer not in SystemMemory: %d\n",
-            hpet->address.address_space_id
-        );
+    gas = hpet->address;
+    uacpi_table_unref(&tbl);
+
+    if (gas.address_space_id != ACPI_AS_ID_SYS_MEM) {
+        pr_warn("timer not in SystemMemory: %d\n", gas.address_space_id);
         return ENOSYS;
     }
-    address = hpet->address.address;
+    address = gas.address;
 
     // Timer 31 ends at 0x3FF
     ret = io_window_map(address, 0x3FF + 1, &s_hpet_io);
