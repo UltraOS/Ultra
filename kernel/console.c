@@ -23,7 +23,7 @@ error_t register_console(struct console *con)
     con->next = g_consoles;
     g_consoles = con;
 
-    log_flush_console(con);
+    log_flush_consoles();
     return EOK;
 }
 

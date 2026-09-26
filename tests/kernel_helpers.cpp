@@ -43,9 +43,8 @@ void print(const char *msg, ...)
     va_end(vlist);
 }
 
-void log_flush_console(struct console *con)
+void log_flush_consoles(void)
 {
-    UNREFERENCED_PARAMETER(con);
 }
 
 #undef panic

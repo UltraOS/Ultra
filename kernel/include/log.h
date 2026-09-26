@@ -65,11 +65,8 @@ enum log_level {
 
 void vprint(const char *msg, va_list vlist);
 
-// Defined in console.h
-struct console;
-
-// Writes every record the console has not seen yet to it
-void log_flush_console(struct console *con);
+// Writes out every record to every console that hasn't yet been output by it
+void log_flush_consoles(void);
 
 PRINTF_DECL(1, 2)
 void print(const char *msg, ...);

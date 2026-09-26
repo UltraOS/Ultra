@@ -4,6 +4,8 @@
 #include <common/minmax.h>
 #include <common/string.h>
 #include <common/ctype.h>
+#include <common/atomic.h>
+#include <common/bit.h>
 
 #include <console.h>
 #include <log.h>
@@ -11,6 +13,7 @@
 #include <unwind.h>
 #include <log_ring.h>
 #include <param.h>
+#include <panic.h>
 
 #include <time/units.h>
 
@@ -200,7 +203,7 @@ static void format_record(
         out_buf_append(out, "\n", 1);
 }
 
-void log_flush_console(struct console *con)
+static void log_flush_console(struct console *con)
 {
     static char s_msg_buf[512], s_out_data[512 + 128];
 
@@ -242,12 +245,75 @@ void log_flush_console(struct console *con)
     }
 }
 
-static void print_flush(void)
+/*
+ * The whole flush state lives in one word, so every transition is a
+ * single compare-and-exchange. PENDING is only set when a writer context
+ * notices there's already an in-progress flush operation that is being
+ * performed by someone else (meaning it sees the OWNED bit was set). The
+ * context currently performing the flush operation then notices that later
+ * on and also flushes the new record left behind by the setter of PENDING.
+ *
+ * (There's one real downside with this scheme and it's that there's no flush
+ *  handover operation defined between writers, meaning the first writer to
+ *  acquire the OWNED bit, gets to flush every single newly inserted record by
+ *  other CPUs. This may lead to hard lockups if other CPUs do heavy-enough
+ *  logging. Fixing this is a TODO.)
+ */
+#define FLUSH_OWNED BIT_U32(0)
+#define FLUSH_PENDING BIT_U32(1)
+
+static u32 s_flush_state;
+
+static bool flush_try_acquire(void)
+{
+    u32 state, desired;
+
+    state = atomic_load_relaxed(&s_flush_state);
+
+    for (;;) {
+        desired = state ? state | FLUSH_PENDING : FLUSH_OWNED;
+
+        if (atomic_cmpxchg_acq_rel(&s_flush_state, &state, desired))
+            return state == 0;
+    }
+}
+
+static bool flush_release(void)
+{
+    u32 state = FLUSH_OWNED;
+
+    /*
+     * Fails when a record was left behind by another writer, which noticed
+     * there was already a flush in-progress that we owned.
+     */
+    if (atomic_cmpxchg_acq_rel(&s_flush_state, &state, 0))
+        return true;
+
+    /*
+     * Go back and take another pass so we flush the record(s) left behind by
+     * concurrent writers. Clear the pending bit so we notice if this happens
+     * again.
+     */
+    atomic_xchg(&s_flush_state, FLUSH_OWNED, MO_ACQ_REL);
+    return false;
+}
+
+void log_flush_consoles(void)
 {
     struct console *con;
 
-    for (con = g_consoles; con; con = con->next)
-        log_flush_console(con);
+    /*
+     * Always allow panic to take over flushing, we have no other way to make
+     * sure the interrupted context that was doing the flushing ever gets to
+     * run again.
+     */
+    if (!flush_try_acquire() && !panic_in_progress())
+        return;
+
+    do {
+        for (con = g_consoles; con; con = con->next)
+            log_flush_console(con);
+    } while (!flush_release());
 }
 
 static size_t extract_msg_level(const char *msg, enum log_level *out_level)
@@ -340,7 +406,7 @@ void vprint(const char *msg, va_list vlist)
     }
 
     log_ring_publish(&res);
-    print_flush();
+    log_flush_consoles();
 }
 
 void print(const char *msg, ...)
