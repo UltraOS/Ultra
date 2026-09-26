@@ -16,6 +16,11 @@ TEST_CASE(bit_constants_and_single_bit_macros)
     ASSERT_EQ(BIT_U16(9), (u16)0x0200);
     ASSERT_EQ(BIT_U32(31), 0x80000000u);
     ASSERT_EQ(BIT_U64(63), 0x8000000000000000ull);
+
+    ASSERT_EQ(sizeof(BIT_U8(0)), sizeof(u8));
+    ASSERT_EQ(sizeof(BIT_U16(0)), sizeof(u16));
+    ASSERT_EQ(sizeof(BIT_U32(0)), sizeof(u32));
+    ASSERT_EQ(sizeof(BIT_U64(0)), sizeof(u64));
 }
 
 TEST_CASE(bit_mask_helpers)
