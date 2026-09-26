@@ -17,7 +17,7 @@
 static bool s_panic_on_warn;
 parameter_with_flags(s_panic_on_warn, PARAM_RUNTIME_WRITABLE);
 
-static void finish_warn_report(struct registers *regs)
+void finish_warn_report(struct registers *regs)
 {
     if (s_panic_on_warn) {
         /*
