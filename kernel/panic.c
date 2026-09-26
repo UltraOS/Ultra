@@ -10,6 +10,11 @@
 
 static bool s_in_panic;
 
+bool panic_in_progress(void)
+{
+    return atomic_load_acquire(&s_in_panic);
+}
+
 #undef panic
 void panic(const char *fmt, ...)
 {
