@@ -21,3 +21,7 @@
         ".short " TO_STR(trap_flags) "\n"                       \
         ".popsection\n"                                         \
     )
+
+struct registers;
+
+void finish_warn_report(struct registers *regs);
