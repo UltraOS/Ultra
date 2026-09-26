@@ -7,7 +7,7 @@
 #define BITS_PER_BYTE CHAR_BIT
 #define BITS_PER_TYPE(type) (sizeof(type) * BITS_PER_BYTE)
 
-#define BIT_OF_TYPE(type, x) (((type)1) << (x))
+#define BIT_OF_TYPE(type, x) ((type)(((type)1) << (x)))
 #define BIT_U8(x) BIT_OF_TYPE(u8, (x))
 #define BIT_U16(x) BIT_OF_TYPE(u16, (x))
 #define BIT_U32(x) BIT_OF_TYPE(u32, (x))
