@@ -5,6 +5,8 @@
 #include <common/attributes.h>
 #include <common/helpers.h>
 
+bool panic_in_progress(void);
+
 NORETURN
 PRINTF_DECL(1, 2)
 void panic(const char *reason, ...);
