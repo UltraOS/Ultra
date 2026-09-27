@@ -52,6 +52,15 @@ GENERIC_DEPS = {
         "python-pyelftools",
         "tk",
     ],
+    "dnf": [
+        "xorriso",
+        "qemu-system-x86",
+        "qemu-system-aarch64",
+        "cmake",
+        "mtools",
+        "python3-pyelftools",
+        "python3-tkinter",
+    ],
     "brew": [
         "xorriso",
         "qemu",
