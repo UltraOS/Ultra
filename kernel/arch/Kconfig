@@ -33,6 +33,9 @@ config ARCH_PHYS_ADDR_WIDTH
     default 8 if (ARCH_64BIT || ARCH_FORCE_64BIT_PHYS_ADDR_WIDTH)
     default 4 if ARCH_32BIT
 
+config ARCH_HAS_UBSAN
+    bool
+
 if ARCH_X86_64
 rsource "x86_64/Kconfig"
 endif

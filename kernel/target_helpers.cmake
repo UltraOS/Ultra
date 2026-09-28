@@ -71,3 +71,14 @@ function(ultra_include_directories)
         ${ARGN}
     )
 endfunction()
+
+function(ultra_sources_no_ubsan)
+    ultra_sources(${ARGN})
+    set_property(
+        SOURCE ${ARGN}
+        TARGET_DIRECTORY ${ULTRA_KERNEL_OBJECTS}
+        APPEND
+        PROPERTY COMPILE_OPTIONS
+        -fno-sanitize=undefined
+    )
+endfunction()
