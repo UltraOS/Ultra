@@ -59,6 +59,38 @@ config VERBOSE_INIT_LEVELS
 config DEBUG_MM
     bool "Enable debug assertions for the memory management subsystem"
 
+menuconfig UBSAN
+    bool "Undefined behavior sanitizer"
+    depends on ARCH_HAS_UBSAN
+
+if UBSAN
+
+config UBSAN_BOUNDS
+    bool "Check array indices against their statically known bounds"
+    default y
+
+config UBSAN_SHIFT
+    bool "Check for shifts that are out of range"
+    default y
+
+config UBSAN_SIGNED_OVERFLOW
+    bool "Check for signed integer overflow"
+    default y
+
+config UBSAN_DIV_ZERO
+    bool "Check for integer division by zero"
+    depends on TOOLCHAIN_GCC
+
+config UBSAN_UNREACHABLE
+    bool "Check for control flow reaching __builtin_unreachable()"
+    default y
+
+config UBSAN_BOOL
+    bool "Check for loads of bool values that are neither 0 nor 1"
+    default y
+
+endif
+
 endmenu
 
 rsource "arch/Kconfig"

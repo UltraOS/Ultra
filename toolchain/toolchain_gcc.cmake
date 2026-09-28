@@ -12,3 +12,4 @@ set(CMAKE_RANLIB "${ULTRA_TOOLCHAIN_PREFIX}gcc-ranlib")
 set(CMAKE_NM "${ULTRA_TOOLCHAIN_PREFIX}gcc-nm")
 
 set(ULTRA_TOOLCHAIN_LTO_FLAGS "-flto;-flto-partition=none")
+set(ULTRA_TOOLCHAIN_UBSAN_BOUNDS "bounds")

@@ -4,6 +4,7 @@ include(build_stamp.cmake)
 include(target_helpers.cmake)
 include(module.cmake)
 include(ld_template.cmake)
+include(ubsan.cmake)
 
 # The base kernel executable that contains an empty stub symbol table
 set(
@@ -121,6 +122,11 @@ if (CONFIG_LTO)
 endif ()
 
 ultra_compile_options(-O${CONFIG_OPTIMIZATION_LEVEL})
+
+if (CONFIG_UBSAN)
+    setup_ubsan()
+    ultra_sources_no_ubsan(ubsan.c)
+endif ()
 
 ultra_link_options(
     -nostdlib
