@@ -11,4 +11,6 @@ kernel-source/
 bin/
 hyper-*
 toolchain/tools-*
+toolchain/*_sources
+toolchain/*.tar.gz*
 __pycache__

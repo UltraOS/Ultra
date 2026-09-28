@@ -52,14 +52,20 @@ jobs:
           submodules: true
 
       - if: ${{ matrix.toolchain == 'gcc' }}
+        id: toolchain-version
+        name: Get the toolchain version
+        run: |
+          python3 -c 'import scripts.build_utils.toolchain_builder as tb
+          print(f"key=gcc-{tb.GCC_VERSION}-binutils-{tb.BINUTILS_VERSION}")' \
+            >> "$GITHUB_OUTPUT"
+
+      - if: ${{ matrix.toolchain == 'gcc' }}
         id: toolchain-cache
         name: Restore the toolchain cache
         uses: actions/cache/restore@v4.2.2
-        env:
-          gcc-version: 15.1.0
         with:
           path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
-          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-gcc-${{ env.gcc-version }}"
+          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-${{ steps.toolchain-version.outputs.key }}"
 
       - name: Build the platform toolchain
         run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native --toolchain-only"
