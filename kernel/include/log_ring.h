@@ -3,6 +3,7 @@
 
 #include <common/error.h>
 #include <common/attributes.h>
+#include <common/bit.h>
 #include <common/string_container.h>
 
 /*
@@ -137,6 +138,15 @@ BUILD_BUG_ON(
     offset_of_after(struct log_info_record, level)
 );
 
+enum log_ring_read_flags : u32 {
+    /*
+     * Skip a record that was reserved and never published, as long as
+     * newer records exist. Only for readers that know such a record will
+     * never be finished, e.g. during a panic.
+     */
+    LOG_RING_READ_SKIP_UNPUBLISHED = BIT_U32(0),
+};
+
 /*
  * Read a record from the log ring.
  *
@@ -148,10 +158,20 @@ BUILD_BUG_ON(
  * sequence number (if the requested record no longer exists
  * due to being overwritten by other log messages) is written to 'out_rec'.
  */
-error_t log_ring_read(
+error_t log_ring_read_with_flags(
+    struct log_ring *ring, u64 seq_num, char *out_buf, size_t buf_size,
+    enum log_ring_read_flags flags, struct log_record *out_rec
+);
+
+static inline error_t log_ring_read(
     struct log_ring *ring, u64 seq_num, char *out_buf, size_t buf_size,
     struct log_record *out_rec
-);
+)
+{
+    return log_ring_read_with_flags(
+        ring, seq_num, out_buf, buf_size, 0, out_rec
+    );
+}
 
 /*
  * Check whether reading a record with 'seq_num' would succeed. Note that this
