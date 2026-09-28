@@ -213,10 +213,19 @@ static void log_flush_console(struct console *con)
     u64 sec, usec;
     int stamp_len;
     char stamp[32];
+    enum log_ring_read_flags read_flags = 0;
+
+    /*
+     * A panic may have interrupted a writer between reserving and
+     * publishing its record, which would hide everything printed after it
+     */
+    if (panic_in_progress())
+        read_flags |= LOG_RING_READ_SKIP_UNPUBLISHED;
 
     for (;;) {
-        ret = log_ring_read(
-            &s_log_ring, con->log_seq_num, s_msg_buf, sizeof(s_msg_buf), &rec
+        ret = log_ring_read_with_flags(
+            &s_log_ring, con->log_seq_num, s_msg_buf, sizeof(s_msg_buf),
+            read_flags, &rec
         );
         if (ret != EOK)
             break;
