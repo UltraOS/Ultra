@@ -165,7 +165,7 @@ static void format_record(
     const char *msg, size_t len, u8 level, enum console_flags flags
 )
 {
-    size_t prefix_len;
+    size_t prefix_len = 0;
     bool has_newline;
     const char *sgr;
 
@@ -179,7 +179,14 @@ static void format_record(
     // The reset and the newline that end the line must always fit
     out->capacity -= sizeof(SGR_RESET);
 
-    prefix_len = log_prefix_length(msg, len);
+    /*
+     * Never detect prefixes for emergency prints, their red background
+     * looks rather silly right next to a blue prefix on the default
+     * background.
+     */
+    if (likely(level != LOG_LEVEL_EMERG))
+        prefix_len = log_prefix_length(msg, len);
+
     if (prefix_len) {
         out_buf_append_cstr(out, SGR_PREFIX);
         out_buf_append(out, msg, prefix_len);
