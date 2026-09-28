@@ -181,6 +181,44 @@ TEST_CASE(extend_record)
     READ_ONE_EXPECT_EINVAL();
 }
 
+TEST_CASE(skip_unpublished)
+{
+    TEST_RING(RING_4K, 5);
+    struct log_ring_reservation reservation;
+    struct log_record record;
+
+    WRITE_ONE_EXPECT_SUCCESS("first");
+
+    // Reserved and never finished, like a writer interrupted by a panic
+    ASSERT_EQ(log_ring_reserve(ring, 8, SYSLOG_CRIT, &reservation), EOK);
+
+    WRITE_ONE_EXPECT_SUCCESS("third");
+
+    READ_ONE_EXPECT("first");
+    READ_ONE_EXPECT_EINVAL();
+
+    ASSERT_EQ(
+        log_ring_read_with_flags(
+            ring, seq, read_buf, sizeof(read_buf),
+            LOG_RING_READ_SKIP_UNPUBLISHED, &record
+        ),
+        EOK
+    );
+    ASSERT_EQ(record.seq_num, 2);
+    ASSERT_EQ(record.length, strlen("third"));
+    ASSERT_EQ(memcmp(read_buf, "third", record.length), 0);
+
+    // The newest record is never skipped, its writer may still finish it
+    ASSERT_EQ(log_ring_reserve(ring, 8, SYSLOG_CRIT, &reservation), EOK);
+    ASSERT_EQ(
+        log_ring_read_with_flags(
+            ring, 3, read_buf, sizeof(read_buf),
+            LOG_RING_READ_SKIP_UNPUBLISHED, &record
+        ),
+        EINVAL
+    );
+}
+
 #define MSG0 "00000000"
 #define MSG1 "11111111"
 #define MSG2 "22222222"

@@ -339,7 +339,8 @@ static error_t log_descriptor_read(
 }
 
 static error_t do_log_ring_read(
-    struct log_ring *ring, u64 *in_out_seq, struct log_record *out_rec
+    struct log_ring *ring, u64 *in_out_seq, enum log_ring_read_flags flags,
+    struct log_record *out_rec
 )
 {
     u64 tail_seq, seq = *in_out_seq;
@@ -372,7 +373,15 @@ static error_t do_log_ring_read(
          * we're done.
          */
         WARN_ON(ret != EINVAL);
-        break;
+
+        if (!(flags & LOG_RING_READ_SKIP_UNPUBLISHED))
+            break;
+
+        // The newest record is never skipped, its writer may still finish it
+        if (seq + 1 >= log_ring_next_assigned_sequence_number(ring))
+            break;
+
+        seq++;
     }
 
     *in_out_seq = seq;
@@ -393,7 +402,7 @@ static void update_last_published_sequence_number(struct log_ring *ring)
         for (;;) {
             new_id++;
 
-            ret = do_log_ring_read(ring, &new_id, nullptr);
+            ret = do_log_ring_read(ring, &new_id, 0, nullptr);
             if (ret != EOK)
                 break;
             cur_id = new_id;
@@ -670,9 +679,9 @@ void log_ring_reservation_set_facility(
     atomic_store_release(&info->facility, facility);
 }
 
-error_t log_ring_read(
+error_t log_ring_read_with_flags(
     struct log_ring *ring, u64 seq_num, char *out_buf, size_t buf_size,
-    struct log_record *out_rec
+    enum log_ring_read_flags flags, struct log_record *out_rec
 )
 {
     error_t ret;
@@ -680,7 +689,7 @@ error_t log_ring_read(
     if (out_rec != nullptr)
         out_rec->data = MAKE_STR(out_buf, buf_size);
 
-    ret = do_log_ring_read(ring, &seq_num, out_rec);
+    ret = do_log_ring_read(ring, &seq_num, flags, out_rec);
     if (ret == EOK && out_rec != nullptr)
         out_rec->data.size = MIN(buf_size, out_rec->length);
 
@@ -689,7 +698,7 @@ error_t log_ring_read(
 
 error_t log_ring_readable(struct log_ring *ring, u64 seq_num)
 {
-    return do_log_ring_read(ring, &seq_num, nullptr);
+    return do_log_ring_read(ring, &seq_num, 0, nullptr);
 }
 
 u64 log_ring_first_readable_sequence_number(struct log_ring *ring)
