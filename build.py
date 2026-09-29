@@ -478,6 +478,9 @@ def main() -> None:
                        help="CPU architecture to build the kernel for")
     build.add_argument("--config",
                        help="Configuration file to use for this build")
+    build.add_argument("--reset-config", action="store_true",
+                       help="Recreate the build directory's config from "
+                            "--config, discarding the changes made to it")
     build.add_argument("--menuconfig", action="store_true",
                        help="Run menuconfig to edit the current config file")
     build.add_argument("--guiconfig", action="store_true",
@@ -583,8 +586,8 @@ def main() -> None:
     os.makedirs(build_dir, exist_ok=True)
 
     args.config = os.path.join(build_dir, ".config")
-    if config_layers or not os.path.isfile(args.config):
-        cl.make_config(config_layers, args.config, args.toolchain, args.arch)
+    cl.prepare_config(args.config, config_layers, args.toolchain,
+                      args.arch, args.reset_config)
 
     if args.menuconfig or args.guiconfig:
         os.environ["KCONFIG_CONFIG"] = args.config
