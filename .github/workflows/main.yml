@@ -31,6 +31,20 @@ jobs:
           mypy *.py
           mypy scripts/
 
+  lint-kernel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Build the platform toolchain
+        run: "${{ github.workspace }}/build.py --toolchain clang --toolchain-only"
+
+      - name: Check the coding conventions
+        run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/x86_64-ci.config --toolchain clang --lint"
+
   build:
     runs-on: ${{ matrix.os }}
 
@@ -80,9 +94,18 @@ jobs:
       - name: Build the kernel
         run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/${{ matrix.arch }}-ci.config --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
       - name: Run the userspace unit tests
         run: "${{ github.workspace }}/build.py --unit-tests"
-
-      - if: ${{ matrix.toolchain == 'clang' && matrix.os == 'ubuntu-latest' }}
-        name: Check the coding conventions
-        run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/${{ matrix.arch }}-ci.config --toolchain ${{ matrix.toolchain }} --no-build --lint"
