@@ -43,7 +43,7 @@ jobs:
         run: "${{ github.workspace }}/build.py --toolchain clang --toolchain-only"
 
       - name: Check the coding conventions
-        run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/x86_64-ci.config --toolchain clang --lint"
+        run: "${{ github.workspace }}/build.py --toolchain clang --lint"
 
   build:
     runs-on: ${{ matrix.os }}
@@ -54,6 +54,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         arch: [x86_64]
         toolchain: [gcc, clang]
+        preset: [debug-lite, release]
         exclude:
           # FIXME: the GCC build somehow ends up being corrupted with
           #        libexec/cc1 containing garbage data.
@@ -92,7 +93,7 @@ jobs:
           key: ${{ steps.toolchain-cache.outputs.cache-primary-key }}
 
       - name: Build the kernel
-        run: "${{ github.workspace }}/build.py --config ${{ github.workspace }}/.github/configs/${{ matrix.arch }}-ci.config --toolchain ${{ matrix.toolchain }} --no-tune-native"
+        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --config ${{ matrix.preset }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
   unit-tests:
     runs-on: ${{ matrix.os }}
