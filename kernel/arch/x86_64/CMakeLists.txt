@@ -1,7 +1,8 @@
 include(CheckCompilerFlag)
 
+ultra_sources_no_lto(string.c)
+
 ultra_sources(
-    string.c
     apic.c
     vector_alloc.c
     lapic_domain.c

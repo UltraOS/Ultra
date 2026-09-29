@@ -82,3 +82,14 @@ function(ultra_sources_no_ubsan)
         -fno-sanitize=undefined
     )
 endfunction()
+
+function(ultra_sources_no_lto)
+    ultra_sources(${ARGN})
+    set_property(
+        SOURCE ${ARGN}
+        TARGET_DIRECTORY ${ULTRA_KERNEL_OBJECTS}
+        APPEND
+        PROPERTY COMPILE_OPTIONS
+        -fno-lto
+    )
+endfunction()
