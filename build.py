@@ -223,7 +223,23 @@ def build_ultra(
     )
 
 
-def make_hyper_config(arch: str) -> str:
+QEMU_HYPER_OPTIONS = """
+cmdline = "log-level=debug earlycon=e9,colored"
+
+# Hardcode a resolution that's good enough for local testing,
+# we don't need a huge QEMU window.
+video-mode:
+    width = 1024
+    height = 768
+"""
+
+IMAGE_TARGETS = {
+    "qemu": QEMU_HYPER_OPTIONS,
+    "baremetal": "",
+}
+
+
+def make_hyper_config(arch: str, target: str) -> str:
     return \
 f"""
 default-entry = ultra-{arch}
@@ -239,15 +255,7 @@ binary:
 page-table:
     levels = 5
     constraint = maximum
-
-cmdline = "log-level=debug earlycon=e9,colored"
-
-# Hardcode a resolution that's good enough for local testing,
-# we don't need a huge QEMU window.
-video-mode:
-    width = 1024
-    height = 768
-
+{IMAGE_TARGETS[target]}
 [ultra-aarch64]
 protocol = ultra
 higher-half-exclusive = true
@@ -269,7 +277,7 @@ def get_kernel_path(execution_node: str, build_dir: str) -> str:
 
 
 def make_hyper_image(
-    br_type: str, fs_type: str, arch: str, build_dir: str,
+    br_type: str, fs_type: str, arch: str, target: str, build_dir: str,
     hyper_installer: Optional[str], hyper_iso_br: Optional[str],
     hyper_uefi_binaries: List[str], image_path: str, force_regenerate: bool
 ) -> Optional[ultr.DiskImage]:
@@ -290,7 +298,7 @@ def make_hyper_image(
 
     return ultr.DiskImage(
         image_root_path, br_type, fs_type,
-        hyper_config=make_hyper_config(arch),
+        hyper_config=make_hyper_config(arch, target),
         hyper_uefi_binary_paths=hyper_uefi_binaries,
         hyper_iso_br_path=hyper_iso_br,
         hyper_installer_path=hyper_installer,
@@ -536,8 +544,11 @@ def main() -> None:
                            help="Build the toolchain and exit")
 
     image = parser.add_argument_group("Image")
-    image.add_argument("--make-image", action="store_true",
-                       help="Produce a bootable image after building")
+    image.add_argument("--make-image", nargs="?", const="qemu",
+                       choices=IMAGE_TARGETS.keys(), metavar="TARGET",
+                       help="Produce a bootable image after building, "
+                            "for QEMU or for real hardware with "
+                            "'baremetal' (default: qemu)")
     image.add_argument("--image-type", choices=["iso", "raw"], default="iso",
                        help="Image type to produce (with --make-image)")
     image.add_argument("--hyper-installer", type=str,
@@ -667,6 +678,11 @@ def main() -> None:
     if args.run_for is not None and is_debug:
         sys.exit("--run-for cannot be combined with a debug run")
 
+    image_target = args.make_image or "qemu"
+    if should_run and image_target != "qemu":
+        sys.exit(f"--make-image {image_target} cannot be combined "
+                 "with a QEMU run")
+
     if should_run or args.make_image:
         hyper_installer = args.hyper_installer
         hyper_iso_br = args.hyper_iso_loader
@@ -674,10 +690,15 @@ def main() -> None:
 
         if args.image_type == "iso":
             fs_type = "ISO9660"
-            image_name = "image.iso"
+            image_ext = "iso"
         else:
             fs_type = "FAT32"
-            image_name = "image.raw"
+            image_ext = "raw"
+
+        image_name = "image"
+        if image_target != "qemu":
+            image_name += f"-{image_target}"
+        image_name += f".{image_ext}"
 
         if not hyper_installer:
             hyper_installer = hyper_get_installer()
@@ -696,9 +717,9 @@ def main() -> None:
         image_path = os.path.join(build_dir, image_name)
 
         make_hyper_image(
-            "MBR", fs_type, args.arch, build_dir,
+            "MBR", fs_type, args.arch, image_target, build_dir,
             hyper_installer, hyper_iso_br, hyper_uefi_binary_paths,
-            image_path, args.make_image
+            image_path, args.make_image is not None
         )
 
     if should_run:
