@@ -20,6 +20,7 @@ try:
     sys.modules["kconfiglib"] = kc
 
     import scripts.build_utils.wsl_wrap as ww
+    import scripts.config_layers as cl
     import scripts.build_utils.package_manager as pm
     import scripts.build_utils.toolchain_builder as tb
     import scripts.build_utils.toolchain_args as ta
@@ -72,16 +73,6 @@ GENERIC_DEPS = {
 
 # How long --run-for waits for the first output before giving up
 QEMU_SILENT_BOOT_SECONDS = 30
-
-ARCH_TO_CONFIG_KEY = {
-    "x86_64": "ARCH_X86_64",
-    "aarch64": "ARCH_AARCH64",
-}
-
-TOOLCHAIN_TO_CONFIG_KEY = {
-    "clang": "TOOLCHAIN_CLANG",
-    "gcc": "TOOLCHAIN_GCC",
-}
 
 
 @contextmanager
@@ -473,44 +464,6 @@ def run_unit_tests(args: argparse.Namespace, this_os: str) -> int:
     return subprocess.run([binary]).returncode
 
 
-def root_kconfig() -> kc.Kconfig:
-    with enter_work_dir(pg.project_root()):
-        kconfig = kc.Kconfig(pg.project_root_relative("Kconfig"))
-
-    return kconfig
-
-
-def make_config_from_preset(
-    preset: str, out_path: str, toolchain: str, arch: str
-) -> str:
-    kconfig = root_kconfig()
-    kconfig.load_config(preset)
-
-    preset_arch = kconfig.syms["ARCH_STRING"].str_value
-    if arch != "auto" and arch != preset_arch:
-        sys.exit(f"--arch {arch} conflicts with {preset}, "
-                 f"which is for {preset_arch}")
-
-    toolchain_sym = kconfig.syms[TOOLCHAIN_TO_CONFIG_KEY[toolchain]]
-    preset_toolchain = toolchain_sym.choice.user_selection
-
-    if preset_toolchain is not None and preset_toolchain is not toolchain_sym:
-        print(f"Ignoring {preset_toolchain.name} from {preset}, "
-              f"building with --toolchain {toolchain}")
-
-    toolchain_sym.set_value("y")
-    kconfig.write_config(out_path)
-
-    return preset_arch
-
-
-def make_default_config(out_path: str, toolchain: str, arch: str) -> None:
-    kconfig = root_kconfig()
-    kconfig.syms[TOOLCHAIN_TO_CONFIG_KEY[toolchain]].set_value("y")
-    kconfig.syms[ARCH_TO_CONFIG_KEY[arch]].set_value("y")
-    kconfig.write_config(out_path)
-
-
 def main() -> None:
     ww.relaunch_in_wsl_if_windows()
     pg.set_project_root(os.path.dirname(os.path.abspath(__file__)))
@@ -628,8 +581,8 @@ def main() -> None:
         os.makedirs(build_dir, exist_ok=True)
 
         config = os.path.join(build_dir, ".config")
-        args.arch = make_config_from_preset(args.config, config,
-                                            args.toolchain, args.arch)
+        args.arch = cl.make_config_from_preset(args.config, config,
+                                               args.toolchain, args.arch)
         args.config = config
     else:
         if args.arch == "auto":
@@ -642,7 +595,7 @@ def main() -> None:
 
         args.config = os.path.join(build_dir, ".config")
         if not os.path.isfile(args.config):
-            make_default_config(args.config, args.toolchain, args.arch)
+            cl.make_default_config(args.config, args.toolchain, args.arch)
 
     if args.menuconfig or args.guiconfig:
         os.environ["KCONFIG_CONFIG"] = args.config
@@ -653,7 +606,7 @@ def main() -> None:
         module = mc if args.menuconfig else gc
 
         with enter_work_dir(pg.project_root()):
-            module.menuconfig(root_kconfig())
+            module.menuconfig(cl.root_kconfig())
         sys.exit(0)
 
     if args.toolchain_only:
