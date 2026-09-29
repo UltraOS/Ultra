@@ -10,6 +10,7 @@
 #define strlen __builtin_strlen
 #define strstr __builtin_strstr
 #define strcmp __builtin_strcmp
+#define strncmp __builtin_strncmp
 
 static ALWAYS_INLINE void *memzero(void *dest, size_t count)
 {

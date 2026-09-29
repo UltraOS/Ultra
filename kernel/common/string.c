@@ -130,4 +130,20 @@ int strcmp(const char *s1, const char *s2)
 }
 #endif
 
+#ifndef ARCH_HAS_CUSTOM_STRNCMP
+#undef strncmp
+int strncmp(const char *s1, const char *s2, size_t count)
+{
+    while (count--) {
+        if (*s1 != *s2 || *s1 == '\0')
+            return (int)(unsigned char)*s1 - (int)(unsigned char)*s2;
+
+        ++s1;
+        ++s2;
+    }
+
+    return 0;
+}
+#endif
+
 #pragma GCC diagnostic pop
