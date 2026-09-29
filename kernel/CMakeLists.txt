@@ -126,6 +126,7 @@ ultra_compile_options(
     -fmacro-prefix-map=${CMAKE_SOURCE_DIR}/=
     -std=gnu23
     -ffreestanding
+    -fstrict-flex-arrays=3
     -fasynchronous-unwind-tables
     -ggdb3
     -Wall
