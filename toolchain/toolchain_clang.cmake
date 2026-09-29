@@ -6,7 +6,7 @@ if (APPLE)
         OUTPUT_VARIABLE BREW_LLD_PREFIX
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=${BREW_LLD_PREFIX}/bin/ld.lld")
+    set(CMAKE_EXE_LINKER_FLAGS_INIT "--ld-path=${BREW_LLD_PREFIX}/bin/ld.lld")
 
     execute_process(
         COMMAND brew --prefix llvm
