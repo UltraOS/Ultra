@@ -171,28 +171,36 @@ def cmake_native_build_args(build_dir: str) -> List[str]:
     return ["--", "-Oline"]
 
 
-def cmake_build(
+def cmake_configure(
     args: argparse.Namespace, build_dir: str, extra_args: List[str] = [],
-    reconfigure_cb: Optional[Callable[[], None]] = None
+    reconfigure_cb: Optional[Callable[[], None]] = None,
+    refresh: bool = False
 ) -> None:
     cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
-    rerun_cmake = args.reconfigure or not os.path.isfile(cmake_cache)
+    has_cache = os.path.isfile(cmake_cache)
 
-    if rerun_cmake:
-        if reconfigure_cb is not None:
-            reconfigure_cb()
-        os.makedirs(build_dir, exist_ok=True)
+    if has_cache and refresh and not args.reconfigure:
+        subprocess.run(["cmake", "."], check=True, cwd=build_dir)
+        return
 
-        generator_args = []
-        if not os.path.isfile(cmake_cache) and shutil.which("ninja"):
-            generator_args = ["-G", "Ninja"]
-
-        subprocess.run(["cmake", "..", *generator_args, *extra_args],
-                       check=True, cwd=build_dir)
-    else:
+    if has_cache and not args.reconfigure:
         print("Not rerunning cmake since build directory already exists "
               "(--reconfigure)")
+        return
 
+    if reconfigure_cb is not None:
+        reconfigure_cb()
+    os.makedirs(build_dir, exist_ok=True)
+
+    generator_args = []
+    if not has_cache and shutil.which("ninja"):
+        generator_args = ["-G", "Ninja"]
+
+    subprocess.run(["cmake", "..", *generator_args, *extra_args],
+                   check=True, cwd=build_dir)
+
+
+def cmake_run_build(build_dir: str) -> None:
     subprocess.run(
         ["cmake", "--build", ".", "-j", str(os.cpu_count()),
          *cmake_native_build_args(build_dir)],
@@ -200,18 +208,30 @@ def cmake_build(
     )
 
 
-def build_ultra(
-    args: argparse.Namespace, build_dir: str
+def cmake_build(args: argparse.Namespace, build_dir: str) -> None:
+    cmake_configure(args, build_dir)
+    cmake_run_build(build_dir)
+
+
+def configure_ultra(
+    args: argparse.Namespace, build_dir: str, refresh: bool = False
 ) -> None:
     def rebuild_toolchain() -> None:
         # Only rerun toolchain builder if reconfigure is not artificial
         if not args.reconfigure:
             build_toolchain(args)
 
-    cmake_build(
+    cmake_configure(
         args, build_dir, [f"-DCONFIG_FILE={args.config}"],
-        rebuild_toolchain
+        rebuild_toolchain, refresh
     )
+
+
+def build_ultra(
+    args: argparse.Namespace, build_dir: str
+) -> None:
+    configure_ultra(args, build_dir)
+    cmake_run_build(build_dir)
 
 
 QEMU_HYPER_OPTIONS = """
@@ -453,6 +473,7 @@ def run_lint(args: argparse.Namespace, build_dir: str) -> int:
     if args.toolchain != "clang":
         sys.exit("--lint only works with --toolchain clang")
 
+    configure_ultra(args, build_dir, refresh=True)
     return lint.run(build_dir)
 
 
@@ -552,7 +573,7 @@ def main() -> None:
     tests.add_argument("--unit-tests", action="store_true",
                        help="Run the userspace test suite")
     tests.add_argument("--lint", action="store_true",
-                       help="Check the coding conventions after building,"
+                       help="Check the coding conventions without building,"
                             " needs the clang toolchain")
 
     args = parser.parse_args()
@@ -604,11 +625,11 @@ def main() -> None:
         build_toolchain(args)
         sys.exit(0)
 
-    if not args.no_build:
-        build_ultra(args, build_dir)
-
     if args.lint:
         sys.exit(run_lint(args, build_dir))
+
+    if not args.no_build:
+        build_ultra(args, build_dir)
 
     rc = bmc.run_from_args(args, args.arch,
                            get_kernel_path(args.arch, build_dir), build_dir)
