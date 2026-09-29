@@ -473,11 +473,9 @@ def main() -> None:
     )
 
     build = parser.add_argument_group("Build")
-    build.add_argument("--arch", default="auto",
-                       choices=["auto", "x86_64", "aarch64"],
-                       help="CPU architecture to build the kernel for "
-                            "(auto implies x86_64 or the config setting if "
-                            "--config is specified)")
+    build.add_argument("--arch", default="x86_64",
+                       choices=["x86_64", "aarch64"],
+                       help="CPU architecture to build the kernel for")
     build.add_argument("--config",
                        help="Configuration file to use for this build")
     build.add_argument("--menuconfig", action="store_true",
@@ -567,6 +565,9 @@ def main() -> None:
     if rc is not None:
         sys.exit(rc)
 
+    config_layers = []
+    build_dir_name = f"build-{args.toolchain}-{args.arch}"
+
     if args.config:
         if not os.path.isfile(args.config):
             raise RuntimeError(f"Invalid --config path: {args.config}")
@@ -575,27 +576,15 @@ def main() -> None:
         if preset_name.startswith("."):
             preset_name = "user-config"
 
-        build_dir = pg.project_root_relative(
-            f"build-{args.toolchain}-{preset_name}"
-        )
-        os.makedirs(build_dir, exist_ok=True)
+        build_dir_name += f"-{preset_name}"
+        config_layers.append(args.config)
 
-        config = os.path.join(build_dir, ".config")
-        args.arch = cl.make_config_from_preset(args.config, config,
-                                               args.toolchain, args.arch)
-        args.config = config
-    else:
-        if args.arch == "auto":
-            args.arch = "x86_64"
+    build_dir = pg.project_root_relative(build_dir_name)
+    os.makedirs(build_dir, exist_ok=True)
 
-        build_dir = pg.project_root_relative(
-            f"build-{args.toolchain}-{args.arch}"
-        )
-        os.makedirs(build_dir, exist_ok=True)
-
-        args.config = os.path.join(build_dir, ".config")
-        if not os.path.isfile(args.config):
-            cl.make_default_config(args.config, args.toolchain, args.arch)
+    args.config = os.path.join(build_dir, ".config")
+    if config_layers or not os.path.isfile(args.config):
+        cl.make_config(config_layers, args.config, args.toolchain, args.arch)
 
     if args.menuconfig or args.guiconfig:
         os.environ["KCONFIG_CONFIG"] = args.config
