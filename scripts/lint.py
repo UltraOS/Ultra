@@ -24,6 +24,8 @@ class Context(NamedTuple):
 
 Check = Callable[[Context], List[Finding]]
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 THIRD_PARTY = ("/uacpi/", "/flanterm/", "/boot/ultra_protocol.h")
 GENERATED_SOURCES = ("kernel_symbols", "build_banner")
 SOURCE_SUFFIXES = (".c", ".h", ".S", ".cpp", ".hpp")
@@ -310,8 +312,15 @@ def check_variable_prefixes(ctx: Context) -> List[Finding]:
     return list(seen)
 
 
+def check_configs(ctx: Context) -> List[Finding]:
+    from scripts.check_configs import check
+
+    return [Finding(path, line, message) for path, line, message in check()]
+
+
 CHECKS: Dict[str, Check] = {
     "comments": check_comments,
+    "configs": check_configs,
     "file-end": check_file_end,
     "includes": check_includes,
     "null": check_null,
@@ -321,8 +330,7 @@ CHECKS: Dict[str, Check] = {
 
 
 def run(build_dir: str, checks: Optional[List[str]] = None) -> int:
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ctx = Context(root, os.path.abspath(build_dir))
+    ctx = Context(ROOT, os.path.abspath(build_dir))
 
     findings: List[Finding] = []
     for name in checks or sorted(CHECKS):
@@ -352,6 +360,7 @@ def main() -> None:
                         help="Only run this check, may be repeated")
     args = parser.parse_args()
 
+    sys.path.insert(0, ROOT)
     sys.exit(run(args.build_dir, args.check))
 
 
