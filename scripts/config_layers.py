@@ -66,6 +66,14 @@ def load_layers(
     return kconfig
 
 
+def arch_base_config(arch: str) -> Optional[str]:
+    path = os.path.join(ROOT, "configs", "arch", arch, "base.config")
+    if not os.path.isfile(path):
+        return None
+
+    return path
+
+
 def display_path(path: str) -> str:
     path = os.path.abspath(path)
     if path.startswith(ROOT + os.sep):

@@ -569,6 +569,10 @@ def main() -> None:
         sys.exit(rc)
 
     config_layers = []
+    base_config = cl.arch_base_config(args.arch)
+    if args.config is None and base_config is not None:
+        config_layers.append(base_config)
+
     build_dir_name = f"build-{args.toolchain}-{args.arch}"
 
     if args.config:
