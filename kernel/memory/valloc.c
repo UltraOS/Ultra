@@ -486,7 +486,7 @@ static struct varea *varea_alloc_within(
     if (align == 0)
         align = PAGE_SIZE;
     BUG_ON(!IS_POWER_OF_TWO(align));
-    align = MAX(align, (size_t)PAGE_SIZE);
+    align = MAX(align, PAGE_SIZE);
 
     size = PAGE_ROUND_UP(size);
     if (unlikely(size == 0))

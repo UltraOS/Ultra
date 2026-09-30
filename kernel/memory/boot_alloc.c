@@ -296,7 +296,7 @@ static INIT_CODE error_t allocate_top_down(
         "invalid allocation size (%zu pages)", page_count
     );
 
-    align = MAX(align, (size_t)PAGE_SIZE);
+    align = MAX(align, PAGE_SIZE);
 
     while (i-- > 0) {
         struct memory_range *mr = &s_buffer[i];
