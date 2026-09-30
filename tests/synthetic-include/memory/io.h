@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/types.h>
-#include <arch/constants.h>
+#include <arch/memory.h>
 
 #include <test_harness.h>
 
