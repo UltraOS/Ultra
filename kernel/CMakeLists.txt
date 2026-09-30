@@ -33,21 +33,32 @@ set(
     ${ULTRA_KERNEL_BASE}
 )
 
-if (CONFIG_ARCH_UNKNOWN_BIT_WIDTH)
-        message(
+if (CONFIG_ARCH_64BIT AND CONFIG_ARCH_32BIT)
+    message(
         FATAL_ERROR
-        "Please fix your achitecture's Kconfig to specify bitness"
+        "Please fix your architecture's Kconfig to specify only one bitness"
+    )
+elseif (NOT CONFIG_ARCH_WIDTH)
+    message(
+        FATAL_ERROR
+        "Please fix your architecture's Kconfig to specify bitness"
     )
 endif ()
 
-if (CONFIG_ARCH_LITTLE_ENDIAN)
+if (CONFIG_ARCH_LITTLE_ENDIAN AND CONFIG_ARCH_BIG_ENDIAN)
+    message(
+        FATAL_ERROR
+        "Please fix your architecture's Kconfig to specify only one "
+        "endianness"
+    )
+elseif (CONFIG_ARCH_LITTLE_ENDIAN)
     ultra_compile_definitions(ULTRA_ARCH_LITTLE_ENDIAN)
 elseif (CONFIG_ARCH_BIG_ENDIAN)
     ultra_compile_definitions(ULTRA_ARCH_BIG_ENDIAN)
 else ()
     message(
         FATAL_ERROR
-        "Please fix your achitecture's Kconfig to specify endianness"
+        "Please fix your architecture's Kconfig to specify endianness"
     )
 endif ()
 
