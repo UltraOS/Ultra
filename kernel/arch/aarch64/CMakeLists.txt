@@ -28,5 +28,5 @@ add_ultra_ld_template(
 
 ultra_link_options(
     -T${ULTRA_LD_SCRIPT}
-    -z max-page-size=4096
+    -z max-page-size=${ULTRA_PAGE_SIZE}
 )
