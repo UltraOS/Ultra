@@ -135,6 +135,7 @@ ultra_compile_options(
     -Wimplicit-fallthrough
     -fomit-frame-pointer
     -Wdate-time
+    -Wundef
 )
 
 if (CONFIG_LTO)
