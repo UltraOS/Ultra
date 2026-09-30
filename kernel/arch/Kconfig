@@ -28,6 +28,31 @@ config ARCH_PHYS_ADDR_WIDTH
 config ARCH_HAS_UBSAN
     bool
 
+config ARCH_HAS_PAGE_SIZE_4K
+    bool
+
+choice
+    prompt "Page size"
+
+    config PAGE_SIZE_4K
+        bool "4KiB"
+        depends on ARCH_HAS_PAGE_SIZE_4K
+endchoice
+
+config PAGE_SHIFT
+    int
+    default 12 if PAGE_SIZE_4K
+
+# Declared here so the symbol always exists as an int. An arch with
+# a different cache line size gives it a default of its own.
+config ARCH_CACHE_LINE_SHIFT
+    int
+
+config CACHE_LINE_SHIFT
+    int
+    default ARCH_CACHE_LINE_SHIFT if ARCH_CACHE_LINE_SHIFT > 0
+    default 6
+
 if ARCH_X86_64
 rsource "x86_64/Kconfig"
 endif

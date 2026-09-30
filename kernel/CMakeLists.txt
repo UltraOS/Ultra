@@ -62,6 +62,13 @@ else ()
     )
 endif ()
 
+if (NOT CONFIG_PAGE_SHIFT)
+    message(
+        FATAL_ERROR
+        "Please fix your architecture's Kconfig to select a page size"
+    )
+endif ()
+
 ultra_compile_definitions(
     ULTRA_ARCH_WIDTH=${CONFIG_ARCH_WIDTH}
     ULTRA_ARCH_PHYS_ADDR_WIDTH=${CONFIG_ARCH_PHYS_ADDR_WIDTH}

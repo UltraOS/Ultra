@@ -3,7 +3,7 @@
 #include <common/types.h>
 #include <common/error.h>
 
-#include <arch/constants.h>
+#include <arch_constants.h>
 #include <memory/io.h>
 
 /*

@@ -3,7 +3,7 @@
 #include <common/types.h>
 #include <common/bit.h>
 
-#include <arch/constants.h>
+#include <arch_constants.h>
 #include <memory/vm_flags.h>
 #include <memory/io.h>
 

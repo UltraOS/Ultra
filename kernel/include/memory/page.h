@@ -39,7 +39,7 @@
 
 #include <memory/io.h>
 #include <memory/bug.h>
-#include <arch/constants.h>
+#include <arch_constants.h>
 #include <spinlock.h>
 
 /*

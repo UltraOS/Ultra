@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/attributes.h>
-#include <arch/constants.h>
+#include <arch_constants.h>
 
 #if HAS_BUILTIN(__builtin_align_up)
     #define ALIGN_UP(x, val) __builtin_align_up(x, val)

@@ -1,8 +1,7 @@
 #include <common/types.h>
 #include <common/attributes.h>
 
-#include <arch/constants.h>
-
+#include <arch_constants.h>
 #include <free_after_init.h>
 #include <init_level.h>
 
