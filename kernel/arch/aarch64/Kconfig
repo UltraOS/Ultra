@@ -15,3 +15,4 @@ config ARCH_AARCH64_BASE
     # Big endian mode is not supported
     select ARCH_LITTLE_ENDIAN
     select ARCH_64BIT
+    select ARCH_HAS_PAGE_SIZE_4K

@@ -5,7 +5,7 @@
 #include <common/helpers.h>
 #include <common/bit.h>
 
-#include <arch/constants.h>
+#include <arch_constants.h>
 
 #include <memory/alloc_behavior.h>
 #include <memory/page.h>

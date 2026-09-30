@@ -14,10 +14,9 @@
 #include <log_ring.h>
 #include <param.h>
 #include <panic.h>
+#include <arch_constants.h>
 
 #include <time/units.h>
-
-#include <arch/constants.h>
 
 MAKE_LOG_RING(s_log_ring, PAGE_SHIFT + 3, 6);
 

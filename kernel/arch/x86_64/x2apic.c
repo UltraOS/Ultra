@@ -2,7 +2,6 @@
 
 #include <arch/private/apic.h>
 #include <arch/private/msr.h>
-#include <arch/constants.h>
 
 #include <common/bit.h>
 

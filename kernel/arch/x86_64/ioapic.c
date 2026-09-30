@@ -4,12 +4,12 @@
 #include <arch/private/irq.h>
 #include <arch/private/apic.h>
 #include <arch/irq.h>
-#include <arch/constants.h>
 
 #include <private/irq.h>
 
 #include <log.h>
 #include <bug.h>
+#include <arch_constants.h>
 #include <init_level.h>
 #include <free_after_init.h>
 #include <spinlock.h>

@@ -10,7 +10,7 @@
 #endif
 
 /*
- * Included after any host headers so that the synthetic <arch/constants.h>
+ * Included after any host headers so that the synthetic <arch_constants.h>
  * (pulled in here) overrides a possibly leaked host PAGE_SIZE.
  */
 #include <common/align.h>

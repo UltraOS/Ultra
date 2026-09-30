@@ -2,7 +2,7 @@
 
 #include <linker.h>
 
-#include <arch/constants.h>
+#include <arch_constants.h>
 #include <private/init_level.h>
 
 #define PHDR_READ  (1 << 2)

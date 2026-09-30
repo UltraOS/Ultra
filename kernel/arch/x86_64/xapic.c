@@ -2,7 +2,6 @@
 
 #include <arch/private/apic.h>
 #include <arch/private/msr.h>
-#include <arch/constants.h>
 #include <arch/cpu_helpers.h>
 
 #include <irq_helpers.h>
@@ -13,6 +12,7 @@
 
 #include <log.h>
 #include <bug.h>
+#include <arch_constants.h>
 #include <free_after_init.h>
 
 static u64 s_xapic_phys_base;
