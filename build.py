@@ -477,7 +477,8 @@ def main() -> None:
                        choices=["x86_64", "aarch64"],
                        help="CPU architecture to build the kernel for")
     build.add_argument("--config",
-                       help="Configuration file to use for this build")
+                       help="Preset from configs/ or a config file to build "
+                            f"(default: {cl.DEFAULT_PRESET})")
     build.add_argument("--reset-config", action="store_true",
                        help="Recreate the build directory's config from "
                             "--config, discarding the changes made to it")
@@ -568,23 +569,17 @@ def main() -> None:
     if rc is not None:
         sys.exit(rc)
 
-    config_layers = []
-    base_config = cl.arch_base_config(args.arch)
-    if args.config is None and base_config is not None:
-        config_layers.append(base_config)
-
+    config_layers = cl.build_layers(args.config, args.arch)
+    config_file = config_layers[-1]
+    default_preset = cl.preset_path(cl.DEFAULT_PRESET)
     build_dir_name = f"build-{args.toolchain}-{args.arch}"
 
-    if args.config:
-        if not os.path.isfile(args.config):
-            raise RuntimeError(f"Invalid --config path: {args.config}")
+    if os.path.abspath(config_file) != os.path.abspath(default_preset):
+        config_name = os.path.splitext(os.path.basename(config_file))[0]
+        if config_name.startswith("."):
+            config_name = "user-config"
 
-        preset_name = os.path.splitext(os.path.basename(args.config))[0]
-        if preset_name.startswith("."):
-            preset_name = "user-config"
-
-        build_dir_name += f"-{preset_name}"
-        config_layers.append(args.config)
+        build_dir_name += f"-{config_name}"
 
     build_dir = pg.project_root_relative(build_dir_name)
     os.makedirs(build_dir, exist_ok=True)
