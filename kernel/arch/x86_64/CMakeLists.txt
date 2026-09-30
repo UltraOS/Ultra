@@ -72,7 +72,7 @@ add_ultra_ld_template(
 
 ultra_link_options(
     -T${ULTRA_LD_SCRIPT}
-    -Wl,-z,max-page-size=4096
+    -Wl,-z,max-page-size=${ULTRA_PAGE_SIZE}
 )
 
 add_subdirectory(hypervisor)
