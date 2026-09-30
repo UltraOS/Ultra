@@ -8,6 +8,7 @@
 #include <memory/io.h>
 #include <free_after_init.h>
 #include <init_level.h>
+#include <arch/constants.h>
 
 #include <common/byte_order.h>
 #include <common/string.h>

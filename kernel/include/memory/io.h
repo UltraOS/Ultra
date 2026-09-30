@@ -4,7 +4,7 @@
 #include <common/error.h>
 #include <common/bit.h>
 
-#include <arch/constants.h>
+#include <arch/memory.h>
 #include <arch/io.h>
 
 #define MAX_PHYS_ADDR BIT_OF_TYPE(phys_addr_t, MAX_PHYS_BITS)

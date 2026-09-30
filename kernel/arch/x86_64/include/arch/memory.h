@@ -9,3 +9,6 @@ extern virt_addr_t g_memory_map_base, g_memory_map_end;
 extern virt_addr_t g_valloc_base, g_valloc_end;
 #define VALLOC_BASE g_valloc_base
 #define VALLOC_END g_valloc_end
+
+extern u8 g_max_phys_bits;
+#define MAX_PHYS_BITS g_max_phys_bits
