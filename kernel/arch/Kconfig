@@ -5,20 +5,12 @@ config ARCH_LITTLE_ENDIAN
 config ARCH_BIG_ENDIAN
     bool
 
-config ARCH_UNKNOWN_ENDIAN
-    bool
-    default y if !ARCH_LITTLE_ENDIAN && !ARCH_BIG_ENDIAN
-
 # Arch bitness settings
 config ARCH_64BIT
     bool
 
 config ARCH_32BIT
     bool
-
-config ARCH_UNKNOWN_BIT_WIDTH
-    bool
-    default y if !ARCH_64BIT && !ARCH_32BIT
 
 config ARCH_WIDTH
     int
