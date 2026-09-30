@@ -13,6 +13,8 @@ ARCH_TO_CONFIG_KEY = {
     "aarch64": "ARCH_AARCH64",
 }
 
+DEFAULT_PRESET = "debug-lite"
+
 TOOLCHAIN_TO_CONFIG_KEY = {
     "clang": "TOOLCHAIN_CLANG",
     "gcc": "TOOLCHAIN_GCC",
@@ -66,12 +68,47 @@ def load_layers(
     return kconfig
 
 
+def preset_path(preset: str) -> str:
+    return os.path.join(ROOT, "configs", f"{preset}.config")
+
+
+def preset_config(preset: str) -> str:
+    if os.path.isfile(preset):
+        return preset
+
+    path = preset_path(preset)
+    if os.path.isfile(path):
+        return path
+
+    presets = sorted(
+        os.path.splitext(name)[0]
+        for name in os.listdir(os.path.join(ROOT, "configs"))
+        if name.endswith(".config")
+    )
+    sys.exit(f"--config {preset} is neither a file nor a preset, "
+             f"presets: {', '.join(presets)}")
+
+
 def arch_base_config(arch: str) -> Optional[str]:
     path = os.path.join(ROOT, "configs", "arch", arch, "base.config")
     if not os.path.isfile(path):
         return None
 
     return path
+
+
+def build_layers(config: Optional[str], arch: str) -> List[str]:
+    path = preset_path(DEFAULT_PRESET)
+    if config is not None:
+        path = preset_config(config)
+
+    base = arch_base_config(arch)
+    is_preset = (os.path.dirname(os.path.abspath(path)) ==
+                 os.path.join(ROOT, "configs"))
+    if base is None or not is_preset:
+        return [path]
+
+    return [base, path]
 
 
 def display_path(path: str) -> str:
