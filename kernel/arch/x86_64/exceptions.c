@@ -79,13 +79,13 @@ EXCEPTION_HANDLER(X86_EXCEPTION_UD)
 
 EXCEPTION_HANDLER(X86_EXCEPTION_PF)
 {
-    phys_addr_t addr;
+    virt_addr_t addr;
 
     if (handle_abortable_instruction(regs))
         return;
 
     asm volatile("mov %%cr2, %0" : "=r"(addr));
-    panic("Page fault at 0x%016llX", addr);
+    panic("Page fault at 0x%016zX", addr);
 }
 
 bool arch_handle_abortable_instruction(
