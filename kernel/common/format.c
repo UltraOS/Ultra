@@ -201,6 +201,22 @@ static void write_symbol(
     }
 }
 
+static void write_phys_addr(
+    struct fmt_buf_state *fb_state, struct fmt_spec *fm, phys_addr_t addr
+)
+{
+    if (fm->min_width == 0)
+        fm->min_width = sizeof(phys_addr_t) * 2;
+
+    fm->base = 16;
+    fm->uppercase = true;
+    fm->pad_char = '0';
+    fm->left_justify = false;
+
+    write_cstr(fb_state, "0x");
+    write_integer(fb_state, fm, addr);
+}
+
 static void consume_digits(struct string *fmt, struct string *out_digits)
 {
     out_digits->text = fmt->text;
@@ -431,6 +447,11 @@ static MAYBE_NERR(int) do_vsnprintf(
                 len = snprintf(unknown, sizeof(unknown), "<errno %d>",
                                *err_ptr);
                 write_many(fb_state, unknown, len);
+                continue;
+            }
+
+            if (consume(&fmt, STR("PA"))) {
+                write_phys_addr(fb_state, &fm, *va_arg(vlist, phys_addr_t*));
                 continue;
             }
 
