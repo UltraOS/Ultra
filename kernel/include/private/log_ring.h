@@ -74,7 +74,7 @@ struct log_ring {
     struct log_data_ring data_ring;
 };
 
-enum descriptor_state {
+enum descriptor_state : i32 {
     DESCRIPTOR_STATE_RESERVED  = 0b00,
     DESCRIPTOR_STATE_FREE      = 0b01,
     DESCRIPTOR_STATE_COMMITTED = 0b10,

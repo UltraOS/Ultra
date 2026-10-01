@@ -177,7 +177,7 @@ void INIT_CODE cpu_info_setup(struct x86_cpu_info *info)
     }
 
     if (info != &g_cpu_info) {
-        int i;
+        u32 i;
 
         /*
          * AND our features into the BSP feature table so that it contains the

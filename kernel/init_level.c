@@ -47,7 +47,7 @@ static const struct init_calls INIT_RODATA s_init_calls[] = {
 static enum init_level s_init_level = INIT_LEVEL_NONE;
 static bool s_in_progress = false;
 
-enum init_call_type {
+enum init_call_type : u32 {
     INIT_CALL_TYPE_AT,
     INIT_CALL_TYPE_PRE,
     INIT_CALL_TYPE_POST,

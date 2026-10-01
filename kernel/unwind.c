@@ -19,7 +19,7 @@
 
 #define DWARF_SP_REG __builtin_dwarf_sp_column()
 
-enum DW_EH_PE {
+enum DW_EH_PE : u32 {
     // The lower 4 bits indicate the format of the data
     DW_EH_PE_absptr = 0x00,
     DW_EH_PE_uleb128 = 0x01,
@@ -527,7 +527,7 @@ static error_t prepare_unwind_state(struct unwind_state *state)
 #define LOW_6_BITS(x) ((x) & ((1 << 6) - 1))
 #define AS_HIGH_2_BITS_OP(x) ((x) & ~((1 << 6) - 1))
 
-enum dw_cfa_opcode {
+enum dw_cfa_opcode : u32 {
     DW_CFA_nop = 0x00,
     DW_CFA_advance_loc1 = 0x02,
     DW_CFA_advance_loc2 = 0x03,

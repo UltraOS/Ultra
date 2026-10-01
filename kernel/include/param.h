@@ -9,7 +9,7 @@
 #include <common/bit.h>
 #include <free_after_init.h>
 
-enum param_flags {
+enum param_flags : u32 {
     /*
      * The value may be changed on a running system, the setter is invoked
      * with is_runtime set to true for such writes. Writing is always a

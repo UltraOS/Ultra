@@ -231,7 +231,7 @@ static void consume_digits(struct string *fmt, struct string *out_digits)
     }
 }
 
-enum parse_number_mode {
+enum parse_number_mode : u32 {
     PARSE_NUMBER_MODE_MAYBE,
     PARSE_NUMBER_MODE_MUST,
 };

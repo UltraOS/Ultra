@@ -44,7 +44,7 @@ struct PACKED smbios3_entrypoint {
 EXPECT_SIZEOF(struct smbios3_entrypoint, 0x18);
 
 // smbios_structure_hdr->type
-enum smbios_structure_type {
+enum smbios_structure_type : u32 {
     SMBIOS_STRUCTURE_TYPE_BIOS_INFORMATION = 0,
     SMBIOS_STRUCTURE_TYPE_SYSTEM_INFORMATION = 1,
     SMBIOS_STRUCTURE_TYPE_BOARD_INFORMATION = 2,

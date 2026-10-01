@@ -8,7 +8,7 @@
 #define PCI_CONFIG_SPACE_SIZE 256
 #define PCIE_CONFIG_SPACE_SIZE 4096
 
-enum pci_config_reg {
+enum pci_config_reg : u32 {
     PCI_CONFIG_VENDOR_ID = 0x00,
         #define PCI_VENDOR_ID_NONE 0xFFFF
 

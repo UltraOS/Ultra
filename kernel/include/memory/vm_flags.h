@@ -1,6 +1,8 @@
 #pragma once
 
-enum vm_prot {
+#include <common/types.h>
+
+enum vm_prot : u32 {
     VM_PROT_NONE = 0,
     VM_PROT_READ = 1 << 0,
     VM_PROT_WRITE = 1 << 1,

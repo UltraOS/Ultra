@@ -4,7 +4,7 @@
 
 #include <common/types.h>
 
-enum char_type {
+enum char_type : u32 {
     CHAR_TYPE_CONTROL = 1 << 0,
     CHAR_TYPE_SPACE = 1 << 1,
     CHAR_TYPE_BLANK = 1 << 2,
