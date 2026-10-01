@@ -69,7 +69,7 @@ static INIT_CODE void range_emplace_at(size_t idx, struct memory_range *mr)
     range_insert(mr, idx, s_entry_count++);
 }
 
-enum allow_one_above {
+enum allow_one_above : u32 {
     ALLOW_ONE_ABOVE_NO = 0,
     ALLOW_ONE_ABOVE_YES,
 };

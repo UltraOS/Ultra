@@ -11,7 +11,7 @@
 
 #include <common/bit.h>
 
-enum hpet_reg {
+enum hpet_reg : u32 {
     HPET_REG_CAPID = 0x00,
         #define REV_ID MAKE_BIT_MASK(7, 0)
         #define NUM_TIM_CAP MAKE_BIT_MASK(12, 8)

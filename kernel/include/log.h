@@ -2,6 +2,7 @@
 
 #include <common/attributes.h>
 #include <common/helpers.h>
+#include <common/types.h>
 
 #include <stdarg.h>
 
@@ -21,7 +22,7 @@
 #define SYSLOG_DEBUG   7
 #define LOG_LEVEL_CONTINUED 8
 
-enum log_level {
+enum log_level : u32 {
     LOG_LEVEL_EMERG   = SYSLOG_EMERG,
     LOG_LEVEL_ALERT   = SYSLOG_ALERT,
     LOG_LEVEL_CRIT    = SYSLOG_CRIT,

@@ -3,7 +3,7 @@
 #include <common/types.h>
 #include <common/bit.h>
 
-enum apic_reg {
+enum apic_reg : u32 {
     APIC_REG_ID = 0x20,
     APIC_REG_VERSION = 0x30,
     APIC_REG_TPR = 0x80,
@@ -60,7 +60,7 @@ enum apic_reg {
 
 #define APIC_ID_NONE 0xFFFF'FFFF
 
-enum apic_mode {
+enum apic_mode : u32 {
     APIC_MODE_NONE = 0,
     APIC_MODE_X,
     APIC_MODE_X2,

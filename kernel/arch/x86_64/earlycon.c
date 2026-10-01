@@ -31,7 +31,7 @@ static struct console s_e9_console = {
     .write = e9_write,
 };
 
-enum ns16550_reg {
+enum ns16550_reg : u32 {
     NS16550_REG_THR = 0,
     NS16550_REG_IER = 1,
     NS16550_REG_FCR = 2,
@@ -165,7 +165,7 @@ unmap:
     return ret;
 }
 
-enum ns16550_source_kind {
+enum ns16550_source_kind : u32 {
     NS16550_SOURCE_NONE,
     NS16550_SOURCE_IO,
     NS16550_SOURCE_PCI,
@@ -403,7 +403,7 @@ static error_t INIT_CODE ns16550_console_init(
     return EOK;
 }
 
-enum earlycon_mode {
+enum earlycon_mode : u32 {
     EARLYCON_MODE_NONE,
     EARLYCON_MODE_E9,
     EARLYCON_MODE_NS16550,

@@ -6,7 +6,7 @@
 
 #include <per_cpu.h>
 
-enum x86_feature_dword {
+enum x86_feature_dword : u32 {
     X86_FEATURE_DWORD_1_C = 0,
     X86_FEATURE_DWORD_1_D,
     X86_FEATURE_DWORD_7_B,
@@ -29,7 +29,7 @@ enum x86_feature_dword {
 #define X86_FEATURE_DWORD_BIT(name, bit) \
     ((X86_FEATURE_DWORD_##name * sizeof(u32) * BITS_PER_BYTE) + (bit))
 
-enum x86_feature {
+enum x86_feature : u32 {
     X86_FEATURE_SSE3 = X86_FEATURE_DWORD_BIT(1_C, 0),
     X86_FEATURE_PCLMULQDQ = X86_FEATURE_DWORD_BIT(1_C, 1),
     X86_FEATURE_DTES64 = X86_FEATURE_DWORD_BIT(1_C, 2),

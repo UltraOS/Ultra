@@ -28,7 +28,7 @@
 #define IOAPIC_IOWIN 0x10
 #define IOAPIC_EOIR 0x40
 
-enum ioapic_reg {
+enum ioapic_reg : u32 {
     IOAPIC_REG_ID = 0x00,
         #define IOAPIC_ID MAKE_BIT_MASK(31, 24)
 

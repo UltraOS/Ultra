@@ -1,6 +1,8 @@
 #pragma once
 
-enum memory_order {
+#include <common/types.h>
+
+enum memory_order : u32 {
     MO_RELAXED = __ATOMIC_RELAXED,
     MO_CONSUME = __ATOMIC_CONSUME,
     MO_ACQ_REL = __ATOMIC_ACQ_REL,

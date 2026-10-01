@@ -68,7 +68,7 @@ struct irq_spec {
     enum irq_trigger trigger;
 };
 
-enum irq_result {
+enum irq_result : u32 {
     IRQ_RESULT_UNHANDLED,
     IRQ_RESULT_HANDLED,
 };

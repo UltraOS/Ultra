@@ -1,6 +1,8 @@
 #pragma once
 
-enum alloc_behavior {
+#include <common/types.h>
+
+enum alloc_behavior : u32 {
     /*
      * Generic kernel allocation, may sleep, use IO, reclaim,
      * retry, or otherwise do things that may cause unpredictable
