@@ -440,7 +440,7 @@ static void check_access(
 
 out_invalid:
     panic(
-        "Invalid %zu-byte %s IO window [%p len=%zu, type=%d] at %zu: %s",
+        "Invalid %zu-byte %s IO window [%p len=%zu, type=%u] at %zu: %s",
         width, type, iow->mmio_address, iow->length, iow->type, offset, why
     );
 }

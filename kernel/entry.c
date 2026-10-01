@@ -120,7 +120,7 @@ static error_t INIT_CODE boot_info_init(void)
     );
 
     pr_info(
-        "direct map set at 0x%016zX (%d pt levels)\n",
+        "direct map set at 0x%016zX (%u pt levels)\n",
         g_direct_map_base, pi->page_table_depth
     );
 

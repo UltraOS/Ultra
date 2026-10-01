@@ -41,7 +41,7 @@ static error_t INIT_CODE x86_early_init(void)
     cr0_setup();
 
     pr_info(
-        "Running on %s (%d:%d:%d)\n",
+        "Running on %s (%u:%u:%u)\n",
         g_cpu_info.name_string, g_cpu_info.family, g_cpu_info.model,
         g_cpu_info.stepping
     );

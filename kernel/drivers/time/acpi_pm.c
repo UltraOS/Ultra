@@ -47,7 +47,7 @@ static error_t pm_timer_init(void)
     if (fadt->hdr.revision >= 3) {
         if (fadt->x_pm_tmr_blk.address_space_id != ACPI_AS_ID_SYS_IO) {
             pr_warn(
-                "timer not in SystemIO: %d\n",
+                "timer not in SystemIO: %u\n",
                 fadt->x_pm_tmr_blk.address_space_id
             );
             return ENOSYS;
@@ -61,7 +61,7 @@ static error_t pm_timer_init(void)
     if (!port)
         return EOK;
 
-    pr_info("at 0x%04X, %d-bit counter\n", port, bitness);
+    pr_info("at 0x%04X, %u-bit counter\n", port, bitness);
 
     ret = io_window_map_pio(port, 4, &s_pm_io);
     if (is_error(ret)) {

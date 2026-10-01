@@ -87,7 +87,7 @@ static NORETURN void corrupted_varea(
 )
 {
     panic(
-        "Corrupted varea %p [0x%016zX - 0x%016zX] (type=%d): %s",
+        "Corrupted varea %p [0x%016zX - 0x%016zX] (type=%u): %s",
         area, area->start, area->end, area->type, why
     );
 }

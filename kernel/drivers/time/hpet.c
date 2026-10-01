@@ -82,7 +82,7 @@ static error_t hpet_init(void)
     uacpi_table_unref(&tbl);
 
     if (gas.address_space_id != ACPI_AS_ID_SYS_MEM) {
-        pr_warn("timer not in SystemMemory: %d\n", gas.address_space_id);
+        pr_warn("timer not in SystemMemory: %u\n", gas.address_space_id);
         return ENOSYS;
     }
     address = gas.address;
@@ -107,7 +107,7 @@ static error_t hpet_init(void)
         return ENXIO;
     }
 
-    pr_info("at %8pPA, %d-bit counter\n", &address, bitness);
+    pr_info("at %8pPA, %u-bit counter\n", &address, bitness);
 
     config = hpet_read(HPET_REG_CONFIG);
     config |= ENABLE_CNF;

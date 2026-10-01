@@ -130,7 +130,7 @@ static error_t decode_format(
         goto out_copy_data;
 
     default:
-        pr_warn("unhandled DWARF format %d\n", format);
+        pr_warn("unhandled DWARF format %u\n", format);
         return ENOSYS;
     }
 
@@ -178,7 +178,7 @@ static error_t decode_value(
     case DW_EH_PE_funcrel:
     case DW_EH_PE_aligned:
     default:
-        pr_warn("unhandled DWARF scaling %d\n", scaling);
+        pr_warn("unhandled DWARF scaling %u\n", scaling);
         return ENOSYS;
     }
 
