@@ -107,7 +107,7 @@ static error_t hpet_init(void)
         return ENXIO;
     }
 
-    pr_info("at 0x%llX, %d-bit counter\n", address, bitness);
+    pr_info("at %8pPA, %d-bit counter\n", &address, bitness);
 
     config = hpet_read(HPET_REG_CONFIG);
     config |= ENABLE_CNF;

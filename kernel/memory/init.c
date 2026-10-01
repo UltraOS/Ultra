@@ -92,8 +92,8 @@ static void INIT_CODE do_for_each_memory_map_range(
              * because no sane firmware produces this.
              */
             pr_warn(
-                "skipping out of bounds range 0x%llx-0x%llx (type %u)\n",
-                p_start, p_end, type
+                "skipping out of bounds range %pPA-%pPA (type %u)\n",
+                &p_start, &p_end, type
             );
             continue;
         }
@@ -475,8 +475,8 @@ static void INIT_CODE split_and_map_range(
         size_to_human_short(page_size, &hs);
 
         pr_debug(
-            "  [0x%016llX - 0x%016llX] %zu%c pages\n",
-            mr->start, mr->end, hs.value, *hs.unit
+            "  [%pPA - %pPA] %zu%c pages\n",
+            &mr->start, &mr->end, hs.value, *hs.unit
         );
 
         direct_map_pt5(ctx, mr, prot);
@@ -488,8 +488,8 @@ static void INIT_CODE direct_map_one(
 )
 {
     pr_debug(
-        "direct mapping [0x%016llX - 0x%016llX] as:\n",
-        start, end
+        "direct mapping [%pPA - %pPA] as:\n",
+        &start, &end
     );
     split_and_map_range(
         ctx, start, end, VM_PROT_KERNEL | VM_PROT_READ | VM_PROT_WRITE
@@ -570,6 +570,7 @@ static void INIT_CODE build_kernel_mappings(struct direct_mapping_ctx *ctx)
 static error_t INIT_CODE kernel_address_space_setup(void)
 {
     struct direct_mapping_ctx ctx = { 0 };
+    phys_addr_t max_supported;
 
     ctx.pt = pt_early_page_alloc();
 
@@ -588,10 +589,12 @@ static error_t INIT_CODE kernel_address_space_setup(void)
     );
 
     g_kernel_address_space.pt = ctx.pt;
+
+    max_supported = MAX_PHYS_ADDR;
     pr_lvl(
-        s_max_ram_addr <= MAX_PHYS_ADDR ? LOG_LEVEL_INFO : LOG_LEVEL_WARN,
-        "max RAM address: %llX, max supported: %llX\n",
-        s_max_ram_addr, MAX_PHYS_ADDR
+        s_max_ram_addr <= max_supported ? LOG_LEVEL_INFO : LOG_LEVEL_WARN,
+        "max RAM address: %1pPA, max supported: %1pPA\n",
+        &s_max_ram_addr, &max_supported
     );
     return EOK;
 }
@@ -746,8 +749,8 @@ static void INIT_CODE kernel_memory_setup_one(
     v_end = ALIGN_UP(v_end, PAGE_SIZE);
 
     pr_debug(
-        "populating memmap [0x%016zX/%0llX - 0x%016zX/%0llX]\n",
-        v_start, p_start, v_end, p_end
+        "populating memmap [0x%016zX/%1pPA - 0x%016zX/%1pPA]\n",
+        v_start, &p_start, v_end, &p_end
     );
 
     memory_map_populate_pt5(v_start, v_end);

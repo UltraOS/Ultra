@@ -1029,7 +1029,7 @@ static void validate_physical_range(
 out_panic:
     panic(
         "attempting to %s() an invalid physical address "
-        "0x%016llX (%zu bytes): %s", caller, start, size, why
+        "%pPA (%zu bytes): %s", caller, &start, size, why
     );
 }
 

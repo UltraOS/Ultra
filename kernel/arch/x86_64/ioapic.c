@@ -300,10 +300,10 @@ static INIT_CODE bool ioapic_check_collisions(
 
 out_collision:
     pr_warn(
-        "unable to register IOAPIC[%u] (0x%llX, GSI[%u->%u]): "
-        "%s collides with existing IOAPIC[%u] (0x%llX, GSI[%u->%u])\n",
-        ioapic->id, ioapic->base, ioapic->gsi_base, ioapic->gsi_last, which,
-        other->id, other->base, other->gsi_base, other->gsi_last
+        "unable to register IOAPIC[%u] (%8pPA, GSI[%u->%u]): "
+        "%s collides with existing IOAPIC[%u] (%8pPA, GSI[%u->%u])\n",
+        ioapic->id, &ioapic->base, ioapic->gsi_base, ioapic->gsi_last, which,
+        other->id, &other->base, other->gsi_base, other->gsi_last
     );
     return true;
 }
@@ -787,8 +787,8 @@ void INIT_CODE ioapic_register(u8 id, phys_addr_t base, u32 gsi_base)
     spin_lock_init(&new_ioapic->lock);
     s_num_ioapics++;
     pr_info(
-        "registered IOAPIC[%u] (0x%llX, GSI[%u->%u])\n",
-        new_ioapic->id, new_ioapic->base,
+        "registered IOAPIC[%u] (%8pPA, GSI[%u->%u])\n",
+        new_ioapic->id, &new_ioapic->base,
         new_ioapic->gsi_base, new_ioapic->gsi_last
     );
     return;
@@ -797,7 +797,7 @@ out_unmap:
     io_window_unmap(&new_ioapic->iow);
 out_no_reg:
     pr_warn(
-        "unable to register IOAPIC[%u] (0x%llX, GSI base %u): %s\n",
-        id, base, gsi_base, why
+        "unable to register IOAPIC[%u] (%8pPA, GSI base %u): %s\n",
+        id, &base, gsi_base, why
     );
 }
