@@ -217,10 +217,12 @@ def compiler_command(entry: Dict[str, Any]) -> Optional[List[str]]:
 
 
 Variable = Tuple[Optional[str], int, str, str]
+Located = Tuple[Optional[str], int, str]
 
 
 class ScanResult(NamedTuple):
     variables: List[Variable]
+    enums: List[Located]
 
 
 class AstScanner:
@@ -228,6 +230,7 @@ class AstScanner:
         self.current_file: Optional[str] = None
         self.current_line = 0
         self.variables: List[Variable] = []
+        self.enums: List[Located] = []
 
     # clang omits the file and the line of a location when they repeat the last
     # ones it printed, in document order, so both are carried along here
@@ -262,17 +265,34 @@ class AstScanner:
             elif not in_function and storage in (None, "extern"):
                 self.variables.append((where, line, node["name"], "g_"))
 
+        if kind == "EnumDecl" and node.get("inner"):
+            self.note_enum(node, where, line)
+
         for child in node.get("inner", []):
             if isinstance(child, dict):
                 self.walk(child, in_function or kind == "FunctionDecl")
+
+    def note_enum(
+        self, node: Dict[str, Any], where: Optional[str], line: int
+    ) -> None:
+        name = node.get("name")
+        if node.get("fixedUnderlyingType") is not None:
+            return
+
+        what = f"enum {name}" if name else "an anonymous enum"
+        self.enums.append((
+            where, line,
+            f"{what} has no type, declare it as "
+            f"enum {name or '<name>'} : <type>"
+        ))
 
 
 def scan_translation_unit(entry: Dict[str, Any]) -> ScanResult:
     source = entry["file"]
     if not source.endswith(".c") or is_third_party(source):
-        return ScanResult([])
+        return ScanResult([], [])
     if any(name in source for name in GENERATED_SOURCES):
-        return ScanResult([])
+        return ScanResult([], [])
 
     command = compiler_command(entry)
     if command is None:
@@ -289,7 +309,7 @@ def scan_translation_unit(entry: Dict[str, Any]) -> ScanResult:
 
     scanner = AstScanner()
     scanner.walk(json.loads(proc.stdout), False)
-    return ScanResult(scanner.variables)
+    return ScanResult(scanner.variables, scanner.enums)
 
 
 @functools.lru_cache(maxsize=None)
@@ -331,6 +351,24 @@ def check_variable_prefixes(ctx: Context) -> List[Finding]:
     return list(seen)
 
 
+def located_findings(
+    ctx: Context, pick: Callable[[ScanResult], List[Located]]
+) -> List[Finding]:
+    seen: Set[Finding] = set()
+
+    for unit in scan_all(ctx):
+        for where, line, message in pick(unit):
+            path = kernel_path(ctx, where)
+            if path is not None:
+                seen.add(Finding(path, line, message))
+
+    return list(seen)
+
+
+def check_enum_types(ctx: Context) -> List[Finding]:
+    return located_findings(ctx, lambda unit: unit.enums)
+
+
 def check_configs(ctx: Context) -> List[Finding]:
     from scripts.check_configs import check
 
@@ -340,6 +378,7 @@ def check_configs(ctx: Context) -> List[Finding]:
 CHECKS: Dict[str, Check] = {
     "comments": check_comments,
     "configs": check_configs,
+    "enum-types": check_enum_types,
     "file-end": check_file_end,
     "includes": check_includes,
     "null": check_null,
