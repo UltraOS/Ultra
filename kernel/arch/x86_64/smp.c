@@ -176,7 +176,7 @@ static INIT_CODE error_t register_cpu(u32 apic_id)
 
     if (g_num_present_cpus >= ULTRA_MAX_CPUS) {
         pr_warn(
-            "Skipping CPU 0x%08X, configured MAX_CPUS is 0x%08X\n",
+            "Skipping CPU 0x%08X, configured MAX_CPUS is %d\n",
             apic_id, ULTRA_MAX_CPUS
         );
 

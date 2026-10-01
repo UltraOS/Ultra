@@ -528,7 +528,7 @@ out:
 
     if (bytes_left) {
         pr_debug(
-            "table size truncated %d -> %d\n",
+            "table size truncated %u -> %u\n",
             s_ctx.size, s_ctx.size - bytes_left
         );
         s_ctx.size -= bytes_left;

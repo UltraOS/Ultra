@@ -61,7 +61,7 @@ enum log_level {
 
 // For a level only known at runtime
 #define LOG_LEVEL_FMT LOG_LEVEL_PREFIX "%c"
-#define LOG_LEVEL_ARG(lvl) ('0' + (lvl))
+#define LOG_LEVEL_ARG(lvl) ((char)('0' + (lvl)))
 
 void vprint(const char *msg, va_list vlist);
 
