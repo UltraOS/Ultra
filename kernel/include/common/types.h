@@ -46,6 +46,7 @@ typedef u64 phys_addr_t;
 #endif
 
 typedef ptr_t virt_addr_t;
+typedef size_t pfn_t;
 
 #define LITERAL_SUFFIX_i32
 #define LITERAL_SUFFIX_i64 ll
