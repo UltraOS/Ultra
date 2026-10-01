@@ -135,7 +135,7 @@ static error_t INIT_CODE early_io_map_init(void)
     }
 
     pr_debug(
-        "early MMIO region at 0x%016zX, slots: %zu of %luK, %zu of %dK\n",
+        "early MMIO region at 0x%016zX, slots: %zu of %zuK, %zu of %dK\n",
         EARLY_IO_MAP_BASE, NUM_EARLY_SMALL_SLOTS, PT1_SIZE / 1024,
         NUM_EARLY_LARGE_SLOTS, NUM_BYTES_PER_LARGE_EARLY_SLOT / 1024
     );
