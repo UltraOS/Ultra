@@ -77,7 +77,7 @@ static INIT_CODE void smbios3_setup(void *base)
 
     if (unlikely(entry->size < sizeof(struct smbios3_entrypoint) ||
                  entry->size > 0xFF)) {
-        pr_err("invalid entrypoint size %d\n", entry->size);
+        pr_err("invalid entrypoint size %u\n", entry->size);
         return;
     }
 
@@ -118,7 +118,7 @@ static INIT_CODE void smbios2_setup(void *base)
 
     if (unlikely(entry->size < sizeof(struct smbios2_entrypoint) ||
                  entry->size > 0xFF)) {
-        pr_err("invalid entrypoint size %d\n", entry->size);
+        pr_err("invalid entrypoint size %u\n", entry->size);
         return;
     }
 
@@ -416,7 +416,7 @@ static error_t INIT_CODE smbios_setup(void)
     if (!smbios_available())
         return ENXIO;
 
-    pr_info("version %d.%d.%d\n", s_ctx.major, s_ctx.minor, s_ctx.docrev);
+    pr_info("version %u.%u.%u\n", s_ctx.major, s_ctx.minor, s_ctx.docrev);
 
     ret = smbios_for_each(smbios_parse, nullptr);
     if (is_error(ret)) {
@@ -467,7 +467,7 @@ error_t smbios_for_each(smbios_callback cb, void *user)
         hdr = cursor;
         if (unlikely(hdr->size > bytes_left || hdr->size < sizeof(*hdr))) {
             pr_err(
-                "invalid entry[%d]: size %d (with %u bytes left)\n",
+                "invalid entry[%d]: size %u (with %u bytes left)\n",
                 item_idx, hdr->size, bytes_left
             );
             break;

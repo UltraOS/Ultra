@@ -114,7 +114,7 @@ static void announce_new_counter(struct counter_device *dev, u64 hz, bool best)
     }
 
     pr_info(
-        "%s @ %s [rated %d], unattended up to %s%s\n",
+        "%s @ %s [rated %u], unattended up to %s%s\n",
         dev->name, freq_str, dev->rating, wrap_str, best ? " [best]" : ""
     );
 }

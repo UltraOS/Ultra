@@ -143,7 +143,7 @@ static INIT_CODE void irq_resolve_activation(
         break;
     default:
         pr_warn(
-            "invalid polarity value %d for irq %d, assuming active high\n",
+            "invalid polarity value %u for irq %u, assuming active high\n",
             *in_out_polarity, irq
         );
         FALLTHROUGH;
@@ -167,7 +167,7 @@ static INIT_CODE void irq_resolve_activation(
         break;
     default:
         pr_warn(
-            "invalid triggering value %d for irq %d, assuming edge\n",
+            "invalid triggering value %u for irq %u, assuming edge\n",
             *in_out_triggering, irq
         );
         FALLTHROUGH;

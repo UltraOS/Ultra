@@ -272,7 +272,7 @@ static INIT_CODE uacpi_iteration_decision detect_isos(
 
     if (unlikely(iso->bus != 0)) {
         pr_warn(
-            "ignoring MADT IRQ %d override for a non-ISA bus %d\n",
+            "ignoring MADT IRQ %u override for a non-ISA bus %u\n",
             iso->source, iso->bus
         );
         return UACPI_ITERATION_DECISION_CONTINUE;
@@ -280,7 +280,7 @@ static INIT_CODE uacpi_iteration_decision detect_isos(
 
     if (unlikely(iso->source >= NUM_ISA_IRQS)) {
         pr_warn(
-            "MADT IRQ %d override outside of ISA range, ignored\n",
+            "MADT IRQ %u override outside of ISA range, ignored\n",
             iso->source
         );
         return UACPI_ITERATION_DECISION_CONTINUE;
