@@ -269,27 +269,34 @@ static inline ptr_t page_to_block_ptr(const struct page *page)
 
 extern struct page *g_memory_map;
 
-#define PHYS_ADDR_TO_PFN(phys_addr) ((phys_addr) >> PAGE_SHIFT)
-#define PFN_TO_PHYS_ADDR(pfn) ((phys_addr_t)(pfn) << PAGE_SHIFT)
+static inline pfn_t phys_to_pfn(phys_addr_t addr)
+{
+    return addr >> PAGE_SHIFT;
+}
 
-static inline struct page *pfn_to_page(phys_addr_t pfn)
+static inline phys_addr_t pfn_to_phys(pfn_t pfn)
+{
+    return (phys_addr_t)pfn << PAGE_SHIFT;
+}
+
+static inline struct page *pfn_to_page(pfn_t pfn)
 {
     return &g_memory_map[pfn];
 }
 
-static inline phys_addr_t page_to_pfn(const struct page *page)
+static inline pfn_t page_to_pfn(const struct page *page)
 {
-    return (phys_addr_t)(page - g_memory_map);
+    return (pfn_t)(page - g_memory_map);
 }
 
 static inline struct page *phys_to_page(phys_addr_t addr)
 {
-    return pfn_to_page(PHYS_ADDR_TO_PFN(addr));
+    return pfn_to_page(phys_to_pfn(addr));
 }
 
 static inline phys_addr_t page_to_phys(const struct page *page)
 {
-    return PFN_TO_PHYS_ADDR(page_to_pfn(page));
+    return pfn_to_phys(page_to_pfn(page));
 }
 
 static inline void *page_to_virt(const struct page *page)

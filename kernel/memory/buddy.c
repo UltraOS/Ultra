@@ -52,7 +52,7 @@ static inline void page_set_meta(struct page *page, ptr_t meta)
  */
 static void do_free_block(struct page_block *block)
 {
-    phys_addr_t pfn, buddy_pfn;
+    pfn_t pfn, buddy_pfn;
     struct page *page, *buddy;
     u8 order;
 
@@ -61,7 +61,7 @@ static void do_free_block(struct page_block *block)
     pfn = page_to_pfn(page);
 
     while (order < BUDDY_MAX_ORDER) {
-        buddy_pfn = pfn ^ BIT_PHYS(order);
+        buddy_pfn = pfn ^ BIT(order);
         buddy = pfn_to_page(buddy_pfn);
 
         if (page_meta(buddy) != META_MAKE_BLOCK(PAGE_TYPE_BUDDY, order))
@@ -70,7 +70,7 @@ static void do_free_block(struct page_block *block)
         list_remove(&buddy->buddy.link);
         s_ctx.free_areas[order].num_free--;
 
-        pfn &= ~BIT_PHYS(order);
+        pfn &= ~BIT(order);
         page = pfn_to_page(pfn);
 
         order++;
@@ -91,7 +91,7 @@ static void do_free_block(struct page_block *block)
 static struct page *grab_free_pages(u8 order)
 {
     struct page *page, *buddy;
-    phys_addr_t pfn;
+    pfn_t pfn;
     u8 cur_order;
 
     if (order > BUDDY_MAX_ORDER)
@@ -118,7 +118,7 @@ static struct page *grab_free_pages(u8 order)
     while (cur_order > order) {
         cur_order--;
 
-        buddy = pfn_to_page(pfn + BIT_PHYS(cur_order));
+        buddy = pfn_to_page(pfn + BIT(cur_order));
         page_set_meta(buddy, META_MAKE_BLOCK(PAGE_TYPE_BUDDY, cur_order));
 
         list_insert_next(
@@ -385,12 +385,10 @@ void free_frozen_blocks_bulk(struct page_block **blocks, size_t count)
 }
 
 // Memmap population granularity, see kernel_memory_setup_one()
-#define BUDDY_WINDOW_PAGES PHYS_ADDR_TO_PFN(BUDDY_MAX_SIZE)
-#define INIT_PFN_NONE ((phys_addr_t)-1)
+#define BUDDY_WINDOW_PAGES (BUDDY_MAX_SIZE >> PAGE_SHIFT)
+#define INIT_PFN_NONE ((pfn_t)-1)
 
-static void INIT_CODE zero_memmap_entries(
-    phys_addr_t pfn_start, phys_addr_t pfn_end
-)
+static void INIT_CODE zero_memmap_entries(pfn_t pfn_start, pfn_t pfn_end)
 {
     if (pfn_start >= pfn_end)
         return;
@@ -407,11 +405,9 @@ static void INIT_CODE zero_memmap_entries(
  * ALIGN_DOWN from the next one, whole windows in between are not
  * mapped and must not be touched.
  */
-static void INIT_CODE zero_memmap_gap(
-    phys_addr_t prev_end_pfn, phys_addr_t start_pfn
-)
+static void INIT_CODE zero_memmap_gap(pfn_t prev_end_pfn, pfn_t start_pfn)
 {
-    phys_addr_t hi, lo;
+    pfn_t hi, lo;
 
     hi = MIN(ALIGN_UP(prev_end_pfn, BUDDY_WINDOW_PAGES), start_pfn);
     lo = MAX(ALIGN_DOWN(start_pfn, BUDDY_WINDOW_PAGES), prev_end_pfn);
@@ -444,14 +440,15 @@ static void INIT_CODE init_free_block(struct page *page, u8 order)
 }
 
 // End pfn of the previously walked boot range
-static phys_addr_t INIT_DATA s_init_pfn_cursor;
+static pfn_t INIT_DATA s_init_pfn_cursor;
 
 static void INIT_CODE buddy_init_ram_range(
     phys_addr_t p_start, phys_addr_t p_end, void *ctx_ptr
 )
 {
     struct boot_alloc_for_each_ctx *ctx = ctx_ptr;
-    phys_addr_t pfn_start, pfn_end, p_cur = p_start;
+    phys_addr_t p_cur = p_start;
+    pfn_t pfn_start, pfn_end;
     struct page *page;
     u8 order;
     u64 next_size;
@@ -460,8 +457,8 @@ static void INIT_CODE buddy_init_ram_range(
     MM_BUG_ON(!IS_ALIGNED(p_start, PAGE_SIZE));
     MM_BUG_ON(!IS_ALIGNED(p_end, PAGE_SIZE));
 
-    pfn_start = PHYS_ADDR_TO_PFN(p_start);
-    pfn_end = PHYS_ADDR_TO_PFN(p_end);
+    pfn_start = phys_to_pfn(p_start);
+    pfn_end = phys_to_pfn(p_end);
 
     if (s_init_pfn_cursor == INIT_PFN_NONE) {
         zero_memmap_entries(

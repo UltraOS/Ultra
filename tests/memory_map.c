@@ -19,7 +19,7 @@
  * stay zeroed, i.e. PAGE_TYPE_RESERVED, so they are never mistaken for
  * free buddies.
  */
-#define MEMORY_MAP_PADDING_PAGES PHYS_ADDR_TO_PFN(BUDDY_MAX_SIZE)
+#define MEMORY_MAP_PADDING_PAGES (BUDDY_MAX_SIZE >> PAGE_SHIFT)
 
 struct page *g_memory_map;
 static uint64_t s_num_pages;

@@ -525,7 +525,7 @@ TEST_CASE(buddy_init_reserved_gap)
     ASSERT_ORDER_FREE(0, 2);
     ASSERT_ORDER_FREE(1, 0);
 
-    reserved = pfn_to_page(0x1000 >> PAGE_SHIFT);
+    reserved = pfn_to_page(phys_to_pfn(0x1000));
     ASSERT_EQ(page_type(reserved), PAGE_TYPE_RESERVED);
 }
 
