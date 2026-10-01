@@ -216,11 +216,18 @@ def compiler_command(entry: Dict[str, Any]) -> Optional[List[str]]:
     return command + ["-fsyntax-only", "-w", "-Xclang", "-ast-dump=json"]
 
 
-class VariableScanner:
+Variable = Tuple[Optional[str], int, str, str]
+
+
+class ScanResult(NamedTuple):
+    variables: List[Variable]
+
+
+class AstScanner:
     def __init__(self) -> None:
         self.current_file: Optional[str] = None
         self.current_line = 0
-        self.found: List[Tuple[Optional[str], int, str, str]] = []
+        self.variables: List[Variable] = []
 
     # clang omits the file and the line of a location when they repeat the last
     # ones it printed, in document order, so both are carried along here
@@ -251,29 +258,27 @@ class VariableScanner:
             storage = node.get("storageClass")
 
             if storage == "static":
-                self.found.append((where, line, node["name"], "s_"))
+                self.variables.append((where, line, node["name"], "s_"))
             elif not in_function and storage in (None, "extern"):
-                self.found.append((where, line, node["name"], "g_"))
+                self.variables.append((where, line, node["name"], "g_"))
 
         for child in node.get("inner", []):
             if isinstance(child, dict):
                 self.walk(child, in_function or kind == "FunctionDecl")
 
 
-def scan_translation_unit(
-    entry: Dict[str, Any]
-) -> List[Tuple[Optional[str], int, str, str]]:
+def scan_translation_unit(entry: Dict[str, Any]) -> ScanResult:
     source = entry["file"]
     if not source.endswith(".c") or is_third_party(source):
-        return []
+        return ScanResult([])
     if any(name in source for name in GENERATED_SOURCES):
-        return []
+        return ScanResult([])
 
     command = compiler_command(entry)
     if command is None:
         sys.exit(
-            f"{source} was not compiled with clang, the variable name check"
-            " needs a clang build"
+            f"{source} was not compiled with clang, the checks that read the"
+            " AST need a clang build"
         )
 
     proc = subprocess.run(
@@ -282,32 +287,46 @@ def scan_translation_unit(
     if proc.returncode != 0:
         sys.exit(f"cannot parse {source}:\n{proc.stderr}")
 
-    scanner = VariableScanner()
+    scanner = AstScanner()
     scanner.walk(json.loads(proc.stdout), False)
-    return scanner.found
+    return ScanResult(scanner.variables)
 
 
-def check_variable_prefixes(ctx: Context) -> List[Finding]:
+@functools.lru_cache(maxsize=None)
+def scan_all(ctx: Context) -> List[ScanResult]:
     database = os.path.join(ctx.build_dir, "compile_commands.json")
     with open(database) as f:
         entries = json.load(f)
 
     with ThreadPoolExecutor(os.cpu_count()) as pool:
-        per_unit = list(pool.map(scan_translation_unit, entries))
+        return list(pool.map(scan_translation_unit, entries))
 
+
+def kernel_path(ctx: Context, where: Optional[str]) -> Optional[str]:
+    if where is None:
+        return None
+
+    path = os.path.relpath(os.path.realpath(where), ctx.root)
+    if not path.startswith("kernel/") or is_third_party(path):
+        return None
+
+    return path
+
+
+def check_variable_prefixes(ctx: Context) -> List[Finding]:
     seen: Set[Finding] = set()
-    for where, line, name, prefix in (v for unit in per_unit for v in unit):
-        if where is None or name.startswith(prefix):
-            continue
 
-        path = os.path.relpath(os.path.realpath(where), ctx.root)
-        if not path.startswith("kernel/") or is_third_party(path):
-            continue
+    for unit in scan_all(ctx):
+        for where, line, name, prefix in unit.variables:
+            path = kernel_path(ctx, where)
+            if path is None or name.startswith(prefix):
+                continue
 
-        kind = "static" if prefix == "s_" else "global"
-        seen.add(Finding(
-            path, line, f"{kind} variable '{name}' must start with {prefix}"
-        ))
+            kind = "static" if prefix == "s_" else "global"
+            seen.add(Finding(
+                path, line,
+                f"{kind} variable '{name}' must start with {prefix}"
+            ))
 
     return list(seen)
 
