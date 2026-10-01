@@ -406,8 +406,8 @@ static INIT_CODE error_t allocate_within(
 
 out_invalid_allocation:
     BUG_WITH_MSG(
-        "invalid allocation: %zu pages within 0x%016llX -> 0x%016llX",
-         page_count, lower_limit, upper_limit
+        "invalid allocation: %zu pages within %pPA -> %pPA",
+         page_count, &lower_limit, &upper_limit
     );
 }
 
@@ -580,14 +580,14 @@ void INIT_CODE boot_free(phys_addr_t address, size_t num_pages)
     };
 
     if (unlikely(!maybe_grow_buffer())) {
-        pr_warn("leaking memory at 0x%016llX (%zu pages)\n", address, num_pages);
+        pr_warn("leaking memory at %pPA (%zu pages)\n", &address, num_pages);
         return;
     }
 
     mr_idx = find_range(address, ALLOW_ONE_ABOVE_NO);
     BUG_ON_WITH_MSG(
-        mr_idx < 0, "invalid free at 0x%016llX (%zu pages)",
-        address, num_pages
+        mr_idx < 0, "invalid free at %pPA (%zu pages)",
+        &address, num_pages
     );
 
     allocate_out_of(mr_idx, &freed_range);
@@ -610,8 +610,7 @@ static void INIT_CODE boot_alloc_add_one(
 
     if (boot_alloc_type == MEMORY_FREE) {
         pr_info(
-            "adding memory 0x%016llX -> 0x%016llX\n",
-            range.physical_address, range.physical_address + MR_SIZE(&range)
+            "adding memory %pPA -> %pPA\n", &start, &end
         );
     }
 
