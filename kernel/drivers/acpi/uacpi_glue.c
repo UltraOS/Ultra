@@ -18,7 +18,13 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address)
 
 void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 {
-    return io_window_map_cached(addr, len);
+    void *virt;
+
+    virt = io_window_map_cached(addr, len);
+    if (unlikely(virt == nullptr))
+        return UACPI_MAP_FAILED;
+
+    return virt;
 }
 
 void uacpi_kernel_unmap(void *addr, uacpi_size len)
