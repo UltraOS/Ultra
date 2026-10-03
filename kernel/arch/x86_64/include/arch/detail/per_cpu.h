@@ -19,12 +19,25 @@
 #define this_cpu_write_32(val, x) (X86_APPLY_SEG_GS(val) = (x))
 #define this_cpu_write_64(val, x) (X86_APPLY_SEG_GS(val) = (x))
 
-#define this_cpu_add_8(val, x) (X86_APPLY_SEG_GS(val) += (x))
-#define this_cpu_add_16(val, x) (X86_APPLY_SEG_GS(val) += (x))
-#define this_cpu_add_32(val, x) (X86_APPLY_SEG_GS(val) += (x))
-#define this_cpu_add_64(val, x) (X86_APPLY_SEG_GS(val) += (x))
+/*
+ * This uses inline assembly instead of raw C with __seg_gs because debug
+ * builds at O0 make some of these operations RMW and thus not compatible
+ * with this_cpu_* semantics, which are assumed to be atomic.
+ */
+#define X86_THIS_CPU_MODIFY(insn, constraint, type, val, x) \
+    asm volatile(                                           \
+        insn " %[value], %%gs:%[var]"                       \
+        : [var] "+m" (val)                                  \
+        : [value] constraint ((type)(x))                    \
+        : "cc"                                              \
+    )
 
-#define this_cpu_sub_8(val, x) (X86_APPLY_SEG_GS(val) -= (x))
-#define this_cpu_sub_16(val, x) (X86_APPLY_SEG_GS(val) -= (x))
-#define this_cpu_sub_32(val, x) (X86_APPLY_SEG_GS(val) -= (x))
-#define this_cpu_sub_64(val, x) (X86_APPLY_SEG_GS(val) -= (x))
+#define this_cpu_add_8(val, x) X86_THIS_CPU_MODIFY("addb", "qi", u8, val, x)
+#define this_cpu_add_16(val, x) X86_THIS_CPU_MODIFY("addw", "ri", u16, val, x)
+#define this_cpu_add_32(val, x) X86_THIS_CPU_MODIFY("addl", "ri", u32, val, x)
+#define this_cpu_add_64(val, x) X86_THIS_CPU_MODIFY("addq", "re", u64, val, x)
+
+#define this_cpu_sub_8(val, x) X86_THIS_CPU_MODIFY("subb", "qi", u8, val, x)
+#define this_cpu_sub_16(val, x) X86_THIS_CPU_MODIFY("subw", "ri", u16, val, x)
+#define this_cpu_sub_32(val, x) X86_THIS_CPU_MODIFY("subl", "ri", u32, val, x)
+#define this_cpu_sub_64(val, x) X86_THIS_CPU_MODIFY("subq", "re", u64, val, x)
