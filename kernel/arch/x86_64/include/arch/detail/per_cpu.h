@@ -41,3 +41,63 @@
 #define this_cpu_sub_16(val, x) X86_THIS_CPU_MODIFY("subw", "ri", u16, val, x)
 #define this_cpu_sub_32(val, x) X86_THIS_CPU_MODIFY("subl", "ri", u32, val, x)
 #define this_cpu_sub_64(val, x) X86_THIS_CPU_MODIFY("subq", "re", u64, val, x)
+
+/*
+ * Don't use xchg here, which implies the lock prefix when dealing with a
+ * memory operand. We don't need such semantics for per-cpu private variables,
+ * so a cmpxchg loop suffices.
+ */
+#define X86_THIS_CPU_XCHG(suffix, constraint, type, val, x) ({ \
+    type xchg_old, xchg_new;                                   \
+                                                               \
+    xchg_new = (type)(ptr_t)(typeof(val))(x);                  \
+    asm volatile(                                              \
+        "mov" suffix " %%gs:%[var], %[old]\n"                  \
+        "1:\n"                                                 \
+        "cmpxchg" suffix " %[new], %%gs:%[var]\n"              \
+        "jnz 1b"                                               \
+        : [old] "=&a" (xchg_old), [var] "+m" (val)             \
+        : [new] constraint (xchg_new)                          \
+        : "cc"                                                 \
+    );                                                         \
+                                                               \
+    (typeof(val))(ptr_t)xchg_old;                              \
+})
+
+#define this_cpu_xchg_8(val, x)             \
+    X86_THIS_CPU_XCHG("b", "q", u8, val, x)
+#define this_cpu_xchg_16(val, x)             \
+    X86_THIS_CPU_XCHG("w", "r", u16, val, x)
+#define this_cpu_xchg_32(val, x)             \
+    X86_THIS_CPU_XCHG("l", "r", u32, val, x)
+#define this_cpu_xchg_64(val, x)             \
+    X86_THIS_CPU_XCHG("q", "r", u64, val, x)
+
+#define X86_THIS_CPU_CMPXCHG(                                                \
+    suffix, constraint, type, val, expected, desired                         \
+) ({                                                                         \
+    type cmpxchg_old, cmpxchg_new;                                           \
+    bool cmpxchg_done;                                                       \
+                                                                             \
+    cmpxchg_old = (type)(ptr_t)(*(expected));                                \
+    cmpxchg_new = (type)(ptr_t)(typeof(val))(desired);                       \
+    asm volatile(                                                            \
+        "cmpxchg" suffix " %[new], %%gs:%[var]"                              \
+        : "=@ccz" (cmpxchg_done), [old] "+a" (cmpxchg_old), [var] "+m" (val) \
+        : [new] constraint (cmpxchg_new)                                     \
+    );                                                                       \
+                                                                             \
+    if (!cmpxchg_done)                                                       \
+        *(expected) = (typeof(val))(ptr_t)cmpxchg_old;                       \
+                                                                             \
+    cmpxchg_done;                                                            \
+})
+
+#define this_cpu_cmpxchg_8(val, expected, desired)             \
+    X86_THIS_CPU_CMPXCHG("b", "q", u8, val, expected, desired)
+#define this_cpu_cmpxchg_16(val, expected, desired)             \
+    X86_THIS_CPU_CMPXCHG("w", "r", u16, val, expected, desired)
+#define this_cpu_cmpxchg_32(val, expected, desired)             \
+    X86_THIS_CPU_CMPXCHG("l", "r", u32, val, expected, desired)
+#define this_cpu_cmpxchg_64(val, expected, desired)             \
+    X86_THIS_CPU_CMPXCHG("q", "r", u64, val, expected, desired)

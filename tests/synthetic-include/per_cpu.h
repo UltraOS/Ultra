@@ -26,5 +26,25 @@ extern ptr_t g_per_cpu_offset[];
 #define this_cpu_inc(var) this_cpu_add(var, 1)
 #define this_cpu_dec(var) this_cpu_sub(var, 1)
 
+#define this_cpu_xchg(var, x) ({ \
+    typeof(var) cxchg_ret;       \
+                                 \
+    cxchg_ret = (var);           \
+    (var) = (x);                 \
+    cxchg_ret;                   \
+})
+
+#define this_cpu_cmpxchg(var, expected, desired) ({ \
+    bool ccmpxchg_ret;                              \
+                                                    \
+    ccmpxchg_ret = (var) == *(expected);            \
+    if (ccmpxchg_ret)                               \
+        (var) = (desired);                          \
+    else                                            \
+        *(expected) = (var);                        \
+                                                    \
+    ccmpxchg_ret;                                   \
+})
+
 #define per_cpu_ptr(ptr, cpu_number) \
     PTR_ADD_HIDE_UB(ptr, g_per_cpu_offset[cpu_number])
