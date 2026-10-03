@@ -39,6 +39,7 @@ void malloc_phys_range(uint64_t start, uint64_t size);
 
 // Done automatically after each test case
 void reset_phys_ranges(void);
+void test_task_reset(void);
 
 uint64_t translate_virt_to_phys(void* virt);
 void *translate_phys_to_virt(uint64_t phys);

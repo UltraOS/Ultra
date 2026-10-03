@@ -3,11 +3,15 @@
 #include <common/format.h>
 
 #include <smp.h>
+#include <preempt.h>
 #include <init_level.h>
 #include <free_after_init.h>
 
 DEFINE_PER_CPU(struct task, g_this_cpu_idle_task) = {
     .name = "idle/0",
+#ifndef ARCH_HAS_CUSTOM_PREEMPT_COUNT
+    .preempt_count = PREEMPT_DISABLE_DEPTH(1),
+#endif
 };
 
 static error_t INIT_CODE idle_tasks_set_names(void)
