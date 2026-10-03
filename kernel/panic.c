@@ -6,6 +6,7 @@
 #include <arch/cpu_helpers.h>
 
 #include <panic.h>
+#include <irq_helpers.h>
 #include <log.h>
 
 static bool s_in_panic;
@@ -20,6 +21,8 @@ void panic(const char *fmt, ...)
 {
     va_list vlist;
     struct nested_printf npf;
+
+    local_irq_disable();
 
     if (atomic_xchg(&s_in_panic, true, MO_ACQ_REL))
         goto hang;
