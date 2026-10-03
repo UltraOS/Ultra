@@ -65,6 +65,48 @@
     }                                        \
 })
 
+#define DISPATCH_CPU_XCHG_OP(var, x) ({       \
+    typeof(var) cxchg_ret;                    \
+    BUILD_BUG_ON_BAD_CPU_OP(var, xchg);       \
+                                              \
+    switch (sizeof(var)) {                    \
+    case 1:                                   \
+        cxchg_ret = this_cpu_xchg_8(var, x);  \
+        break;                                \
+    case 2:                                   \
+        cxchg_ret = this_cpu_xchg_16(var, x); \
+        break;                                \
+    case 4:                                   \
+        cxchg_ret = this_cpu_xchg_32(var, x); \
+        break;                                \
+    case 8:                                   \
+        cxchg_ret = this_cpu_xchg_64(var, x); \
+        break;                                \
+    }                                         \
+    cxchg_ret;                                \
+})
+
+#define DISPATCH_CPU_CMPXCHG_OP(var, expected, desired) ({          \
+    bool ccmpxchg_ret;                                              \
+    BUILD_BUG_ON_BAD_CPU_OP(var, cmpxchg);                          \
+                                                                    \
+    switch (sizeof(var)) {                                          \
+    case 1:                                                         \
+        ccmpxchg_ret = this_cpu_cmpxchg_8(var, expected, desired);  \
+        break;                                                      \
+    case 2:                                                         \
+        ccmpxchg_ret = this_cpu_cmpxchg_16(var, expected, desired); \
+        break;                                                      \
+    case 4:                                                         \
+        ccmpxchg_ret = this_cpu_cmpxchg_32(var, expected, desired); \
+        break;                                                      \
+    case 8:                                                         \
+        ccmpxchg_ret = this_cpu_cmpxchg_64(var, expected, desired); \
+        break;                                                      \
+    }                                                               \
+    ccmpxchg_ret;                                                   \
+})
+
 #define this_cpu_read(var) DISPATCH_CPU_READ_OP(var, read)
 #define this_cpu_write(var, x) DISPATCH_CPU_WRITE_OP(var, write, x)
 
@@ -73,3 +115,7 @@
 
 #define this_cpu_inc(var) this_cpu_add(var, 1)
 #define this_cpu_dec(var) this_cpu_sub(var, 1)
+
+#define this_cpu_xchg(var, x) DISPATCH_CPU_XCHG_OP(var, x)
+#define this_cpu_cmpxchg(var, expected, desired) \
+    DISPATCH_CPU_CMPXCHG_OP(var, expected, desired)
