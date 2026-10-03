@@ -14,6 +14,7 @@
 #include <log_ring.h>
 #include <param.h>
 #include <panic.h>
+#include <irq_helpers.h>
 #include <sched/task.h>
 #include <arch_constants.h>
 
@@ -210,7 +211,7 @@ static void format_record(
         out_buf_append(out, "\n", 1);
 }
 
-static void log_flush_console(struct console *con)
+static bool log_flush_console(struct console *con)
 {
     static char s_msg_buf[512], s_out_data[512 + 128];
 
@@ -229,36 +230,35 @@ static void log_flush_console(struct console *con)
     if (panic_in_progress())
         read_flags |= LOG_RING_READ_SKIP_UNPUBLISHED;
 
-    for (;;) {
-        ret = log_ring_read_with_flags(
-            &s_log_ring, con->log_seq_num, s_msg_buf, sizeof(s_msg_buf),
-            read_flags, &rec
-        );
-        if (ret != EOK)
-            break;
+    ret = log_ring_read_with_flags(
+        &s_log_ring, con->log_seq_num, s_msg_buf, sizeof(s_msg_buf),
+        read_flags, &rec
+    );
+    if (ret != EOK)
+        return false;
 
-        con->log_seq_num = rec.seq_num + 1;
+    con->log_seq_num = rec.seq_num + 1;
 
-        if (rec.level > s_log_level)
-            continue;
+    if (rec.level > s_log_level)
+        return true;
 
-        sec = rec.timestamp_ns / NS_PER_SEC;
-        usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
-        stamp_len = snprintf(
-            stamp, sizeof(stamp), "[%5llu.%06llu] ", sec, usec
-        );
+    sec = rec.timestamp_ns / NS_PER_SEC;
+    usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
+    stamp_len = snprintf(
+        stamp, sizeof(stamp), "[%5llu.%06llu] ", sec, usec
+    );
 
-        out = (struct out_buf) {
-            .data = s_out_data,
-            .capacity = sizeof(s_out_data),
-        };
-        format_record(
-            &out, stamp, stamp_len, s_msg_buf, rec.length, rec.level,
-            con->flags
-        );
+    out = (struct out_buf) {
+        .data = s_out_data,
+        .capacity = sizeof(s_out_data),
+    };
+    format_record(
+        &out, stamp, stamp_len, s_msg_buf, rec.length, rec.level,
+        con->flags
+    );
 
-        con->write(con, out.data, out.size);
-    }
+    con->write(con, out.data, out.size);
+    return true;
 }
 
 /*
@@ -296,40 +296,41 @@ static bool flush_try_acquire(void)
 
 static bool flush_release(void)
 {
-    u32 state = FLUSH_OWNED;
+    u32 state;
 
-    /*
-     * Fails when a record was left behind by another writer, which noticed
-     * there was already a flush in-progress that we owned.
-     */
-    if (atomic_cmpxchg_acq_rel(&s_flush_state, &state, 0))
-        return true;
-
-    /*
-     * Go back and take another pass so we flush the record(s) left behind by
-     * concurrent writers. Clear the pending bit so we notice if this happens
-     * again.
-     */
-    atomic_xchg(&s_flush_state, FLUSH_OWNED, MO_ACQ_REL);
-    return false;
+    state = atomic_xchg(&s_flush_state, 0, MO_ACQ_REL);
+    return !(state & FLUSH_PENDING);
 }
 
 void log_flush_consoles(void)
 {
     struct console *con;
+    irq_state_t irq_state;
+    bool advanced, clean;
 
-    /*
-     * Always allow panic to take over flushing, we have no other way to make
-     * sure the interrupted context that was doing the flushing ever gets to
-     * run again.
-     */
-    if (!flush_try_acquire() && !panic_in_progress())
-        return;
+    for (;;) {
+        irq_state = local_irq_state_save();
 
-    do {
+        /*
+         * Always allow panic to take over flushing, we have no other way to
+         * make sure the interrupted context that was doing the flushing ever
+         * gets to run again.
+         */
+        if (!flush_try_acquire() && !panic_in_progress()) {
+            local_irq_state_restore(irq_state);
+            return;
+        }
+
+        advanced = false;
         for (con = g_consoles; con; con = con->next)
-            log_flush_console(con);
-    } while (!flush_release());
+            advanced |= log_flush_console(con);
+
+        clean = flush_release();
+        local_irq_state_restore(irq_state);
+
+        if (!advanced && clean)
+            return;
+    }
 }
 
 static size_t extract_msg_level(const char *msg, enum log_level *out_level)
