@@ -6,7 +6,6 @@
 #include <arch/private/idt.h>
 #include <arch/private/cpu.h>
 #include <arch/private/cr.h>
-#include <arch/private/msr.h>
 #include <arch/private/smp.h>
 #include <arch/private/apic.h>
 #include <arch/private/hypervisor.h>
@@ -34,9 +33,6 @@ static error_t INIT_CODE x86_early_init(void)
     idt_init();
 
     cpu_info_setup(&g_cpu_info);
-
-    // Enable early per-cpu variables for the BSP
-    wrmsr_or_die(MSR_GS_BASE, 0);
 
     cr0_setup();
 
