@@ -28,8 +28,10 @@ typedef reg_t irq_state_t;
 
 #if ULTRA_ARCH_PHYS_ADDR_WIDTH == 4
 typedef u32 phys_addr_t;
-#else
+#elif ULTRA_ARCH_PHYS_ADDR_WIDTH == 8
 typedef u64 phys_addr_t;
+#else
+#error Unsupported ULTRA_ARCH_PHYS_ADDR_WIDTH
 #endif
 
 typedef ptr_t virt_addr_t;
