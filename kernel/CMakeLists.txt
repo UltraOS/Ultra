@@ -1,3 +1,4 @@
+include(CheckCCompilerFlag)
 include(symbols.cmake)
 include(free_after_init.cmake)
 include(build_stamp.cmake)

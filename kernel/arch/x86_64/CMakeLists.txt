@@ -1,5 +1,3 @@
-include(CheckCompilerFlag)
-
 ultra_sources_no_lto(string.c)
 
 ultra_sources(
@@ -29,12 +27,12 @@ ultra_sources(
 )
 ultra_include_directories(include)
 
-check_compiler_flag(
-    C -mpreferred-stack-boundary=4
+check_c_compiler_flag(
+    -mpreferred-stack-boundary=4
     HAVE_PREFERRED_STACK_BOUNDARY
 )
-check_compiler_flag(
-    C -mstack-alignment=16
+check_c_compiler_flag(
+    -mstack-alignment=16
     HAVE_STACK_ALIGNMENT
 )
 
