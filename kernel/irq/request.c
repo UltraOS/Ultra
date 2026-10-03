@@ -4,6 +4,7 @@
 
 #include <bug.h>
 #include <locking/mutex.h>
+#include <preempt.h>
 #include <init_level.h>
 #include <memory/alloc.h>
 #include <common/atomic.h>

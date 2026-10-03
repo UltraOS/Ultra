@@ -98,6 +98,7 @@ int main(int argc, char **argv)
 
             std::printf("Running test %s...", test->name);
             std::fflush(stdout);
+            test_task_reset();
             test->run();
             std::puts("OK");
         } catch (const std::exception& ex) {

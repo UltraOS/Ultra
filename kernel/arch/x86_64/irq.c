@@ -4,34 +4,18 @@
 #include <arch/private/vectors.h>
 #include <arch/registers.h>
 
+#include <private/arch/preempt.h>
+
 #include <per_cpu.h>
-#include <irq_helpers.h>
+#include <preempt.h>
 #include <log.h>
 #include <bug.h>
 
-static DEFINE_PER_CPU(bool, s_in_hard_irq);
+// Every CPU starts out with preemption disabled
+DEFINE_PER_CPU(u32, g_this_cpu_preempt_count) =
+    X86_PREEMPT_RESCHED_NOT_NEEDED | PREEMPT_DISABLE_DEPTH(1);
+
 static DEFINE_PER_CPU(u64, s_num_fixed_invocations[NUM_FIXED_VECTORS]);
-
-bool in_hard_irq(void)
-{
-    return this_cpu_read(s_in_hard_irq);
-}
-
-/*
- * Handlers run with interrupts disabled for their entire duration,
- * so hard interrupt context can never nest. NMIs and exceptions take
- * a different path and are not part of this context.
- */
-void hard_irq_enter(void)
-{
-    BUG_ON(this_cpu_read(s_in_hard_irq));
-    this_cpu_write(s_in_hard_irq, true);
-}
-
-void hard_irq_exit(void)
-{
-    this_cpu_write(s_in_hard_irq, false);
-}
 
 void fixed_vector_enter(u8 vector)
 {

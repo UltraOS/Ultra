@@ -1,5 +1,5 @@
 #include <locking/mutex.h>
-#include <irq_helpers.h>
+#include <preempt.h>
 #include <bug.h>
 
 void mutex_init(struct mutex *mutex)

@@ -10,8 +10,10 @@
 #include <arch/smp.h>
 
 #include <private/irq.h>
+#include <private/arch/preempt.h>
 
 #include <per_cpu.h>
+#include <preempt.h>
 #include <init_level.h>
 #include <free_after_init.h>
 #include <memory/alloc.h>
