@@ -139,6 +139,11 @@ ultra_compile_options(
     -Wundef
 )
 
+check_c_compiler_flag(-Wformat-signedness HAVE_FORMAT_SIGNEDNESS)
+if (HAVE_FORMAT_SIGNEDNESS)
+    ultra_compile_options(-Wformat-signedness)
+endif ()
+
 if (CONFIG_LTO)
     ultra_compile_options(${ULTRA_TOOLCHAIN_LTO_FLAGS})
 endif ()
