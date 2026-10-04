@@ -68,6 +68,11 @@ static void rr_switch_out(struct rq *rq)
     UNREFERENCED_PARAMETER(rq);
 }
 
+static void rr_slice_expired(struct rq *rq)
+{
+    UNREFERENCED_PARAMETER(rq);
+}
+
 DEFINE_SCHED_CLASS(rr) = {
     .enqueue = rr_enqueue,
     .dequeue = rr_dequeue,
@@ -76,4 +81,5 @@ DEFINE_SCHED_CLASS(rr) = {
     .wakeup_preempt = rr_wakeup_preempt,
     .switch_in = rr_switch_in,
     .switch_out = rr_switch_out,
+    .slice_expired = rr_slice_expired,
 };

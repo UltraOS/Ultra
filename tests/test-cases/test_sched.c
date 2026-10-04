@@ -19,12 +19,16 @@ void sched_test_timer_init(
 void sched_test_timer_arm_with_slack(
     struct timer *timer, u64 deadline_ns, u64 slack_ns
 );
+void sched_test_timer_arm_lazy(struct timer *timer, u64 deadline_ns);
 void sched_test_timer_cancel(struct timer *timer);
+bool sched_test_timer_cancel_nosync(struct timer *timer);
 u64 sched_test_now(void);
 
 #define timer_init sched_test_timer_init
 #define timer_arm_with_slack sched_test_timer_arm_with_slack
+#define timer_arm_lazy sched_test_timer_arm_lazy
 #define timer_cancel sched_test_timer_cancel
+#define timer_cancel_nosync sched_test_timer_cancel_nosync
 #define ns_since_boot sched_test_now
 
 #define alloc sched_test_alloc
@@ -1369,6 +1373,12 @@ void sched_test_timer_cancel(struct timer *timer)
     }
 }
 
+bool sched_test_timer_cancel_nosync(struct timer *timer)
+{
+    sched_test_timer_cancel(timer);
+    return true;
+}
+
 void sched_test_timer_arm_with_slack(
     struct timer *timer, u64 deadline_ns, u64 slack_ns
 )
@@ -1389,6 +1399,11 @@ void sched_test_timer_arm_with_slack(
     }
 
     BUG();
+}
+
+void sched_test_timer_arm_lazy(struct timer *timer, u64 deadline_ns)
+{
+    sched_test_timer_arm_with_slack(timer, deadline_ns, 0);
 }
 
 u64 sched_test_now(void)

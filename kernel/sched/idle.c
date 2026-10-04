@@ -54,6 +54,13 @@ static void idle_switch_out(struct rq *rq)
     UNREFERENCED_PARAMETER(rq);
 }
 
+static void idle_slice_expired(struct rq *rq)
+{
+    UNREFERENCED_PARAMETER(rq);
+
+    BUG();
+}
+
 DEFINE_SCHED_CLASS(idle) = {
     .enqueue = idle_enqueue,
     .dequeue = idle_dequeue,
@@ -62,6 +69,7 @@ DEFINE_SCHED_CLASS(idle) = {
     .wakeup_preempt = idle_wakeup_preempt,
     .switch_in = idle_switch_in,
     .switch_out = idle_switch_out,
+    .slice_expired = idle_slice_expired,
 };
 
 /*
