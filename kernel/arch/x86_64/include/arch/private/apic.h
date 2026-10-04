@@ -55,6 +55,7 @@ enum apic_reg : u32 {
     APIC_REG_TIMER_INITIAL_COUNT = 0x380,
     APIC_REG_TIMER_CURRENT_COUNT = 0x390,
     APIC_REG_TIMER_DIVIDE_CONFIG = 0x3E0,
+        #define APIC_TIMER_DIVIDE_BY_2 0x0
 
     // x2APIC-only shorthand for a fixed IPI to self
     APIC_REG_SELF_IPI = 0x3F0,
@@ -106,5 +107,3 @@ apic_id_t apic_read_id(void);
 void apic_icr_write(u32 value, apic_id_t dest_apic_id);
 void apic_send_fixed_ipi(apic_id_t dest_apic_id, u8 vector);
 void apic_send_ipi_self(u8 vector);
-
-void apic_set_known_frequency(u64 hz);

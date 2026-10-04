@@ -2,6 +2,7 @@ ultra_sources_no_lto(string.c)
 
 ultra_sources(
     apic.c
+    apic_timer.c
     vector_alloc.c
     lapic_domain.c
     xapic.c

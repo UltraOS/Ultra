@@ -36,11 +36,14 @@
 #define X86_IRQ_DISPATCH irq_dispatch
 #define X86_FIXED_UNEXPECTED fixed_unexpected
 #define X86_APIC_ERROR apic_error
+#define X86_APIC_TIMER apic_timer
 #define X86_APIC_SPURIOUS apic_spurious
 
 #define X86_IRQ_DISPATCH_ASM CONCAT(X86_IRQ_DISPATCH, _asm)
 #define X86_FIXED_UNEXPECTED_ASM \
     CONCAT(handle_, CONCAT(X86_FIXED_UNEXPECTED, _asm))
+#define X86_APIC_TIMER_ASM \
+    CONCAT(handle_, CONCAT(X86_APIC_TIMER, _asm))
 #define X86_APIC_ERROR_ASM \
     CONCAT(handle_, CONCAT(X86_APIC_ERROR, _asm))
 #define X86_APIC_SPURIOUS_ASM \
