@@ -7,6 +7,7 @@
 #include <config.h>
 #include <sched/task.h>
 
+#include <detail/refcount.h>
 #include <detail/sched/rr.h>
 #include <arch/detail/task.h>
 
@@ -31,6 +32,7 @@ struct task {
 #ifndef ARCH_HAS_CUSTOM_PREEMPT_COUNT
     u32 preempt_count;
 #endif
+    struct refcount32 refcount;
 
     cpu_t cpu;
     u8 prio;

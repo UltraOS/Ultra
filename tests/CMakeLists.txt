@@ -250,7 +250,7 @@ include("test-cases/files.cmake")
 add_executable(
     run_tests
     run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
-    task_state.c
+    task_state.c sched_alloc.c
     kernel-source/locking/spinlock.c kernel-source/memory/units.c
     kernel-source/common/bit.c kernel-source/locking/mutex.c
     kernel-source/common/string_container.c kernel-source/common/conversions.c
