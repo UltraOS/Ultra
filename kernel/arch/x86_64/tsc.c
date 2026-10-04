@@ -103,6 +103,11 @@ void INIT_CODE tsc_set_known_frequency(u64 hz, const char *reported_by)
     tsc_clocksource_register();
 }
 
+u64 tsc_frequency(void)
+{
+    return s_tsc_ctx.hz;
+}
+
 #define CPUID_TSC_AND_NOMINAL_CORE_CRYSTAL_CLOCK 0x15
 #define CPUID_PROCESSOR_FREQUENCY_INFORMATION 0x16
 

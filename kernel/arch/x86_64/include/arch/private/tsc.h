@@ -8,3 +8,6 @@
 #define TSC_PRECISE_RATING (TSC_APPROXIMATE_RATING + 2)
 
 void tsc_set_known_frequency(u64 hz, const char *reported_by);
+
+// Zero if the frequency is not known
+u64 tsc_frequency(void);
