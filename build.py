@@ -584,6 +584,10 @@ def main() -> None:
         sys.exit(1)
 
     if args.unit_tests:
+        if this_os != "Linux":
+            print("Unit tests only support Linux hosts")
+            sys.exit(1)
+
         sys.exit(run_unit_tests(args, this_os.lower()))
 
     rc = bmc.early_action(args, hyper_pxe_loaders)

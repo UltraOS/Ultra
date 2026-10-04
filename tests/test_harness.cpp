@@ -3,19 +3,9 @@
 #include <set>
 #include <filesystem>
 
-#ifdef __APPLE__
-#include <mach/mach_time.h>
-#else
 #include <ctime>
-#endif
 
-/*
- * Included after any host headers so that the synthetic <arch_constants.h>
- * (pulled in here) overrides a possibly leaked host PAGE_SIZE.
- */
 #include <common/align.h>
-
-static_assert(PAGE_SIZE == 4096, "host PAGE_SIZE leaked into the harness");
 
 /*
  * struct page pulls in <common/bit.h>'s meta bit-field macros, which are not
@@ -226,20 +216,8 @@ void teardown_callback_register(void (*callback)(void), const char *file)
 
 uint64_t ns_timer()
 {
-#if defined(__APPLE__)
-    static struct mach_timebase_info tb;
-    static bool initialized;
-
-    if (!initialized) {
-        ASSERT_EQ(mach_timebase_info(&tb), KERN_SUCCESS);
-        initialized = true;
-    }
-
-    return (mach_absolute_time() * tb.numer) / tb.denom;
-#else
     struct timespec ts;
 
     ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &ts), 0);
     return ts.tv_sec * NANOSECONDS_PER_SECOND + ts.tv_nsec;
-#endif
 }
