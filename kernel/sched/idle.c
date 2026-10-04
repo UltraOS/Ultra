@@ -4,6 +4,9 @@
 #include <common/helpers.h>
 
 #include <bug.h>
+#include <irq_helpers.h>
+
+#include <arch/cpu_helpers.h>
 
 static void idle_enqueue(struct rq *rq, struct task *task)
 {
@@ -48,3 +51,23 @@ DEFINE_SCHED_CLASS(idle) = {
     .yield = idle_yield,
     .wakeup_preempt = idle_wakeup_preempt,
 };
+
+/*
+ * The function every CPU's idle task runs. The check and the wait
+ * are done with interrupts disabled so that a wakeup arriving in
+ * between ends the wait instead of being slept through.
+ */
+void sched_idle_loop(void)
+{
+    for (;;) {
+        local_irq_disable();
+
+        if (need_resched()) {
+            local_irq_enable();
+            schedule_idle();
+            continue;
+        }
+
+        arch_cpu_idle_wait();
+    }
+}

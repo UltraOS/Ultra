@@ -8,3 +8,10 @@ static inline void arch_cpu_relax(void)
     if (g_cpu_relax_hook)
         g_cpu_relax_hook();
 }
+
+void test_cpu_idle_wait(void);
+
+static inline void arch_cpu_idle_wait(void)
+{
+    test_cpu_idle_wait();
+}

@@ -41,7 +41,7 @@
       "mock_lines": [
         "Booted via network (PXE)",
         "Starting ultra kernel",
-        "Nothing left to do, halting!"
+        "Nothing left to do, idling"
       ]
     }
   ]

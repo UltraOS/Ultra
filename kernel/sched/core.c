@@ -341,3 +341,10 @@ static error_t INIT_CODE sched_init(void)
     return EOK;
 }
 INIT_CALL_POST(PER_CPU_AVAILABLE, sched_init);
+
+static error_t INIT_CODE sched_online(void)
+{
+    local_irq_enable();
+    return EOK;
+}
+INIT_CALL_AT(SCHEDULER_ONLINE, sched_online);

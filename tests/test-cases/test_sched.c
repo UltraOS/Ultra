@@ -23,6 +23,11 @@ void sched_test_vrelease(void *ptr);
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
 
+void test_cpu_idle_wait(void)
+{
+    g_test_irqs_enabled = true;
+}
+
 #include <test_harness.h>
 
 #define NUM_TEST_TASKS 8

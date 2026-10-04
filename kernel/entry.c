@@ -7,8 +7,6 @@
 #include <boot/boot.h>
 #include <boot/ultra_protocol.h>
 
-#include <arch/cpu_helpers.h>
-
 #include <free_after_init.h>
 #include <log.h>
 #include <bug.h>
@@ -16,8 +14,11 @@
 #include <param.h>
 #include <config.h>
 #include <init_level.h>
+#include <sched/kthread.h>
+#include <panic.h>
 
 #include <private/param.h>
+#include <private/sched/sched.h>
 
 struct boot_context g_boot_ctx;
 ptr_t g_direct_map_base;
@@ -128,14 +129,28 @@ static error_t INIT_CODE boot_info_init(void)
 }
 INIT_CALL_AT(BOOT_INFO_AVAILABLE, boot_info_init);
 
+static void INIT_CODE threaded_init(void *user)
+{
+    UNREFERENCED_PARAMETER(user);
+
+    init_level_raise(INIT_LEVEL_GENERIC_MODULES_INITIALIZED);
+
+    print(LOG_NOTICE"Nothing left to do, idling\n");
+}
+
 void INIT_CODE entry(struct ultra_boot_context *ctx)
 {
+    error_t ret;
+
     print(LOG_INFO"%s\n", g_build_banner);
 
     s_loader_ctx = ctx;
 
-    init_level_raise(INIT_LEVEL_IRQS_AVAILABLE);
+    init_level_raise(INIT_LEVEL_SCHEDULER_ONLINE);
 
-    print(LOG_NOTICE"Nothing left to do, halting!\n");
-    arch_cpu_halt();
+    ret = kthread_run(threaded_init, nullptr, "init");
+    if (is_error(ret))
+        panic("Unable to start the init thread: %pE", &ret);
+
+    sched_idle_loop();
 }
