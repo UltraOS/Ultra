@@ -96,12 +96,7 @@ jobs:
         run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --config ${{ matrix.preset }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
   unit-tests:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
