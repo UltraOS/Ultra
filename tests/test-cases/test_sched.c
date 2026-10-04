@@ -19,6 +19,7 @@ void sched_test_vrelease(void *ptr);
 #include <kernel-source/sched/rr.c>
 #include <kernel-source/sched/idle.c>
 #include <kernel-source/sched/kthread.c>
+#include <kernel-source/sched/wait_queue.c>
 
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
@@ -843,6 +844,257 @@ TEST_CASE(kthread_run_runs_and_frees)
     ASSERT_EQ(s_log[0], 9);
     ASSERT_EQ(g_sched_test_live_tasks, 0);
     ASSERT_EQ(g_sched_test_live_stacks, 0);
+
+    switching_test_end();
+}
+
+struct waiter {
+    struct wait_queue *wq;
+    bool *condition;
+    int id;
+    bool exclusive;
+};
+
+static void wait_for_condition(void *user)
+{
+    struct waiter *waiter = user;
+
+    wait_event(waiter->wq, *waiter->condition);
+    log_id(waiter->id);
+}
+
+static void wait_once(void *user)
+{
+    struct waiter *waiter = user;
+    struct wait_entry entry;
+    enum wait_entry_flags flags = WAIT_ENTRY_FLAG_NONE;
+
+    if (waiter->exclusive)
+        flags = WAIT_ENTRY_FLAG_EXCLUSIVE;
+
+    wait_entry_init(&entry, flags);
+    wait_queue_prepare(waiter->wq, &entry);
+    schedule();
+    wait_queue_finish(waiter->wq, &entry);
+
+    log_id(waiter->id);
+}
+
+static int count_ids(int id)
+{
+    int i, count = 0;
+
+    for (i = 0; i < s_log_length; i++) {
+        if (s_log[i] == id)
+            count++;
+    }
+
+    return count;
+}
+
+TEST_CASE(wait_event_returns_right_away_if_true)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    bool condition = true;
+    struct waiter waiter = { .wq = &wq, .condition = &condition, .id = 1 };
+
+    switching_test_begin();
+    spawn(wait_for_condition, &waiter, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(list_is_empty(&wq.entries));
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_event_sleeps_until_woken_with_the_condition)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    bool condition = false;
+    struct waiter waiter = { .wq = &wq, .condition = &condition, .id = 1 };
+    struct task *task;
+
+    switching_test_begin();
+    task = spawn(wait_for_condition, &waiter, TASK_PRIO_DEFAULT);
+    task_ref(task);
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+    ASSERT_EQ(task_state(task), TASK_STATE_UNINTERRUPTIBLE);
+    ASSERT(!list_is_empty(&wq.entries));
+
+    wait_queue_wake(&wq);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+    ASSERT_EQ(task_state(task), TASK_STATE_UNINTERRUPTIBLE);
+
+    condition = true;
+    wait_queue_wake(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(task_state(task), TASK_STATE_DEAD);
+    ASSERT(list_is_empty(&wq.entries));
+
+    task_unref(task);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_queue_wake_wakes_every_plain_waiter)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    struct waiter waiters[3];
+    int i;
+
+    switching_test_begin();
+
+    for (i = 0; i < 3; i++) {
+        waiters[i] = (struct waiter) { .wq = &wq, .id = i };
+        spawn(wait_once, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    wait_queue_wake(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 3);
+    ASSERT(list_is_empty(&wq.entries));
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_queue_wake_wakes_one_exclusive_waiter)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    struct waiter waiters[3];
+    int i;
+
+    switching_test_begin();
+
+    for (i = 0; i < 3; i++) {
+        waiters[i] = (struct waiter) { .wq = &wq, .id = i, .exclusive = true };
+        spawn(wait_once, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+
+    for (i = 0; i < 3; i++) {
+        wait_queue_wake(&wq);
+        schedule_idle();
+
+        ASSERT_EQ(s_log_length, i + 1);
+        ASSERT_EQ(s_log[i], i);
+    }
+
+    ASSERT(list_is_empty(&wq.entries));
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_queue_wake_all_ignores_exclusivity)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    struct waiter waiters[3];
+    int i;
+
+    switching_test_begin();
+
+    for (i = 0; i < 3; i++) {
+        waiters[i] = (struct waiter) { .wq = &wq, .id = i, .exclusive = true };
+        spawn(wait_once, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+
+    wait_queue_wake_all(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 3);
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_queue_plain_waiters_come_before_exclusive_ones)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    struct waiter waiters[4];
+    int i;
+
+    switching_test_begin();
+
+    for (i = 0; i < 4; i++) {
+        waiters[i] = (struct waiter) {
+            .wq = &wq, .id = i % 2, .exclusive = i % 2 == 0,
+        };
+        spawn(wait_once, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+
+    wait_queue_wake(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(count_ids(1), 2);
+    ASSERT_EQ(count_ids(0), 1);
+
+    wait_queue_wake(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(count_ids(0), 2);
+    ASSERT(list_is_empty(&wq.entries));
+
+    switching_test_end();
+}
+
+struct counting_entry {
+    struct wait_entry entry;
+    int calls;
+    bool result;
+};
+
+static bool count_the_wake(struct wait_entry *entry)
+{
+    struct counting_entry *counting;
+
+    counting = container_of(entry, struct counting_entry, entry);
+    counting->calls++;
+
+    return counting->result;
+}
+
+TEST_CASE(wait_queue_entry_with_its_own_callback)
+{
+    DEFINE_WAIT_QUEUE(wq);
+    struct counting_entry first = { .result = false };
+    struct counting_entry second = { .result = true };
+
+    switching_test_begin();
+
+    first.entry.flags = WAIT_ENTRY_FLAG_EXCLUSIVE;
+    first.entry.wake = count_the_wake;
+    second.entry.flags = WAIT_ENTRY_FLAG_EXCLUSIVE;
+    second.entry.wake = count_the_wake;
+
+    list_insert_prev(&wq.entries, &first.entry.link);
+    list_insert_prev(&wq.entries, &second.entry.link);
+
+    wait_queue_wake(&wq);
+    ASSERT_EQ(first.calls, 1);
+    ASSERT_EQ(second.calls, 1);
+
+    second.result = false;
+    first.result = true;
+
+    wait_queue_wake(&wq);
+    ASSERT_EQ(first.calls, 2);
+    ASSERT_EQ(second.calls, 1);
 
     switching_test_end();
 }

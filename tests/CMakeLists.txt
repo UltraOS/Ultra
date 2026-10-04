@@ -224,6 +224,12 @@ KERNEL_FILE(
     SOURCE_PATH "sched" SOURCE_FILE "idle.c"
 )
 KERNEL_FILE(
+    INCLUDE_PATH "sched" INCLUDE_FILE "wait_queue.h"
+    SOURCE_PATH "sched" SOURCE_FILE "wait_queue.c"
+)
+KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "wait_queue.h")
+KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "wait_queue.h")
+KERNEL_FILE(
     INCLUDE_PATH "sched" INCLUDE_FILE "kthread.h"
     SOURCE_PATH "sched" SOURCE_FILE "kthread.c"
 )
