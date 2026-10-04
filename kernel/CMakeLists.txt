@@ -174,6 +174,7 @@ add_subdirectory(memory)
 add_subdirectory(sched)
 add_subdirectory(time)
 add_subdirectory(drivers)
+add_subdirectory(demo)
 
 set(ULTRA_ALL_OBJECTS "")
 get_property(ULTRA_OBJECT_TARGETS_FINAL GLOBAL PROPERTY ULTRA_OBJECT_TARGETS)

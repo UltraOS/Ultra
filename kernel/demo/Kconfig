@@ -1,0 +1,18 @@
+menu "Demos"
+
+config FIREWORKS_DEMO
+    tristate "Fireworks scheduler stress demo"
+    depends on !FLANTERM_CONSOLE
+    help
+        Draw fireworks on the framebuffer once the kernel is up, with
+        one thread per rocket and per particle. Every thread plots its
+        pixel, sleeps for a frame and moves on, so a volley keeps a
+        few thousand threads sleeping and waking 60 times a second.
+        Statistics go to the log every couple of seconds. It runs until
+        the machine is turned off, or for fireworks.runtime-seconds=<n>
+        from the kernel command line.
+
+        The demo owns the framebuffer, which is why it cannot be
+        combined with the framebuffer log console.
+
+endmenu
