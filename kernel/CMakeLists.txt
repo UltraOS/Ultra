@@ -169,6 +169,7 @@ add_subdirectory(common)
 add_subdirectory(locking)
 add_subdirectory(irq)
 add_subdirectory(memory)
+add_subdirectory(sched)
 add_subdirectory(time)
 add_subdirectory(drivers)
 

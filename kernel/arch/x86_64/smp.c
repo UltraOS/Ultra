@@ -6,6 +6,7 @@
 #include <arch/private/msr.h>
 #include <arch/private/descriptors.h>
 #include <arch/private/cpu.h>
+#include <private/sched/task.h>
 
 #include <uacpi/tables.h>
 #include <uacpi/acpi.h>
@@ -26,6 +27,7 @@
 
 DEFINE_PER_CPU(cpu_t, g_this_cpu_id);
 DEFINE_PER_CPU(apic_id_t, g_this_cpu_apic_id);
+DEFINE_PER_CPU(struct task*, g_this_cpu_task) = &g_this_cpu_idle_task;
 
 static INIT_DATA apic_id_t s_early_cpu_to_apic_id[ULTRA_MAX_CPUS] = {
     [0 ... (ULTRA_MAX_CPUS - 1)] = APIC_ID_NONE,
@@ -373,13 +375,14 @@ static error_t INIT_CODE x86_per_cpu_setup(void)
 {
     cpu_t i;
 
-    // Do the boot CPU setup here, AP CPUs call it elsewhere
-    this_cpu_enable_per_cpu(0);
-
     for_each_present_cpu(i) {
         per_cpu(g_this_cpu_id, i) = i;
         per_cpu(g_this_cpu_apic_id, i) = s_early_cpu_to_apic_id[i];
+        per_cpu(g_this_cpu_task, i) = per_cpu_ptr(&g_this_cpu_idle_task, i);
     }
+
+    // Do the boot CPU setup here, AP CPUs call it elsewhere
+    this_cpu_enable_per_cpu(0);
 
     /*
      * Duplicate the early boot CPU feature detection data into its own per-cpu
