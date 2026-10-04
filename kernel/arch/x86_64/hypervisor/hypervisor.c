@@ -13,8 +13,7 @@
 static struct active_hypervisor s_hypervisor;
 static char s_hypervisor_signature[13];
 
-extern const struct hypervisor SECTION_ARRAY_BEGIN(HYPERVISORS_SECTION)[];
-extern const struct hypervisor SECTION_ARRAY_END(HYPERVISORS_SECTION)[];
+DECLARE_TYPED_SECTION_MARKERS(const struct hypervisor, HYPERVISORS_SECTION);
 
 /*
  * A placeholder hypervisor that is used in case we detect the presence of a

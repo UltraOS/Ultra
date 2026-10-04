@@ -3,22 +3,22 @@
 
 #include <linker.h>
 
-extern u8 LINKER_SYMBOL(text_begin)[];
-extern u8 LINKER_SYMBOL(text_end)[];
+DECLARE_LINKER_SYMBOL(text_begin);
+DECLARE_LINKER_SYMBOL(text_end);
 
-extern u8 LINKER_SYMBOL(eh_frame_hdr_begin)[];
-extern u8 LINKER_SYMBOL(eh_frame_hdr_end)[];
+DECLARE_LINKER_SYMBOL(eh_frame_hdr_begin);
+DECLARE_LINKER_SYMBOL(eh_frame_hdr_end);
 
-extern u8 LINKER_SYMBOL(eh_frame_begin)[];
-extern u8 LINKER_SYMBOL(eh_frame_end)[];
+DECLARE_LINKER_SYMBOL(eh_frame_begin);
+DECLARE_LINKER_SYMBOL(eh_frame_end);
 
 // 127 chars & a NULL terminator
 #define MAX_SYMBOL_LENGTH (127 + 1)
 
 static inline bool address_is_kernel_code(ptr_t address)
 {
-    return address >= (ptr_t)LINKER_SYMBOL(text_begin) &&
-           address <= (ptr_t)LINKER_SYMBOL(text_end);
+    return address >= LINKER_SYMBOL_ADDR(text_begin) &&
+           address <= LINKER_SYMBOL_ADDR(text_end);
 }
 
 error_t symbol_lookup_by_address(

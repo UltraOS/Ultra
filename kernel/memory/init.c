@@ -496,14 +496,14 @@ static void INIT_CODE direct_map_one(
     );
 }
 
-extern u8 LINKER_SYMBOL(executable_data_begin)[];
-extern u8 LINKER_SYMBOL(executable_data_end)[];
+DECLARE_LINKER_SYMBOL(executable_data_begin);
+DECLARE_LINKER_SYMBOL(executable_data_end);
 
-extern u8 LINKER_SYMBOL(readonly_data_begin)[];
-extern u8 LINKER_SYMBOL(readonly_data_end)[];
+DECLARE_LINKER_SYMBOL(readonly_data_begin);
+DECLARE_LINKER_SYMBOL(readonly_data_end);
 
-extern u8 LINKER_SYMBOL(readwrite_data_begin)[];
-extern u8 LINKER_SYMBOL(readwrite_data_end)[];
+DECLARE_LINKER_SYMBOL(readwrite_data_begin);
+DECLARE_LINKER_SYMBOL(readwrite_data_end);
 
 static void INIT_CODE map_kernel_segment(
     struct direct_mapping_ctx *ctx, struct ultra_kernel_info_attribute *ki,

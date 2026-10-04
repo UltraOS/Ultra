@@ -169,10 +169,10 @@ static error_t decode_value(
         *out_value = (ptr_t)data->cursor;
         break;
     case DW_EH_PE_textrel:
-        *out_value = (ptr_t)LINKER_SYMBOL(text_begin);
+        *out_value = LINKER_SYMBOL_ADDR(text_begin);
         break;
     case DW_EH_PE_datarel:
-        *out_value = (ptr_t)LINKER_SYMBOL(eh_frame_hdr_begin);
+        *out_value = LINKER_SYMBOL_ADDR(eh_frame_hdr_begin);
         break;
     case DW_EH_PE_funcrel:
     case DW_EH_PE_aligned:
@@ -255,7 +255,7 @@ static error_t INIT_CODE unwind_init(void)
     if (is_error(ret))
         return ret;
 
-    if (unlikely((ptr_t)LINKER_SYMBOL(eh_frame_begin) != value))
+    if (unlikely(LINKER_SYMBOL_ADDR(eh_frame_begin) != value))
         return EINVAL;
 
     ret = decode_value(&data, fde_count_encoding, &s_num_fdes);
