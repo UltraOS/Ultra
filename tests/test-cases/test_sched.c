@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include <common/types.h>
 #include <memory/alloc_behavior.h>
 
 extern int g_sched_test_live_tasks, g_sched_test_live_stacks;
@@ -8,6 +9,23 @@ void *sched_test_alloc(size_t size, enum alloc_behavior behavior);
 void sched_test_free(void *ptr);
 void *sched_test_valloc(size_t size, enum alloc_behavior behavior);
 void sched_test_vrelease(void *ptr);
+
+struct timer;
+enum timer_result : u32;
+
+void sched_test_timer_init(
+    struct timer *timer, enum timer_result (*fn)(struct timer *timer)
+);
+void sched_test_timer_arm_with_slack(
+    struct timer *timer, u64 deadline_ns, u64 slack_ns
+);
+void sched_test_timer_cancel(struct timer *timer);
+u64 sched_test_now(void);
+
+#define timer_init sched_test_timer_init
+#define timer_arm_with_slack sched_test_timer_arm_with_slack
+#define timer_cancel sched_test_timer_cancel
+#define ns_since_boot sched_test_now
 
 #define alloc sched_test_alloc
 #define free sched_test_free
@@ -1323,6 +1341,173 @@ TEST_CASE(kthread_stop_after_it_exited)
     ASSERT_EQ(s_log_length, 2);
     ASSERT_EQ(s_log[1], 2);
     ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+#define MAX_PENDING_TIMERS 4
+
+static struct timer *s_pending_timers[MAX_PENDING_TIMERS];
+static u64 s_now;
+
+void sched_test_timer_init(
+    struct timer *timer, enum timer_result (*fn)(struct timer *timer)
+)
+{
+    *timer = (struct timer) {
+        .fn = fn,
+    };
+}
+
+void sched_test_timer_cancel(struct timer *timer)
+{
+    size_t i;
+
+    for (i = 0; i < MAX_PENDING_TIMERS; i++) {
+        if (s_pending_timers[i] == timer)
+            s_pending_timers[i] = nullptr;
+    }
+}
+
+void sched_test_timer_arm_with_slack(
+    struct timer *timer, u64 deadline_ns, u64 slack_ns
+)
+{
+    size_t i;
+
+    sched_test_timer_cancel(timer);
+
+    timer->deadline_ns = deadline_ns;
+    timer->hard_deadline_ns = deadline_ns + slack_ns;
+
+    for (i = 0; i < MAX_PENDING_TIMERS; i++) {
+        if (s_pending_timers[i] != nullptr)
+            continue;
+
+        s_pending_timers[i] = timer;
+        return;
+    }
+
+    BUG();
+}
+
+u64 sched_test_now(void)
+{
+    return s_now;
+}
+
+static int count_pending_timers(void)
+{
+    int count = 0;
+    size_t i;
+
+    for (i = 0; i < MAX_PENDING_TIMERS; i++) {
+        if (s_pending_timers[i] != nullptr)
+            count++;
+    }
+
+    return count;
+}
+
+// Moves the clock and runs what became due
+static void advance_time_to(u64 now)
+{
+    struct timer *timer;
+    struct registers regs = { .irq_state = false };
+    irq_state_t irq_state;
+    size_t i;
+
+    irq_state = local_irq_state_save();
+    hard_irq_enter();
+
+    s_now = now;
+
+    for (i = 0; i < MAX_PENDING_TIMERS; i++) {
+        timer = s_pending_timers[i];
+        if (timer == nullptr || timer->deadline_ns > now)
+            continue;
+
+        s_pending_timers[i] = nullptr;
+        timer->fn(timer);
+    }
+
+    hard_irq_exit(&regs);
+    local_irq_state_restore(irq_state);
+}
+
+static void timed_test_begin(void)
+{
+    switching_test_begin();
+
+    memset(s_pending_timers, 0, sizeof(s_pending_timers));
+    s_now = 1000;
+}
+
+struct timed_sleeper {
+    int id;
+    u64 ns;
+    struct wait_queue *wq;
+    struct completion *completion;
+    bool *condition;
+    bool result;
+};
+
+static void sleep_then_log(void *user)
+{
+    struct timed_sleeper *sleeper = user;
+
+    log_id(sleeper->id);
+    sleep_ns(sleeper->ns);
+    log_id(sleeper->id);
+}
+
+TEST_CASE(sleep_ns_sleeps_until_the_deadline)
+{
+    struct timed_sleeper sleeper = { .id = 1, .ns = 100 };
+
+    timed_test_begin();
+    spawn(sleep_then_log, &sleeper, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(count_pending_timers(), 1);
+
+    advance_time_to(1099);
+    ASSERT(!need_resched());
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 1);
+
+    advance_time_to(1100);
+    ASSERT(need_resched());
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 2);
+
+    ASSERT_EQ(count_pending_timers(), 0);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(sleep_ns_goes_back_to_sleep_after_an_early_wakeup)
+{
+    struct timed_sleeper sleeper = { .id = 1, .ns = 100 };
+    struct task *task;
+
+    timed_test_begin();
+    task = spawn(sleep_then_log, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    advance_time_to(1050);
+    ASSERT(wake_up_task(task, TASK_STATE_UNINTERRUPTIBLE));
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(count_pending_timers(), 1);
+
+    advance_time_to(1100);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 2);
+    ASSERT_EQ(count_pending_timers(), 0);
 
     switching_test_end();
 }
