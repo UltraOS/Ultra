@@ -1,7 +1,6 @@
 #define MSG_FMT(msg) "time: " msg
 
 #include <common/minmax.h>
-#include <common/format.h>
 #include <common/list.h>
 
 #include <private/time/counter_device.h>
@@ -87,28 +86,15 @@ static void calculate_thresholds(struct counter_device *dev)
 
 static void announce_new_counter(struct counter_device *dev, u64 hz, bool best)
 {
-    struct human_repr freq;
-    u64 ms;
-    char wrap_str[32];
-#define snprintf_wrap(...) snprintf(wrap_str, sizeof(wrap_str), __VA_ARGS__)
+    struct human_repr freq, unattended;
 
     frequency_to_human(hz, &freq);
-    ms = dev->max_unattended_ns / NS_PER_MS;
-
-    if (ms >= MS_PER_HOUR) {
-        snprintf_wrap("%llu hours", ms / MS_PER_HOUR);
-    } else if (ms >= MS_PER_MIN) {
-        snprintf_wrap("%llu mins", ms / MS_PER_MIN);
-    } else if (ms >= MS_PER_SEC) {
-        snprintf_wrap("%llu.%03llu secs", ms / MS_PER_SEC, ms % MS_PER_SEC);
-    } else {
-        snprintf_wrap("%llu ms", ms);
-    }
+    duration_to_human(dev->max_unattended_ns, &unattended);
 
     pr_info(
-        "%s @ " HUMAN_REPR_FMT " [rated %u], unattended up to %s%s\n",
-        dev->name, HUMAN_REPR_ARG(freq), dev->rating, wrap_str,
-        best ? " [best]" : ""
+        "%s @ " HUMAN_REPR_FMT " [rated %u], unattended up to "
+        HUMAN_REPR_FMT "%s\n", dev->name, HUMAN_REPR_ARG(freq), dev->rating,
+        HUMAN_REPR_ARG(unattended), best ? " [best]" : ""
     );
 }
 
