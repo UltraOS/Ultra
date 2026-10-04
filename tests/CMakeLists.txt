@@ -230,6 +230,11 @@ KERNEL_FILE(
 KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "wait_queue.h")
 KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "wait_queue.h")
 KERNEL_FILE(
+    INCLUDE_PATH "sched" INCLUDE_FILE "completion.h"
+    SOURCE_PATH "sched" SOURCE_FILE "completion.c"
+)
+KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "completion.h")
+KERNEL_FILE(
     INCLUDE_PATH "sched" INCLUDE_FILE "kthread.h"
     SOURCE_PATH "sched" SOURCE_FILE "kthread.c"
 )
