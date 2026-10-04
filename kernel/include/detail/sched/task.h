@@ -5,6 +5,7 @@
 #include <common/bit.h>
 
 #include <config.h>
+#include <locking/spinlock.h>
 #include <sched/task.h>
 
 #include <detail/refcount.h>
@@ -27,12 +28,16 @@ enum task_flags : u32 {
 #endif
 };
 
+enum task_state : u32;
+
 struct task {
     enum task_flags flags;
 #ifndef ARCH_HAS_CUSTOM_PREEMPT_COUNT
     u32 preempt_count;
 #endif
+    enum task_state state;
     struct refcount32 refcount;
+    struct spinlock lock;
 
     cpu_t cpu;
     u8 prio;

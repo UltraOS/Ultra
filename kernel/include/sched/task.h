@@ -3,6 +3,8 @@
 // Arch-specific way to fetch 'current'
 #include <arch/detail/current.h>
 
+typedef void (*task_fn_t)(void *user);
+
 // A thread of execution, 'current' is the one running on this CPU
 struct task;
 

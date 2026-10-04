@@ -5,11 +5,15 @@
 
 #include <per_cpu.h>
 #include <linker.h>
+#include <preempt.h>
 #include <locking/spinlock.h>
 
+#include <private/sched/sched.h>
 #include <private/sched/rr.h>
 #include <private/sched/classes.h>
 #include <private/sched/task.h>
+
+#define PREEMPT_COUNT_AT_SWITCH PREEMPT_DISABLE_DEPTH(2)
 
 struct rq;
 
@@ -37,6 +41,9 @@ struct sched_class {
      * nullptr if the class has nothing runnable.
      */
     struct task *(*pick)(struct rq *rq);
+
+    // Called when rq->curr yields the CPU to its peers but stays runnable
+    void (*yield)(struct rq *rq);
 };
 
 #define DEFINE_SCHED_CLASS(name)                                      \
@@ -56,6 +63,7 @@ struct rq {
      * running task. The idle task is not accounted here.
      */
     u32 nr_running;
+    u64 nr_switches;
 
     struct rr_rq rr;
 };
@@ -69,3 +77,6 @@ DECLARE_PER_CPU(struct rq, g_this_cpu_rq);
 void rq_enqueue(struct rq *rq, struct task *task);
 void rq_dequeue(struct rq *rq, struct task *task);
 struct task *rq_pick_next(struct rq *rq);
+
+void schedule_idle(void);
+void sched_finish_switch(struct task *prev);

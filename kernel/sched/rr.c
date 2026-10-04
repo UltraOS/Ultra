@@ -43,8 +43,18 @@ static struct task *rr_pick(struct rq *rq)
     return list_first_entry(&rr->queues[prio], struct task, rr.link);
 }
 
+static void rr_yield(struct rq *rq)
+{
+    struct task *curr = rq->curr;
+    struct rr_rq *rr = &rq->rr;
+
+    list_remove(&curr->rr.link);
+    list_insert_prev(&rr->queues[curr->prio], &curr->rr.link);
+}
+
 DEFINE_SCHED_CLASS(rr) = {
     .enqueue = rr_enqueue,
     .dequeue = rr_dequeue,
     .pick = rr_pick,
+    .yield = rr_yield,
 };

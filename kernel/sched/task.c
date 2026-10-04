@@ -1,4 +1,6 @@
 #include <private/sched/task.h>
+#include <private/arch/task.h>
+#include <private/sched/core.h>
 
 #include <common/format.h>
 
@@ -86,6 +88,9 @@ struct task *task_alloc(void)
     }
 
     task->stack_size = TASK_STACK_SIZE;
+#ifndef ARCH_HAS_CUSTOM_PREEMPT_COUNT
+    task->preempt_count = PREEMPT_COUNT_AT_SWITCH;
+#endif
     refcount_set(&task->refcount, 1);
 
     return task;
@@ -103,4 +108,13 @@ void task_unref(struct task *task)
 
     vrelease(task->stack);
     free(task);
+}
+
+void task_entry(struct task *prev, task_fn_t fn, void *user)
+{
+    sched_finish_switch(prev);
+    preempt_enable();
+
+    fn(user);
+    task_exit();
 }

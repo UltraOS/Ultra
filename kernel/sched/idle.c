@@ -26,8 +26,16 @@ static struct task *idle_pick(struct rq *rq)
     return rq->idle;
 }
 
+static void idle_yield(struct rq *rq)
+{
+    UNREFERENCED_PARAMETER(rq);
+
+    BUG();
+}
+
 DEFINE_SCHED_CLASS(idle) = {
     .enqueue = idle_enqueue,
     .dequeue = idle_dequeue,
     .pick = idle_pick,
+    .yield = idle_yield,
 };
