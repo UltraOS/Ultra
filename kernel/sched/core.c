@@ -157,7 +157,10 @@ static void do_schedule(bool preempted)
         rq_dequeue(rq, prev);
     }
 
+    prev->sched_class->switch_out(rq);
     next = rq_pick_next(rq);
+    rq->curr = next;
+    next->sched_class->switch_in(rq);
 
     task_clear_flag(prev, TASK_FLAG_NEED_RESCHED);
     preempt_clear_need_resched();
@@ -169,7 +172,6 @@ static void do_schedule(bool preempted)
     }
 
     rq->nr_switches++;
-    rq->curr = next;
     atomic_store_relaxed(&next->on_cpu, true);
 
     prev = arch_switch_to(prev, next);

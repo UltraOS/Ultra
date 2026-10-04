@@ -54,6 +54,20 @@ struct sched_class {
      *       resched_curr() is invoked automatically.
      */
     void (*wakeup_preempt)(struct rq *rq, struct task *task);
+
+    /*
+     * Called on every pass through schedule(), switch_out() for rq->curr
+     * before the next task is picked, then switch_in() once the task picked
+     * is rq->curr. A task runs from its switch_in() call until its
+     * switch_out() call.
+     *
+     * NOTE: The task picked may be rq->curr again, in which case it gets
+     *       switch_out() and switch_in() back to back without a context
+     *       switch. rq->curr may already be dequeued when switch_out() is
+     *       called.
+     */
+    void (*switch_in)(struct rq *rq);
+    void (*switch_out)(struct rq *rq);
 };
 
 #define DEFINE_SCHED_CLASS(name)                                      \
