@@ -12,6 +12,7 @@ add_test_cases(
     test_list.c
     test_slist.c
     test_time.c
+    test_timer.c
     test_rbtree.c
     test_cpu_mask.c
     test_cpu_mask_out_of_line.c
