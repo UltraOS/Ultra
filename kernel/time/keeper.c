@@ -5,9 +5,11 @@
 
 #include <bug.h>
 #include <init_level.h>
+#include <free_after_init.h>
 #include <locking/spinlock.h>
 #include <locking/seq.h>
 #include <time/time.h>
+#include <time/timer.h>
 
 #include <arch/cpu_helpers.h>
 
@@ -17,6 +19,8 @@ struct keeper_base {
     u64 ns_frac;
     u64 prev_cycles;
 };
+
+static enum timer_result tick_timer_fn(struct timer *timer);
 
 static struct keeper {
     struct spinlock lock;
@@ -29,9 +33,12 @@ static struct keeper {
 
     // At least one of these is always consistent (time_seq decides which)
     struct keeper_base published[2];
+
+    struct timer tick_timer;
 } s_ctx = {
     .lock = SPINLOCK_INIT(s_ctx.lock),
     .time_seq = SEQCOUNT_LATCH_INIT(s_ctx.time_seq),
+    .tick_timer = TIMER_INIT(s_ctx.tick_timer, tick_timer_fn),
 };
 
 static void base_store(struct keeper_base *base)
@@ -76,14 +83,54 @@ static void do_tick(void)
     publish();
 }
 
-void time_keeper_tick(void)
+/*
+ * The counter must be read again before max_unattended_ns have passed.
+ * Any timer interrupt in the second half of that window will do.
+ */
+static void tick_timer_rearm(void)
+{
+    u64 max_ns;
+
+    if (init_level_below(INIT_LEVEL_PER_CPU_AVAILABLE))
+        return;
+
+    if (s_ctx.cd == nullptr) {
+        timer_cancel_nosync(&s_ctx.tick_timer);
+        return;
+    }
+
+    max_ns = s_ctx.cd->max_unattended_ns;
+    timer_arm_with_slack(&s_ctx.tick_timer, s_ctx.ns + max_ns / 2, max_ns / 2);
+}
+
+static enum timer_result tick_timer_fn(struct timer *timer)
+{
+    enum timer_result result = TIMER_RESULT_DONE;
+
+    spin_lock(&s_ctx.lock);
+    do_tick();
+
+    if (likely(s_ctx.cd != nullptr)) {
+        timer_advance(timer, s_ctx.cd->max_unattended_ns / 2);
+        result = TIMER_RESULT_REARM;
+    }
+
+    spin_unlock(&s_ctx.lock);
+    return result;
+}
+
+static error_t INIT_CODE tick_timer_init(void)
 {
     irq_state_t state;
 
     state = spin_lock_irq_save(&s_ctx.lock);
     do_tick();
+    tick_timer_rearm();
     spin_unlock_irq_restore(&s_ctx.lock, state);
+
+    return EOK;
 }
+INIT_CALL_POST(PER_CPU_AVAILABLE, tick_timer_init);
 
 void time_keeper_set_counter_device(struct counter_device *cd)
 {
@@ -121,6 +168,7 @@ void time_keeper_set_counter_device(struct counter_device *cd)
     s_ctx.prev_cycles = new_cycles;
 
     publish();
+    tick_timer_rearm();
     spin_unlock_irq_restore(&s_ctx.lock, state);
 }
 

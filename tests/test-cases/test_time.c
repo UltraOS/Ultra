@@ -1,3 +1,17 @@
+#include <common/types.h>
+
+struct timer;
+
+void test_timer_arm_with_slack(
+    struct timer *timer, u64 deadline_ns, u64 slack_ns
+);
+bool test_timer_cancel_nosync(struct timer *timer);
+u64 test_timer_advance(struct timer *timer, u64 period_ns);
+
+#define timer_arm_with_slack test_timer_arm_with_slack
+#define timer_cancel_nosync test_timer_cancel_nosync
+#define timer_advance test_timer_advance
+
 #include <kernel-source/time/keeper.c>
 #undef MSG_FMT
 #include <kernel-source/time/counter_device.c>
@@ -29,6 +43,38 @@ static u64 test_counter_read(struct counter_device *dev)
         .rating = COUNTER_DEVICE_RATING_##r, \
     }
 
+static u64 s_tick_deadline_ns;
+static u64 s_tick_slack_ns;
+static u64 s_tick_period_ns;
+static bool s_tick_armed;
+
+void test_timer_arm_with_slack(
+    struct timer *timer, u64 deadline_ns, u64 slack_ns
+)
+{
+    UNREFERENCED_PARAMETER(timer);
+
+    s_tick_deadline_ns = deadline_ns;
+    s_tick_slack_ns = slack_ns;
+    s_tick_armed = true;
+}
+
+bool test_timer_cancel_nosync(struct timer *timer)
+{
+    UNREFERENCED_PARAMETER(timer);
+
+    s_tick_armed = false;
+    return true;
+}
+
+u64 test_timer_advance(struct timer *timer, u64 period_ns)
+{
+    UNREFERENCED_PARAMETER(timer);
+
+    s_tick_period_ns = period_ns;
+    return 1;
+}
+
 static void time_test_reset(void)
 {
     list_init(&s_counter_devices);
@@ -42,6 +88,8 @@ static void time_test_reset(void)
     s_ctx.ns_frac = 0;
     s_ctx.prev_cycles = 0;
     memset(s_ctx.published, 0, sizeof(s_ctx.published));
+    s_test_init_level = INIT_LEVEL_PLATFORM_INFO_AVAILABLE;
+    s_tick_armed = false;
 
     g_counter_value = 0;
 }
@@ -264,7 +312,7 @@ TEST_CASE(keeper_without_device_is_zero)
     ASSERT_EQ(ns_since_boot(), 0);
 
     // Ticking with no counter device installed is a harmless no-op.
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     ASSERT_EQ(ns_since_boot(), 0);
 }
 
@@ -290,11 +338,11 @@ TEST_CASE(keeper_accumulates_across_ticks)
     counter_device_register(&dev, ONE_NS_PER_CYCLE_HZ);
 
     g_counter_value = 1000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     ASSERT_EQ(ns_since_boot(), 1000);
 
     g_counter_value = 5000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     ASSERT_EQ(ns_since_boot(), 5000);
 }
 
@@ -307,7 +355,7 @@ TEST_CASE(keeper_reports_live_delta)
     counter_device_register(&dev, ONE_NS_PER_CYCLE_HZ);
 
     g_counter_value = 1000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
 
     // No tick here: the extra 500 cycles are observed live
     g_counter_value = 1500;
@@ -324,7 +372,7 @@ TEST_CASE(keeper_carries_the_fraction_across_ticks)
 
     for (i = 1; i <= 1000; i++) {
         g_counter_value = i;
-        time_keeper_tick();
+        tick_timer_fn(&s_ctx.tick_timer);
     }
 
     ASSERT_EQ(ns_since_boot(), reference_cycles_to_ns(&dev, 1000));
@@ -343,7 +391,7 @@ TEST_CASE(keeper_time_does_not_step_back_across_a_tick)
 
     // The tick read the counter before the reader did, but published after it
     g_counter_value = 1;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
 
     g_counter_value = 2;
     ASSERT_EQ(ns_since_boot(), before);
@@ -362,7 +410,7 @@ TEST_CASE(keeper_banks_time_on_device_switch)
     counter_device_register(&a, ONE_NS_PER_CYCLE_HZ);
 
     g_counter_value = 2000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     ASSERT_EQ(ns_since_boot(), 2000);
 
     // Switching to the better device banks a's outstanding 1000 cycles
@@ -386,7 +434,7 @@ TEST_CASE(counter_unregister_repicks_best)
     ASSERT_EQ((uintptr_t)current_counter_device(), (uintptr_t)&great);
 
     g_counter_value = 1000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
 
     // Dropping the active device falls back to the next best one
     counter_device_unregister(&great);
@@ -429,7 +477,7 @@ TEST_CASE(keeper_banking_ignores_new_counter_offset)
     counter_device_register(&a, ONE_NS_PER_CYCLE_HZ);
 
     g_counter_value = 2000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
 
     counter_device_register(&b, ONE_NS_PER_CYCLE_HZ);
     ASSERT_EQ(ns_since_boot(), 2000);
@@ -453,12 +501,12 @@ TEST_CASE(keeper_ignores_counter_glitch)
     counter_device_register(&dev, 3579545);
 
     g_counter_value = 0x1000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     settled = ns_since_boot();
 
     // Counter jumps backwards, the resulting masked delta is rejected
     g_counter_value = 0x0FFF;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     ASSERT_EQ(ns_since_boot(), settled);
 }
 
@@ -524,7 +572,7 @@ TEST_CASE(keeper_read_does_not_wait_for_an_update_in_progress)
 
     ASSERT_EQ(counter_device_register(&dev, ONE_NS_PER_CYCLE_HZ), EOK);
     g_counter_value = 1000;
-    time_keeper_tick();
+    tick_timer_fn(&s_ctx.tick_timer);
     g_counter_value = 1500;
 
     before = ns_since_boot();
@@ -542,4 +590,50 @@ TEST_CASE(keeper_read_does_not_wait_for_an_update_in_progress)
 
     s_ctx.published[1] = s_ctx.published[0];
     counter_device_unregister(&dev);
+}
+
+TEST_CASE(keeper_tick_timer_stays_off_until_usable)
+{
+    struct counter_device dev = TEST_CD("pm", COUNTER_MASK(24), GOOD);
+
+    time_test_reset();
+    g_counter_value = 0;
+
+    ASSERT_EQ(counter_device_register(&dev, ONE_NS_PER_CYCLE_HZ), EOK);
+    ASSERT(!s_tick_armed);
+
+    counter_device_unregister(&dev);
+}
+
+TEST_CASE(keeper_tick_timer_follows_the_counter)
+{
+    struct counter_device narrow = TEST_CD("pm", COUNTER_MASK(24), GOOD);
+    struct counter_device wide = TEST_CD("hpet", COUNTER_MASK(32), GREAT);
+
+    time_test_reset();
+    g_counter_value = 0;
+
+    s_test_init_level = INIT_LEVEL_PER_CPU_AVAILABLE;
+    ASSERT_EQ(tick_timer_init(), EOK);
+    ASSERT(!s_tick_armed);
+
+    ASSERT_EQ(counter_device_register(&narrow, ONE_NS_PER_CYCLE_HZ), EOK);
+    ASSERT(s_tick_armed);
+    ASSERT_EQ(s_tick_deadline_ns, narrow.max_unattended_ns / 2);
+    ASSERT_EQ(s_tick_slack_ns, narrow.max_unattended_ns / 2);
+
+    g_counter_value = 1000;
+    ASSERT_EQ(tick_timer_fn(&s_ctx.tick_timer), TIMER_RESULT_REARM);
+    ASSERT_EQ(s_tick_period_ns, narrow.max_unattended_ns / 2);
+
+    ASSERT_EQ(counter_device_register(&wide, ONE_NS_PER_CYCLE_HZ), EOK);
+    ASSERT_EQ(s_tick_deadline_ns, 1000 + wide.max_unattended_ns / 2);
+    ASSERT(wide.max_unattended_ns > narrow.max_unattended_ns);
+
+    counter_device_unregister(&wide);
+    ASSERT_EQ(s_tick_deadline_ns, 1000 + narrow.max_unattended_ns / 2);
+
+    counter_device_unregister(&narrow);
+    ASSERT(!s_tick_armed);
+    ASSERT_EQ(tick_timer_fn(&s_ctx.tick_timer), TIMER_RESULT_DONE);
 }
