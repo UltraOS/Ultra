@@ -36,11 +36,12 @@ static void time_test_reset(void)
     s_active_cd = nullptr;
 
     spin_lock_init(&s_ctx.lock);
-    seqcount_init(&s_ctx.time_seq);
+    seqcount_latch_init(&s_ctx.time_seq);
     s_ctx.cd = nullptr;
     s_ctx.ns = 0;
     s_ctx.ns_frac = 0;
     s_ctx.prev_cycles = 0;
+    memset(s_ctx.published, 0, sizeof(s_ctx.published));
 
     g_counter_value = 0;
 }
@@ -451,4 +452,80 @@ TEST_TEARDOWN()
 {
     // ns_since_boot() is used by other tests as well, so make sure its clean
     time_test_reset();
+}
+
+static u64 g_seen_during_switch;
+static bool g_switch_pending;
+
+// The first read is the keeper sampling the device it is switching to
+static u64 test_counter_read_during_switch(struct counter_device *dev)
+{
+    UNREFERENCED_PARAMETER(dev);
+
+    if (g_switch_pending) {
+        g_switch_pending = false;
+
+        g_counter_value += 400;
+        g_seen_during_switch = ns_since_boot();
+    }
+
+    return 0;
+}
+
+TEST_CASE(keeper_time_does_not_step_back_across_a_device_switch)
+{
+    struct counter_device old_dev = TEST_CD("old", COUNTER_MASK(64), GOOD);
+    struct counter_device new_dev = {
+        .name = "new",
+        .read = test_counter_read_during_switch,
+        .mask = COUNTER_MASK(64),
+        .rating = COUNTER_DEVICE_RATING_GREAT,
+    };
+
+    time_test_reset();
+    g_counter_value = 0;
+    g_seen_during_switch = 0;
+    g_switch_pending = true;
+
+    ASSERT_EQ(counter_device_register(&old_dev, ONE_NS_PER_CYCLE_HZ), EOK);
+    g_counter_value = 1000;
+
+    ASSERT_EQ(counter_device_register(&new_dev, ONE_NS_PER_CYCLE_HZ), EOK);
+    ASSERT_EQ((uintptr_t)s_ctx.cd, (uintptr_t)&new_dev);
+
+    ASSERT_EQ(g_seen_during_switch, 1400);
+    ASSERT(ns_since_boot() >= g_seen_during_switch);
+
+    counter_device_unregister(&new_dev);
+    counter_device_unregister(&old_dev);
+}
+
+TEST_CASE(keeper_read_does_not_wait_for_an_update_in_progress)
+{
+    struct counter_device dev = TEST_CD("test", COUNTER_MASK(64), GOOD);
+    u64 before;
+
+    time_test_reset();
+    g_counter_value = 0;
+
+    ASSERT_EQ(counter_device_register(&dev, ONE_NS_PER_CYCLE_HZ), EOK);
+    g_counter_value = 1000;
+    time_keeper_tick();
+    g_counter_value = 1500;
+
+    before = ns_since_boot();
+    ASSERT_EQ(before, 1500);
+
+    seqcount_latch_flip(&s_ctx.time_seq);
+    s_ctx.published[0].ns = 0xDEAD0000;
+    s_ctx.published[0].prev_cycles = 7;
+    ASSERT_EQ(ns_since_boot(), before);
+
+    s_ctx.published[0] = s_ctx.published[1];
+    seqcount_latch_flip(&s_ctx.time_seq);
+    s_ctx.published[1].ns = 0xDEAD0000;
+    ASSERT_EQ(ns_since_boot(), before);
+
+    s_ctx.published[1] = s_ctx.published[0];
+    counter_device_unregister(&dev);
 }
