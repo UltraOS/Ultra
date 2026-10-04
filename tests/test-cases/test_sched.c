@@ -18,6 +18,7 @@ void sched_test_vrelease(void *ptr);
 #include <kernel-source/sched/core.c>
 #include <kernel-source/sched/rr.c>
 #include <kernel-source/sched/idle.c>
+#include <kernel-source/sched/kthread.c>
 
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
@@ -783,6 +784,60 @@ TEST_CASE(sched_interrupt_exit_respects_disabled_interrupts)
     ASSERT_EQ(s_log[1], 1);
     ASSERT_EQ(s_log[2], 1);
     ASSERT_EQ(s_log[3], 2);
+
+    switching_test_end();
+}
+
+TEST_CASE(kthread_create_then_start)
+{
+    struct runner runner = { .id = 5, .rounds = 2 };
+    struct task *task;
+    struct rq *rq;
+
+    rq = switching_test_begin();
+
+    task = kthread_create(run_to_completion, &runner, "worker/%d", 3);
+    ASSERT_NOT_NULL(task);
+    ASSERT_STR_EQ(task->name, "worker/3");
+    ASSERT_EQ(task_state(task), TASK_STATE_NEW);
+    ASSERT_EQ(task->prio, TASK_PRIO_DEFAULT);
+    ASSERT_EQ(task->sched_class, &SCHED_CLASS_INSTANCE(rr));
+    ASSERT(!task->on_rq);
+    ASSERT_EQ(rq->nr_running, 0);
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    kthread_start(task);
+    ASSERT_EQ(rq->nr_running, 1);
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 2);
+    ASSERT_EQ(task_state(task), TASK_STATE_DEAD);
+    ASSERT_EQ(g_sched_test_live_tasks, 1);
+
+    task_unref(task);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+    ASSERT_EQ(g_sched_test_live_stacks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(kthread_run_runs_and_frees)
+{
+    struct runner runner = { .id = 9, .rounds = 3 };
+
+    switching_test_begin();
+
+    ASSERT_EQ(kthread_run(run_to_completion, &runner, "runner"), EOK);
+    ASSERT_EQ(g_sched_test_live_tasks, 1);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 3);
+    ASSERT_EQ(s_log[0], 9);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+    ASSERT_EQ(g_sched_test_live_stacks, 0);
 
     switching_test_end();
 }

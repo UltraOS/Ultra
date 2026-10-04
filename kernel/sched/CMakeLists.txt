@@ -3,4 +3,5 @@ ultra_sources(
     core.c
     rr.c
     idle.c
+    kthread.c
 )
