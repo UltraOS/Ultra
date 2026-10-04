@@ -189,6 +189,8 @@ KERNEL_FILE(INCLUDE_FILE "config_helpers.h")
 KERNEL_FILE(INCLUDE_FILE "log.h")
 KERNEL_FILE(INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "bug.h")
+KERNEL_FILE(INCLUDE_FILE "refcount.h" SOURCE_FILE "refcount.c")
+KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "refcount.h")
 KERNEL_FILE(INCLUDE_FILE "panic.h")
 KERNEL_FILE(INCLUDE_FILE "linker.h")
 KERNEL_FILE(INCLUDE_FILE "linker_common.ld.h")
@@ -252,6 +254,7 @@ add_executable(
     kernel-source/locking/spinlock.c kernel-source/memory/units.c
     kernel-source/common/bit.c kernel-source/locking/mutex.c
     kernel-source/common/string_container.c kernel-source/common/conversions.c
+    kernel-source/refcount.c
 )
 set_property(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

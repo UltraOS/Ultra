@@ -101,6 +101,7 @@ ultra_sources(
     entry.c
     panic.c
     bug.c
+    refcount.c
     console.c
     log.c
     symbols.c

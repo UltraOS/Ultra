@@ -3,6 +3,7 @@ add_test_cases(
     test_parameter.c
     test_log_ring.c
     test_bit.c
+    test_refcount.c
     test_console.c
     test_string.c
     test_minmax.c
