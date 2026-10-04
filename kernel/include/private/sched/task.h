@@ -47,9 +47,19 @@ static inline bool task_test_and_set_flag(
     return atomic_fetch_or(&task->flags, flag, MO_ACQ_REL) & flag;
 }
 
+static inline void task_set_flag(struct task *task, enum task_flags flag)
+{
+    atomic_fetch_or(&task->flags, flag, MO_RELEASE);
+}
+
 static inline void task_clear_flag(struct task *task, enum task_flags flag)
 {
     atomic_fetch_and(&task->flags, ~flag, MO_RELEASE);
+}
+
+static inline bool task_is_kthread(struct task *task)
+{
+    return task_test_flag(task, TASK_FLAG_KTHREAD);
 }
 
 struct task *task_alloc(void);

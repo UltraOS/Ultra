@@ -1220,3 +1220,109 @@ TEST_CASE(completion_from_interrupt_context)
 
     switching_test_end();
 }
+
+struct worker {
+    int id;
+    int iterations;
+};
+
+static void work_until_stopped(void *user)
+{
+    struct worker *worker = user;
+
+    for (;;) {
+        set_current_state(TASK_STATE_UNINTERRUPTIBLE);
+
+        if (kthread_should_stop())
+            break;
+
+        worker->iterations++;
+        schedule();
+    }
+
+    set_current_state(TASK_STATE_RUNNING);
+    log_id(worker->id);
+}
+
+struct stopper {
+    struct task *target;
+    int id;
+};
+
+static void stop_target(void *user)
+{
+    struct stopper *stopper = user;
+
+    kthread_stop(stopper->target);
+    log_id(stopper->id);
+}
+
+TEST_CASE(kthread_stop_waits_for_a_sleeping_thread)
+{
+    struct worker worker = { .id = 1 };
+    struct stopper stopper = { .id = 2 };
+
+    switching_test_begin();
+
+    stopper.target = kthread_create(work_until_stopped, &worker, "worker");
+    kthread_start(stopper.target);
+
+    schedule_idle();
+    ASSERT_EQ(worker.iterations, 1);
+    ASSERT_EQ(s_log_length, 0);
+
+    ASSERT_EQ(kthread_run(stop_target, &stopper, "stopper"), EOK);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 2);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+    ASSERT_EQ(g_sched_test_live_stacks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(kthread_stop_before_start_never_runs_it)
+{
+    struct runner runner = { .id = 1, .rounds = 3 };
+    struct stopper stopper = { .id = 2 };
+
+    switching_test_begin();
+
+    stopper.target = kthread_create(run_to_completion, &runner, "unstarted");
+
+    ASSERT_EQ(kthread_run(stop_target, &stopper, "stopper"), EOK);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(s_log[0], 2);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+    ASSERT_EQ(g_sched_test_live_stacks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(kthread_stop_after_it_exited)
+{
+    struct runner runner = { .id = 1, .rounds = 1 };
+    struct stopper stopper = { .id = 2 };
+
+    switching_test_begin();
+
+    stopper.target = kthread_create(run_to_completion, &runner, "short");
+    kthread_start(stopper.target);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(task_state(stopper.target), TASK_STATE_DEAD);
+
+    ASSERT_EQ(kthread_run(stop_target, &stopper, "stopper"), EOK);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 2);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
