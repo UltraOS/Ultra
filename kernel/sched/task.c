@@ -92,6 +92,7 @@ struct task *task_alloc(void)
     task->preempt_count = PREEMPT_COUNT_AT_SWITCH;
 #endif
     refcount_set(&task->refcount, 1);
+    task->state = TASK_STATE_NEW;
 
     return task;
 }

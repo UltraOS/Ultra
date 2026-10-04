@@ -234,7 +234,6 @@ static void switching_test_end(void)
 
 static struct task *spawn(task_fn_t fn, void *user, u8 prio)
 {
-    struct rq *rq = cpu_rq(0);
     struct task *task;
 
     task = task_alloc();
@@ -242,10 +241,8 @@ static struct task *spawn(task_fn_t fn, void *user, u8 prio)
     task->sched_class = &SCHED_CLASS_INSTANCE(rr);
     arch_task_frame_init(task, fn, user);
 
-    spin_lock(&rq->lock);
-    rq_enqueue(rq, task);
-    spin_unlock(&rq->lock);
-
+    wake_up_task(task, TASK_STATE_NEW);
+    task_unref(task);
     return task;
 }
 
@@ -394,5 +391,115 @@ TEST_CASE(sched_sleeping_task_leaves_the_runqueue)
     ASSERT_EQ(g_sched_test_live_tasks, 1);
 
     task_unref(task);
+    switching_test_end();
+}
+
+struct sleeper {
+    struct task *task;
+    struct task *to_wake;
+    int id;
+    bool woke_self;
+    bool wake_result;
+};
+
+static void sleep_once(void *user)
+{
+    struct sleeper *sleeper = user;
+
+    log_id(sleeper->id);
+
+    set_current_state(TASK_STATE_UNINTERRUPTIBLE);
+    schedule();
+
+    log_id(sleeper->id);
+}
+
+static void wake_other(void *user)
+{
+    struct sleeper *sleeper = user;
+
+    log_id(sleeper->id);
+    sleeper->wake_result = wake_up_task(
+        sleeper->to_wake, TASK_STATE_UNINTERRUPTIBLE
+    );
+    log_id(sleeper->id);
+}
+
+static void wake_self_before_schedule(void *user)
+{
+    struct sleeper *sleeper = user;
+
+    set_current_state(TASK_STATE_UNINTERRUPTIBLE);
+    sleeper->woke_self = wake_up_task(current, TASK_STATE_UNINTERRUPTIBLE);
+    schedule();
+
+    log_id(sleeper->id);
+}
+
+TEST_CASE(sched_new_task_is_woken_once)
+{
+    struct runner runner = { .id = 1, .rounds = 1 };
+    struct task *task;
+    struct rq *rq;
+
+    rq = switching_test_begin();
+
+    task = spawn(run_to_completion, &runner, TASK_PRIO_DEFAULT);
+    ASSERT(task->on_rq);
+    ASSERT_EQ(task_state(task), TASK_STATE_RUNNING);
+    ASSERT_EQ(rq->nr_running, 1);
+
+    ASSERT(!wake_up_task(task, TASK_STATE_NEW));
+    ASSERT(!wake_up_task(task, TASK_STATE_UNINTERRUPTIBLE));
+    ASSERT_EQ(rq->nr_running, 1);
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 1);
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_wakeup_resumes_a_sleeper)
+{
+    struct sleeper sleeper = { .id = 1 };
+    struct sleeper waker = { .id = 2 };
+    struct rq *rq;
+
+    rq = switching_test_begin();
+
+    sleeper.task = spawn(sleep_once, &sleeper, TASK_PRIO_DEFAULT);
+    waker.to_wake = sleeper.task;
+    waker.task = spawn(wake_other, &waker, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT(waker.wake_result);
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(s_log[2], 2);
+    ASSERT_EQ(s_log[3], 1);
+
+    ASSERT_EQ(rq->nr_running, 0);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_wakeup_before_schedule_is_not_lost)
+{
+    struct sleeper sleeper = { .id = 1 };
+    struct rq *rq;
+
+    rq = switching_test_begin();
+
+    spawn(wake_self_before_schedule, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    ASSERT(sleeper.woke_self);
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(rq->nr_running, 0);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
     switching_test_end();
 }

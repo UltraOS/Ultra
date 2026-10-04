@@ -42,6 +42,7 @@ struct task {
     cpu_t cpu;
     u8 prio;
     bool on_rq;
+    bool on_cpu;
     const struct sched_class *sched_class;
 
     union {
