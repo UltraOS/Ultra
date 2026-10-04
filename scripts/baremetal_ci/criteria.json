@@ -1,5 +1,5 @@
 {
-  "success": "Nothing left to do, halting!",
+  "success": "Nothing left to do, idling",
   "failures": [
     "Kernel panic:",
     "BUG!",

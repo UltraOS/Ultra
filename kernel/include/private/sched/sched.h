@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/atomic.h>
+#include <common/attributes.h>
 #include <common/types.h>
 
 #include <private/sched/task.h>
@@ -30,3 +31,6 @@ bool wake_up_task(struct task *task, enum task_state state_mask);
  *       priority never get to run.
  */
 void yield(void);
+
+NORETURN
+void sched_idle_loop(void);
