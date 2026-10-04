@@ -36,3 +36,7 @@ void kthread_start(struct task *task);
  */
 PRINTF_DECL(3, 4)
 error_t kthread_run(task_fn_t fn, void *user, const char *name_fmt, ...);
+
+// Exit the current kernel thread
+NORETURN
+void kthread_exit(void);

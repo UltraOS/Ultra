@@ -63,3 +63,8 @@ error_t kthread_run(task_fn_t fn, void *user, const char *name_fmt, ...)
 
     return EOK;
 }
+
+void kthread_exit(void)
+{
+    task_exit();
+}
