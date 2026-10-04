@@ -179,6 +179,17 @@ KERNEL_FILE(
     SOURCE_PATH "time" SOURCE_FILE "units.c"
     INCLUDE_PATH "time" INCLUDE_FILE "units.h"
 )
+KERNEL_FILE(
+    SOURCE_PATH "time" SOURCE_FILE "timer.c"
+    INCLUDE_PATH "time" INCLUDE_FILE "timer.h"
+)
+KERNEL_FILE(INCLUDE_PATH "detail/time" INCLUDE_FILE "timer.h")
+KERNEL_FILE(INCLUDE_PATH "private/time" INCLUDE_FILE "timer.h")
+KERNEL_FILE(
+    SOURCE_PATH "time" SOURCE_FILE "event_device.c"
+    INCLUDE_PATH "time" INCLUDE_FILE "event_device.h"
+)
+KERNEL_FILE(INCLUDE_PATH "private/time" INCLUDE_FILE "event_device.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "alloc_behavior.h")

@@ -1,6 +1,8 @@
 #include <private/time/timer.h>
+#include <private/time/event_device.h>
 
 #include <time/timer.h>
+#include <time/event_device.h>
 #include <time/time.h>
 #include <time/units.h>
 
@@ -23,6 +25,10 @@ enum timer_flags : u32 {
 struct timer_queue {
     struct spinlock lock;
     struct rb_root_cached timers;
+    struct event_device *dev;
+
+    // The deadline the device is currently armed for, or NO_DEADLINE
+    u64 armed_ns;
     bool in_interrupt;
 };
 
@@ -62,6 +68,41 @@ static void queue_remove(struct timer_queue *queue, struct timer *timer)
 {
     rb_node_remove_cached(&timer->node, &queue->timers);
     timer->flags &= ~TIMER_FLAG_QUEUED;
+}
+
+static u64 queue_next_deadline(struct timer_queue *queue)
+{
+    struct timer *first;
+
+    first = queue_first(queue);
+    if (first == nullptr)
+        return NO_DEADLINE;
+
+    return first->deadline_ns;
+}
+
+static void queue_arm_device(struct timer_queue *queue, u64 deadline_ns)
+{
+    struct event_device *dev = queue->dev;
+
+    queue->armed_ns = deadline_ns;
+
+    if (deadline_ns == NO_DEADLINE)
+        dev->disarm(dev);
+    else
+        event_device_arm(dev, deadline_ns);
+}
+
+static void queue_arm(struct timer_queue *queue)
+{
+    u64 deadline_ns;
+
+    if (queue->dev == nullptr)
+        return;
+
+    deadline_ns = queue_next_deadline(queue);
+    if (deadline_ns != queue->armed_ns)
+        queue_arm_device(queue, deadline_ns);
 }
 
 static struct timer_queue *timer_lock_queue(
@@ -156,6 +197,12 @@ void timer_init(struct timer *timer, timer_fn_t fn)
     *timer = TIMER_INIT(*timer, fn);
 }
 
+// The interrupt handler re-arms the device at the end, after the last callback
+static bool queue_should_defer_arming(struct timer_queue *queue)
+{
+    return queue->in_interrupt;
+}
+
 static void queue_insert(
     struct timer_queue *queue, struct timer *timer, u64 deadline_ns
 )
@@ -177,6 +224,9 @@ void timer_arm(struct timer *timer, u64 deadline_ns)
     irq_state = local_irq_state_save();
     queue = timer_lock_queue_for_arm(timer);
     queue_insert(queue, timer, deadline_ns);
+
+    if (queue_first(queue) == timer && !queue_should_defer_arming(queue))
+        queue_arm(queue);
 
     spin_unlock(&queue->lock);
     local_irq_state_restore(irq_state);
@@ -206,6 +256,22 @@ void timer_cancel(struct timer *timer)
         BUG_ON(in_hard_irq());
         arch_cpu_relax();
     }
+}
+
+void timer_queue_set_event_device(struct event_device *dev)
+{
+    struct timer_queue *queue;
+    irq_state_t irq_state;
+
+    irq_state = local_irq_state_save();
+    queue = this_cpu_ptr(&s_queue);
+
+    spin_lock(&queue->lock);
+    queue->dev = dev;
+    queue_arm_device(queue, queue_next_deadline(queue));
+    spin_unlock(&queue->lock);
+
+    local_irq_state_restore(irq_state);
 }
 
 static void queue_run_due(struct timer_queue *queue, u64 now_ns)
@@ -239,8 +305,10 @@ void timer_queue_expire(void)
 
     spin_lock(&queue->lock);
     queue->in_interrupt = true;
+    queue->armed_ns = NO_DEADLINE;
 
     queue_run_due(queue, ns_since_boot());
+    queue_arm(queue);
 
     queue->in_interrupt = false;
     spin_unlock(&queue->lock);
