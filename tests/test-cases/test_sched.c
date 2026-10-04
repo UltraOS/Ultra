@@ -2061,6 +2061,33 @@ TEST_CASE(mutex_waiters_get_the_lock_in_arrival_order)
     switching_test_end();
 }
 
+TEST_CASE(mutex_is_handed_to_a_waiter_that_lost_it_once)
+{
+    DEFINE_MUTEX(mutex)
+    struct mutex_user greedy = {
+        .id = 1, .mutex = &mutex, .rounds = 3, .yield_while_holding = true,
+    };
+    struct mutex_user waiter = { .id = 2, .mutex = &mutex, .rounds = 1 };
+
+    switching_test_begin();
+    spawn(lock_log_unlock, &greedy, TASK_PRIO_DEFAULT);
+    spawn(lock_log_unlock, &waiter, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(s_log[2], 2);
+    ASSERT_EQ(s_log[3], 1);
+
+    ASSERT_EQ(mutex.owner, 0);
+    ASSERT(list_is_empty(&mutex.waiters));
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
 static void try_lock_and_log(void *user)
 {
     struct mutex_user *mutex_user = user;
