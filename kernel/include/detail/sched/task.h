@@ -7,6 +7,8 @@
 #include <config.h>
 #include <sched/task.h>
 
+#include <arch/detail/task.h>
+
 // We need to know whether this arch keeps preempt_count in struct task
 #if HAS_INCLUDE(<arch/detail/preempt.h>)
 #include <arch/detail/preempt.h>
@@ -28,4 +30,8 @@ struct task {
 #endif
 
     char name[TASK_NAME_MAX];
+    void *stack;
+    size_t stack_size;
+
+    struct arch_task arch;
 };

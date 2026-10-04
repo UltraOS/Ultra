@@ -24,6 +24,7 @@ ultra_sources(
     earlycon.c
     pci_type1.c
     tsc.c
+    task.S
 )
 setup_asm_offsets(asm_offsets.c)
 

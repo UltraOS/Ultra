@@ -1,6 +1,7 @@
 #include <private/arch/asm_offsets.h>
 
 #include <arch/registers.h>
+#include <detail/sched/task.h>
 
 void asm_offsets(void)
 {
@@ -30,4 +31,6 @@ void asm_offsets(void)
     ASM_OFFSET(SS_OFFSET, struct registers, ss);
 
     ASM_CONSTANT(REGISTERS_SIZE, sizeof(struct registers));
+
+    ASM_OFFSET(TASK_ARCH_SP_OFFSET, struct task, arch.sp);
 }
