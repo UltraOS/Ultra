@@ -9,6 +9,7 @@ enum timer_result : u32;
 
 struct timer {
     u64 deadline_ns;
+    u64 hard_deadline_ns;
 
     enum timer_result (*fn)(struct timer *timer);
 
