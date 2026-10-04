@@ -93,7 +93,7 @@ void time_keeper_set_counter_device(struct counter_device *cd)
 
 u64 ns_since_boot(void)
 {
-    u32 seq;
+    seq_t seq;
     u64 base, ns_frac, prev_cycles, now, delta_cycles, delta_ns;
     struct counter_device *cd;
 
