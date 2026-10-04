@@ -58,10 +58,22 @@ static void rr_wakeup_preempt(struct rq *rq, struct task *task)
         resched_curr(rq);
 }
 
+static void rr_switch_in(struct rq *rq)
+{
+    UNREFERENCED_PARAMETER(rq);
+}
+
+static void rr_switch_out(struct rq *rq)
+{
+    UNREFERENCED_PARAMETER(rq);
+}
+
 DEFINE_SCHED_CLASS(rr) = {
     .enqueue = rr_enqueue,
     .dequeue = rr_dequeue,
     .pick = rr_pick,
     .yield = rr_yield,
     .wakeup_preempt = rr_wakeup_preempt,
+    .switch_in = rr_switch_in,
+    .switch_out = rr_switch_out,
 };
