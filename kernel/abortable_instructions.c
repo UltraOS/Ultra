@@ -3,9 +3,9 @@
 
 #include <private/arch/abortable_instructions.h>
 
-extern const struct abortable_instruction
-SECTION_ARRAY_BEGIN(ABORTABLE_INSTRUCTIONS_SECTION)[],
-SECTION_ARRAY_END(ABORTABLE_INSTRUCTIONS_SECTION)[];
+DECLARE_TYPED_SECTION_MARKERS(
+    const struct abortable_instruction, ABORTABLE_INSTRUCTIONS_SECTION
+);
 
 static const struct abortable_instruction *find_abortable_instruction(reg_t ip)
 {

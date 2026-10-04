@@ -22,8 +22,7 @@
 ptr_t g_per_cpu_offset[ULTRA_MAX_CPUS];
 virt_addr_t g_per_cpu_base;
 
-extern u8 SECTION_MARKER_BEGIN(PER_CPU_SECTION)[];
-extern u8 SECTION_MARKER_END(PER_CPU_SECTION)[];
+DECLARE_SECTION_MARKERS(PER_CPU_SECTION);
 
 static error_t INIT_CODE per_cpu_setup(void)
 {
@@ -57,7 +56,7 @@ static error_t INIT_CODE per_cpu_setup(void)
      * and the new allocated per-cpu section, which is duplicated for each CPU.
      */
     this_cpu_offset = g_per_cpu_base;
-    this_cpu_offset -= (ptr_t)SECTION_MARKER_BEGIN(PER_CPU_SECTION);
+    this_cpu_offset -= SECTION_MARKER_BEGIN_ADDR(PER_CPU_SECTION);
 
     for_each_present_cpu(i) {
         g_per_cpu_offset[i] = this_cpu_offset;

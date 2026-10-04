@@ -52,9 +52,7 @@ BUILD_BUG_ON(offsetof(struct bug_entry, file_disp) != 4);
 BUILD_BUG_ON(offsetof(struct bug_entry, line) != 8);
 BUILD_BUG_ON(offsetof(struct bug_entry, flags) != 10);
 
-extern struct bug_entry
-SECTION_ARRAY_BEGIN(BUG_TABLE_SECTION)[],
-SECTION_ARRAY_END(BUG_TABLE_SECTION)[];
+DECLARE_TYPED_SECTION_MARKERS(struct bug_entry, BUG_TABLE_SECTION);
 
 static struct bug_entry *find_bug_entry(reg_t pc)
 {

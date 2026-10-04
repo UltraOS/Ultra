@@ -3,11 +3,22 @@
 #include <common/helpers.h>
 
 #define LINKER_SYMBOL(x) CONCAT(g_linker_symbol_, x)
+#define DECLARE_LINKER_SYMBOL(x) extern u8 LINKER_SYMBOL(x)[]
+#define LINKER_SYMBOL_ADDR(x) ((ptr_t)LINKER_SYMBOL(x))
+
 #define SECTION_NAME(sec) TO_STR(.##sec)
 
 #define SECTION_MARKER_BEGIN(x) CONCAT(LINKER_SYMBOL(x), _begin)
 #define SECTION_MARKER_END(x) CONCAT(LINKER_SYMBOL(x), _end)
+#define SECTION_MARKER_BEGIN_ADDR(x) ((ptr_t)SECTION_MARKER_BEGIN(x))
+#define SECTION_MARKER_END_ADDR(x) ((ptr_t)SECTION_MARKER_END(x))
 #define SECTION_SIZE(x) (SECTION_MARKER_END(x) - SECTION_MARKER_BEGIN(x))
+
+#define DECLARE_TYPED_SECTION_MARKERS(type, x) \
+    extern type SECTION_MARKER_BEGIN(x)[];     \
+    extern type SECTION_MARKER_END(x)[]
+
+#define DECLARE_SECTION_MARKERS(x) DECLARE_TYPED_SECTION_MARKERS(u8, x)
 
 #define SECTION_ARRAY_BEGIN(x) SECTION_MARKER_BEGIN(x)
 #define SECTION_ARRAY_END(x) SECTION_MARKER_END(x)
