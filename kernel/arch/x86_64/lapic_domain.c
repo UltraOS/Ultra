@@ -56,7 +56,7 @@ IRQ_HANDLER {
     irq_deliver(irq);
 
 out:
-    hard_irq_exit();
+    hard_irq_exit(regs);
 }
 
 // The domain's private bookkeeping for one allocated interrupt

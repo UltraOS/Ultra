@@ -32,6 +32,11 @@ static inline void local_irq_state_restore(irq_state_t state)
     g_test_irqs_enabled = state;
 }
 
+static inline bool arch_local_irq_is_enabled_state(irq_state_t state)
+{
+    return state;
+}
+
 static inline void arch_local_irq_enable(void)
 {
     g_test_irqs_enabled = true;

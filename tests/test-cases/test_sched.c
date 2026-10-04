@@ -20,6 +20,7 @@ void sched_test_vrelease(void *ptr);
 #include <kernel-source/sched/idle.c>
 
 #include <private/arch/task.h>
+#include <private/arch/preempt.h>
 
 #include <test_harness.h>
 
@@ -666,6 +667,122 @@ TEST_CASE(sched_preempted_sleeper_stays_queued)
     ASSERT_EQ(s_log[2], 1);
     ASSERT_EQ(rq->nr_running, 0);
     ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+struct interrupted {
+    int id;
+    bool irqs_were_enabled;
+    bool preemption_disabled;
+    struct runner child;
+};
+
+/*
+ * Emulates a handler that wakes a task: the wakeup runs in hard
+ * interrupt context with interrupts off, then the exit path decides
+ * whether to switch.
+ */
+static void take_fake_interrupt(struct interrupted *ctx)
+{
+    struct registers regs = { .irq_state = ctx->irqs_were_enabled };
+    irq_state_t irq_state;
+
+    irq_state = local_irq_state_save();
+    hard_irq_enter();
+    spawn(run_to_completion, &ctx->child, TASK_PRIO_HIGHEST);
+    hard_irq_exit(&regs);
+
+    local_irq_state_restore(irq_state);
+}
+
+static void get_interrupted(void *user)
+{
+    struct interrupted *ctx = user;
+    irq_state_t irq_state = 0;
+
+    log_id(ctx->id);
+
+    if (ctx->preemption_disabled)
+        preempt_disable();
+    if (!ctx->irqs_were_enabled)
+        irq_state = local_irq_state_save();
+
+    take_fake_interrupt(ctx);
+    log_id(ctx->id);
+
+    if (!ctx->irqs_were_enabled)
+        local_irq_state_restore(irq_state);
+    if (ctx->preemption_disabled)
+        preempt_enable();
+
+    log_id(ctx->id);
+}
+
+TEST_CASE(sched_interrupt_exit_preempts)
+{
+    struct interrupted ctx = {
+        .id = 1,
+        .irqs_were_enabled = true,
+        .child = { .id = 2, .rounds = 1 },
+    };
+
+    switching_test_begin();
+    spawn(get_interrupted, &ctx, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(s_log[2], 1);
+    ASSERT_EQ(s_log[3], 1);
+    ASSERT(local_irq_enabled());
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_interrupt_exit_respects_preempt_disable)
+{
+    struct interrupted ctx = {
+        .id = 1,
+        .irqs_were_enabled = true,
+        .preemption_disabled = true,
+        .child = { .id = 2, .rounds = 1 },
+    };
+
+    switching_test_begin();
+    spawn(get_interrupted, &ctx, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(s_log[2], 2);
+    ASSERT_EQ(s_log[3], 1);
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_interrupt_exit_respects_disabled_interrupts)
+{
+    struct interrupted ctx = {
+        .id = 1,
+        .irqs_were_enabled = false,
+        .child = { .id = 2, .rounds = 1 },
+    };
+
+    switching_test_begin();
+    spawn(get_interrupted, &ctx, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(s_log[2], 1);
+    ASSERT_EQ(s_log[3], 2);
 
     switching_test_end();
 }
