@@ -74,6 +74,41 @@ void resched_curr(struct rq *rq)
     preempt_set_need_resched();
 }
 
+void rq_arm_slice(struct rq *rq, u64 deadline_ns)
+{
+    BUG_ON(!spin_is_locked(&rq->lock));
+    BUG_ON(rq != this_rq());
+
+    timer_arm_lazy(&rq->slice_timer, deadline_ns);
+}
+
+void rq_cancel_slice(struct rq *rq)
+{
+    BUG_ON(!spin_is_locked(&rq->lock));
+    BUG_ON(rq != this_rq());
+
+    /*
+     * The slice timer is only ever armed on this CPU, so its callback runs
+     * here, in an interrupt, and can't be running while we hold rq->lock with
+     * interrupts disabled. timer_cancel() must not be used here, because it
+     * waits for a running callback, and the callback takes rq->lock.
+     */
+    timer_cancel_nosync(&rq->slice_timer);
+}
+
+static enum timer_result slice_timer_fn(struct timer *timer)
+{
+    struct rq *rq;
+
+    rq = container_of(timer, struct rq, slice_timer);
+
+    spin_lock(&rq->lock);
+    rq->curr->sched_class->slice_expired(rq);
+    spin_unlock(&rq->lock);
+
+    return TIMER_RESULT_DONE;
+}
+
 static void rq_wakeup_preempt(struct rq *rq, struct task *task)
 {
     struct task *curr = rq->curr;
@@ -396,6 +431,7 @@ static void rq_init(struct rq *rq, cpu_t cpu)
 
     spin_lock_init(&rq->lock);
     rr_rq_init(&rq->rr);
+    timer_init(&rq->slice_timer, slice_timer_fn);
 
     idle->on_cpu = true;
 

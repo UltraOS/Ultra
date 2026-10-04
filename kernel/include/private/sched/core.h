@@ -7,6 +7,7 @@
 #include <linker.h>
 #include <preempt.h>
 #include <locking/spinlock.h>
+#include <time/timer.h>
 
 #include <private/sched/sched.h>
 #include <private/sched/rr.h>
@@ -68,6 +69,9 @@ struct sched_class {
      */
     void (*switch_in)(struct rq *rq);
     void (*switch_out)(struct rq *rq);
+
+    // Called for rq->curr once the deadline of rq_arm_slice() expires
+    void (*slice_expired)(struct rq *rq);
 };
 
 #define DEFINE_SCHED_CLASS(name)                                      \
@@ -89,6 +93,8 @@ struct rq {
     u32 nr_running;
     u64 nr_switches;
 
+    struct timer slice_timer;
+
     struct rr_rq rr;
 };
 
@@ -107,6 +113,9 @@ void rq_enqueue(struct rq *rq, struct task *task);
 void rq_dequeue(struct rq *rq, struct task *task);
 struct task *rq_pick_next(struct rq *rq);
 void resched_curr(struct rq *rq);
+
+void rq_arm_slice(struct rq *rq, u64 deadline_ns);
+void rq_cancel_slice(struct rq *rq);
 
 void schedule_idle(void);
 void sched_finish_switch(struct task *prev);
