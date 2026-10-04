@@ -63,8 +63,10 @@
     void X86_IRQ_DISPATCH(struct registers *regs); \
     void X86_IRQ_DISPATCH(struct registers *regs)
 
+struct registers;
+
 void fixed_vector_enter(u8 vector);
-void fixed_vector_exit(void);
+void fixed_vector_exit(struct registers *regs);
 
 #define FIXED_VECTOR_HANDLER(x, vector)                 \
     static void CONCAT(do_, x)(struct registers *regs); \
@@ -73,7 +75,7 @@ void fixed_vector_exit(void);
     {                                                   \
         fixed_vector_enter(vector);                     \
         CONCAT(do_, x)(regs);                           \
-        fixed_vector_exit();                            \
+        fixed_vector_exit(regs);                        \
     }                                                   \
     static void CONCAT(do_, x)(struct registers *regs)
 

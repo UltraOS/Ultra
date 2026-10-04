@@ -3,6 +3,7 @@
 #include <private/sched/idle.h>
 #include <private/sched/task.h>
 #include <private/arch/task.h>
+#include <private/arch/preempt.h>
 
 #include <common/helpers.h>
 #include <common/atomic.h>
@@ -16,6 +17,7 @@
 #include <free_after_init.h>
 
 #include <arch/cpu_helpers.h>
+#include <arch/registers.h>
 
 DEFINE_PER_CPU(struct rq, g_this_cpu_rq);
 
@@ -258,6 +260,24 @@ void preempt_schedule(void)
     do {
         preempt_disable();
         do_schedule(true);
+        preempt_enable_no_resched();
+    } while (need_resched());
+}
+
+void preempt_schedule_irq(struct registers *regs)
+{
+    if (!arch_local_irq_is_enabled_state(registers_get_irq_state(regs)))
+        return;
+    if (!preempt_should_resched())
+        return;
+
+    do {
+        preempt_disable();
+        local_irq_enable();
+
+        do_schedule(true);
+
+        local_irq_disable();
         preempt_enable_no_resched();
     } while (need_resched());
 }

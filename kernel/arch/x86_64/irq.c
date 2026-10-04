@@ -23,9 +23,9 @@ void fixed_vector_enter(u8 vector)
     this_cpu_inc(s_num_fixed_invocations[vector - VECTOR_FIXED_FIRST]);
 }
 
-void fixed_vector_exit(void)
+void fixed_vector_exit(struct registers *regs)
 {
-    hard_irq_exit();
+    hard_irq_exit(regs);
 }
 
 // No fixed vector handlers are wired up yet, every slot lands here

@@ -58,3 +58,8 @@ static inline void registers_set_return_value(struct registers *regs, u64 value)
 {
     regs->rax = value;
 }
+
+static inline irq_state_t registers_get_irq_state(struct registers *regs)
+{
+    return regs->flags;
+}
