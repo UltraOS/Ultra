@@ -22,6 +22,8 @@ extern ptr_t g_per_cpu_offset[];
 
 #define this_cpu_add(var, x) ((void)((var) += (x)))
 #define this_cpu_sub(var, x) ((void)((var) -= (x)))
+#define this_cpu_and(var, x) ((void)((var) &= (x)))
+#define this_cpu_or(var, x) ((void)((var) |= (x)))
 
 #define this_cpu_inc(var) this_cpu_add(var, 1)
 #define this_cpu_dec(var) this_cpu_sub(var, 1)

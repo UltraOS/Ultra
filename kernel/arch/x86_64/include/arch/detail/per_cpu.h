@@ -42,6 +42,16 @@
 #define this_cpu_sub_32(val, x) X86_THIS_CPU_MODIFY("subl", "ri", u32, val, x)
 #define this_cpu_sub_64(val, x) X86_THIS_CPU_MODIFY("subq", "re", u64, val, x)
 
+#define this_cpu_and_8(val, x) X86_THIS_CPU_MODIFY("andb", "qi", u8, val, x)
+#define this_cpu_and_16(val, x) X86_THIS_CPU_MODIFY("andw", "ri", u16, val, x)
+#define this_cpu_and_32(val, x) X86_THIS_CPU_MODIFY("andl", "ri", u32, val, x)
+#define this_cpu_and_64(val, x) X86_THIS_CPU_MODIFY("andq", "re", u64, val, x)
+
+#define this_cpu_or_8(val, x) X86_THIS_CPU_MODIFY("orb", "qi", u8, val, x)
+#define this_cpu_or_16(val, x) X86_THIS_CPU_MODIFY("orw", "ri", u16, val, x)
+#define this_cpu_or_32(val, x) X86_THIS_CPU_MODIFY("orl", "ri", u32, val, x)
+#define this_cpu_or_64(val, x) X86_THIS_CPU_MODIFY("orq", "re", u64, val, x)
+
 /*
  * Don't use xchg here, which implies the lock prefix when dealing with a
  * memory operand. We don't need such semantics for per-cpu private variables,
