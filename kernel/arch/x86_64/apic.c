@@ -14,8 +14,6 @@
 #include <free_after_init.h>
 #include <init_level.h>
 
-static UNUSED_DECL u64 s_freq_hz;
-
 struct apic *g_apic = nullptr;
 enum apic_mode g_apic_mode = APIC_MODE_NONE;
 
@@ -66,11 +64,6 @@ void INIT_CODE apic_detect(void)
     }
 
     g_bsp_apic_id = g_boot_cpu_apic_id;
-}
-
-void apic_set_known_frequency(u64 hz)
-{
-    s_freq_hz = hz;
 }
 
 void apic_eoi(void)

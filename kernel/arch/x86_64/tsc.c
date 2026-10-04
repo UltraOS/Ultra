@@ -3,6 +3,7 @@
 #include <arch/private/cpu.h>
 #include <arch/private/tsc.h>
 #include <arch/private/apic.h>
+#include <arch/private/apic_timer.h>
 #include <arch/cpu_helpers.h>
 
 #include <log.h>
