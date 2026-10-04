@@ -20,6 +20,7 @@ void sched_test_vrelease(void *ptr);
 #include <kernel-source/sched/idle.c>
 #include <kernel-source/sched/kthread.c>
 #include <kernel-source/sched/wait_queue.c>
+#include <kernel-source/sched/completion.c>
 
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
@@ -1095,6 +1096,127 @@ TEST_CASE(wait_queue_entry_with_its_own_callback)
     wait_queue_wake(&wq);
     ASSERT_EQ(first.calls, 2);
     ASSERT_EQ(second.calls, 1);
+
+    switching_test_end();
+}
+
+struct completion_waiter {
+    struct completion *completion;
+    int id;
+};
+
+static void wait_then_log(void *user)
+{
+    struct completion_waiter *waiter = user;
+
+    wait_for_completion(waiter->completion);
+    log_id(waiter->id);
+}
+
+TEST_CASE(completion_done_before_the_wait)
+{
+    DEFINE_COMPLETION(completion);
+    struct completion_waiter waiter = { .completion = &completion, .id = 1 };
+
+    switching_test_begin();
+
+    complete(&completion);
+    ASSERT_EQ(completion.done, 1);
+
+    spawn(wait_then_log, &waiter, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(completion.done, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(completion_wakes_one_waiter_per_complete)
+{
+    DEFINE_COMPLETION(completion);
+    struct completion_waiter waiters[3];
+    int i;
+
+    switching_test_begin();
+
+    for (i = 0; i < 3; i++) {
+        waiters[i] = (struct completion_waiter) {
+            .completion = &completion, .id = i,
+        };
+        spawn(wait_then_log, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    for (i = 0; i < 3; i++) {
+        complete(&completion);
+        schedule_idle();
+
+        ASSERT_EQ(s_log_length, i + 1);
+        ASSERT_EQ(s_log[i], i);
+        ASSERT_EQ(completion.done, 0);
+    }
+
+    ASSERT(list_is_empty(&completion.wq.entries));
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(completion_complete_all_stays_done)
+{
+    DEFINE_COMPLETION(completion);
+    struct completion_waiter waiters[3];
+    struct completion_waiter late = { .completion = &completion, .id = 9 };
+    int i;
+
+    switching_test_begin();
+
+    for (i = 0; i < 3; i++) {
+        waiters[i] = (struct completion_waiter) {
+            .completion = &completion, .id = i,
+        };
+        spawn(wait_then_log, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+
+    complete_all(&completion);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 3);
+
+    spawn(wait_then_log, &late, TASK_PRIO_DEFAULT);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[3], 9);
+
+    switching_test_end();
+}
+
+TEST_CASE(completion_from_interrupt_context)
+{
+    DEFINE_COMPLETION(completion);
+    struct completion_waiter waiter = { .completion = &completion, .id = 1 };
+    struct registers regs = { .irq_state = false };
+    irq_state_t irq_state;
+
+    switching_test_begin();
+
+    spawn(wait_then_log, &waiter, TASK_PRIO_DEFAULT);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    irq_state = local_irq_state_save();
+    hard_irq_enter();
+    complete(&completion);
+    hard_irq_exit(&regs);
+    local_irq_state_restore(irq_state);
+
+    ASSERT(need_resched());
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 1);
 
     switching_test_end();
 }
