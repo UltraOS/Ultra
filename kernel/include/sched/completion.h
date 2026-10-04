@@ -27,3 +27,10 @@ void complete_all(struct completion *completion);
 
 // Sleep until a complete() is called on this object
 void wait_for_completion(struct completion *completion);
+
+/*
+ * Same as wait_for_completion(), except the caller stops waiting once
+ * 'timeout_ns' have passed. Returns true if the caller was let through, false
+ * if it still wasn't when the timeout ran out.
+ */
+bool wait_for_completion_timeout(struct completion *completion, u64 timeout_ns);
