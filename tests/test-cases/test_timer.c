@@ -539,6 +539,129 @@ TEST_CASE(timer_interrupt_runs_everything_that_is_due)
     ASSERT_EQ(s_armed_for, NOT_ARMED);
 }
 
+static enum timer_result advance_clock_and_count(struct timer *timer)
+{
+    UNREFERENCED_PARAMETER(timer);
+
+    s_num_counted++;
+    s_now += 50;
+
+    return TIMER_RESULT_DONE;
+}
+
+TEST_CASE(timer_due_during_the_interrupt_runs_in_the_same_one)
+{
+    struct timer first, second;
+
+    reset_state();
+    s_num_counted = 0;
+
+    timer_init(&first, advance_clock_and_count);
+    timer_init(&second, count);
+    timer_arm(&first, 100);
+    timer_arm(&second, 120);
+
+    take_interrupt_at(100);
+
+    ASSERT_EQ(s_num_counted, 2);
+    ASSERT_EQ(s_armed_for, NOT_ARMED);
+}
+
+static enum timer_result fall_further_behind(struct timer *timer)
+{
+    s_num_counted++;
+    s_now += 50;
+
+    timer_arm(timer, timer_deadline(timer) + 10);
+
+    return TIMER_RESULT_DONE;
+}
+
+TEST_CASE(timer_interrupt_backs_off_when_it_cannot_keep_up)
+{
+    struct timer timer;
+    u64 entered_at = 100;
+
+    reset_state();
+    s_num_counted = 0;
+
+    timer_init(&timer, fall_further_behind);
+    timer_arm(&timer, 100);
+
+    take_interrupt_at(entered_at);
+
+    /*
+     * One run in the first pass, then 5 and 25 as every pass has
+     * more to catch up with than the one before it.
+     */
+    ASSERT_EQ(s_num_counted, 31);
+    ASSERT_EQ(s_armed_for, s_now + (s_now - entered_at));
+
+    ASSERT(timer_cancel_nosync(&timer));
+}
+
+TEST_CASE(timer_armed_during_a_backoff_does_not_cut_it_short)
+{
+    struct timer hog, overdue, later;
+    u64 backoff_ends_at;
+    int arms_before;
+
+    reset_state();
+    s_num_counted = 0;
+
+    timer_init(&hog, fall_further_behind);
+    timer_init(&overdue, count);
+    timer_init(&later, count);
+
+    timer_arm(&hog, 100);
+    take_interrupt_at(100);
+
+    backoff_ends_at = s_armed_for;
+    arms_before = s_num_arms;
+    ASSERT(timer_cancel_nosync(&hog));
+
+    timer_arm(&overdue, 1);
+    ASSERT_EQ(s_armed_for, backoff_ends_at);
+    ASSERT_EQ(s_num_arms, arms_before);
+
+    s_num_counted = 0;
+    take_interrupt_at(backoff_ends_at);
+    ASSERT_EQ(s_num_counted, 1);
+
+    timer_arm(&later, backoff_ends_at + 500);
+    ASSERT_EQ(s_armed_for, backoff_ends_at + 500);
+
+    ASSERT(timer_cancel_nosync(&later));
+}
+
+static enum timer_result fall_behind_by_a_second(struct timer *timer)
+{
+    s_num_counted++;
+    s_now += NS_PER_SEC;
+
+    timer_arm(timer, s_now);
+
+    return TIMER_RESULT_DONE;
+}
+
+TEST_CASE(timer_interrupt_backoff_is_capped)
+{
+    struct timer timer;
+
+    reset_state();
+    s_num_counted = 0;
+
+    timer_init(&timer, fall_behind_by_a_second);
+    timer_arm(&timer, 100);
+
+    take_interrupt_at(100);
+
+    ASSERT_EQ(s_num_counted, MAX_PASSES_PER_INTERRUPT);
+    ASSERT_EQ(s_armed_for, s_now + MAX_BACKOFF_NS);
+
+    ASSERT(timer_cancel_nosync(&timer));
+}
+
 static struct timer *s_moving_timer;
 static struct timer_queue *s_moving_to;
 static int s_num_relaxes;

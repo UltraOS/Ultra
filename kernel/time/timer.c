@@ -8,6 +8,7 @@
 
 #include <common/atomic.h>
 #include <common/bit.h>
+#include <common/minmax.h>
 #include <common/overflow.h>
 
 #include <bug.h>
@@ -23,6 +24,9 @@ enum timer_flags : u32 {
     TIMER_FLAG_RUNNING = BIT_U32(1),
 };
 
+#define MAX_PASSES_PER_INTERRUPT 3
+#define MAX_BACKOFF_NS (100 * NS_PER_MS)
+
 struct timer_queue {
     struct spinlock lock;
     struct rb_root_cached timers;
@@ -31,6 +35,7 @@ struct timer_queue {
     // The deadline the device is currently armed for, or NO_DEADLINE
     u64 armed_ns;
     bool in_interrupt;
+    bool backing_off;
 };
 
 static DEFINE_PER_CPU(struct timer_queue, s_queue);
@@ -201,7 +206,11 @@ void timer_init(struct timer *timer, timer_fn_t fn)
 // The interrupt handler re-arms the device at the end, after the last callback
 static bool queue_should_defer_arming(struct timer_queue *queue)
 {
-    return queue->in_interrupt;
+    /*
+     * During a back-off the device stays armed for the end of it, a
+     * timer armed meanwhile runs then at the latest.
+     */
+    return queue->in_interrupt || queue->backing_off;
 }
 
 static void queue_insert(
@@ -362,16 +371,45 @@ static void queue_run_due(struct timer_queue *queue, u64 now_ns)
 void timer_queue_expire(void)
 {
     struct timer_queue *queue;
+    struct timer *first;
+    u64 entry_ns, now_ns, backoff_ns;
+    u32 pass = 0;
 
     queue = this_cpu_ptr(&s_queue);
     BUG_ON(!in_hard_irq());
 
     spin_lock(&queue->lock);
     queue->in_interrupt = true;
+    queue->backing_off = false;
     queue->armed_ns = NO_DEADLINE;
 
-    queue_run_due(queue, ns_since_boot());
-    queue_arm(queue);
+    entry_ns = ns_since_boot();
+    now_ns = entry_ns;
+
+    for (;;) {
+        queue_run_due(queue, now_ns);
+
+        first = queue_first(queue);
+        now_ns = ns_since_boot();
+
+        if (first == nullptr || first->hard_deadline_ns > now_ns) {
+            queue_arm(queue);
+            break;
+        }
+
+        if (++pass < MAX_PASSES_PER_INTERRUPT)
+            continue;
+
+        /*
+         * Timers come due faster than their callbacks finish. Leave the
+         * interrupt for as long as we have spent in it, so that something
+         * other than timer callbacks gets to run.
+         */
+        backoff_ns = MIN(now_ns - entry_ns, MAX_BACKOFF_NS);
+        queue_arm_device(queue, now_ns + backoff_ns);
+        queue->backing_off = true;
+        break;
+    }
 
     queue->in_interrupt = false;
     spin_unlock(&queue->lock);
