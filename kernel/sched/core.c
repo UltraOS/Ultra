@@ -19,6 +19,9 @@
 #include <init_level.h>
 #include <free_after_init.h>
 
+#include <time/time.h>
+#include <time/timer.h>
+
 #include <arch/cpu_helpers.h>
 #include <arch/registers.h>
 
@@ -293,6 +296,57 @@ void preempt_schedule_irq(struct registers *regs)
         local_irq_disable();
         preempt_enable_no_resched();
     } while (need_resched());
+}
+
+struct wakeup_timer {
+    struct timer timer;
+    struct task *task;
+    bool expired;
+};
+
+static enum timer_result wakeup_timer_fn(struct timer *timer)
+{
+    struct wakeup_timer *wakeup;
+
+    wakeup = container_of(timer, struct wakeup_timer, timer);
+
+    wakeup->expired = true;
+    wake_up_task(wakeup->task, TASK_STATE_UNINTERRUPTIBLE);
+
+    return TIMER_RESULT_DONE;
+}
+
+bool schedule_until(u64 deadline_ns)
+{
+    struct wakeup_timer wakeup;
+
+    if (deadline_ns == NO_DEADLINE) {
+        schedule();
+        return false;
+    }
+
+    wakeup.task = current;
+    wakeup.expired = false;
+    timer_init(&wakeup.timer, wakeup_timer_fn);
+    timer_arm(&wakeup.timer, deadline_ns);
+
+    schedule();
+
+    timer_cancel(&wakeup.timer);
+    return wakeup.expired;
+}
+
+void sleep_ns(u64 ns)
+{
+    u64 deadline_ns;
+
+    might_sleep();
+
+    deadline_ns = ns_from_now(ns);
+
+    do {
+        set_current_state(TASK_STATE_UNINTERRUPTIBLE);
+    } while (!schedule_until(deadline_ns));
 }
 
 void yield(void)
