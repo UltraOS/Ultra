@@ -22,4 +22,5 @@ add_test_cases(
     test_irq.c
     test_conversions.c
     test_types.c
+    test_units.c
 )

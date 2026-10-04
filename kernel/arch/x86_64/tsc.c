@@ -55,6 +55,8 @@ static void INIT_CODE tsc_set_frequency(
     u64 hz, bool precise, const char *reported_by
 )
 {
+    struct human_repr freq;
+
     if (s_tsc_ctx.hz) {
         if (!precise)
             // One imprecise guess is good enough
@@ -71,9 +73,10 @@ static void INIT_CODE tsc_set_frequency(
     s_tsc_ctx.hz = hz;
     s_tsc_ctx.reported_by = reported_by;
 
+    frequency_to_human(hz, &freq);
     pr_info(
-        "frequency set to %llu.%03llu MHz (%s, reported by %s)\n",
-        hz / MHZ, hz % MHZ, precise ? "precise" : "approximate",
+        "frequency set to " HUMAN_REPR_FMT " (%s, reported by %s)\n",
+        HUMAN_REPR_ARG(freq), precise ? "precise" : "approximate",
         reported_by
     );
 }

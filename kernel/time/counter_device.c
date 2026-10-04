@@ -6,6 +6,7 @@
 
 #include <private/time/counter_device.h>
 #include <private/time/keeper.h>
+#include <time/units.h>
 
 #include <log.h>
 #include <locking/spinlock.h>
@@ -86,21 +87,12 @@ static void calculate_thresholds(struct counter_device *dev)
 
 static void announce_new_counter(struct counter_device *dev, u64 hz, bool best)
 {
+    struct human_repr freq;
     u64 ms;
-    char freq_str[32], wrap_str[32];
-#define snprintf_freq(...) snprintf(freq_str, sizeof(freq_str), __VA_ARGS__)
+    char wrap_str[32];
 #define snprintf_wrap(...) snprintf(wrap_str, sizeof(wrap_str), __VA_ARGS__)
 
-    if (hz >= GHZ) {
-        snprintf_freq("%llu.%03llu GHz", hz / GHZ, (hz % GHZ) / MHZ);
-    } else if (hz >= MHZ) {
-        snprintf_freq("%llu.%03llu MHz", hz / MHZ, (hz % MHZ) / KHZ);
-    } else if (hz >= KHZ) {
-        snprintf_freq("%llu.%03llu KHz", hz / KHZ, hz % KHZ);
-    } else {
-        snprintf_freq("%llu Hz", hz);
-    }
-
+    frequency_to_human(hz, &freq);
     ms = dev->max_unattended_ns / NS_PER_MS;
 
     if (ms >= MS_PER_HOUR) {
@@ -114,8 +106,9 @@ static void announce_new_counter(struct counter_device *dev, u64 hz, bool best)
     }
 
     pr_info(
-        "%s @ %s [rated %u], unattended up to %s%s\n",
-        dev->name, freq_str, dev->rating, wrap_str, best ? " [best]" : ""
+        "%s @ " HUMAN_REPR_FMT " [rated %u], unattended up to %s%s\n",
+        dev->name, HUMAN_REPR_ARG(freq), dev->rating, wrap_str,
+        best ? " [best]" : ""
     );
 }
 

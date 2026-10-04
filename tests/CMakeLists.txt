@@ -174,7 +174,10 @@ KERNEL_FILE(
     SOURCE_PATH "time" SOURCE_FILE "keeper.c"
     INCLUDE_PATH "private/time" INCLUDE_FILE "keeper.h"
 )
-KERNEL_FILE(INCLUDE_PATH "time" INCLUDE_FILE "units.h")
+KERNEL_FILE(
+    SOURCE_PATH "time" SOURCE_FILE "units.c"
+    INCLUDE_PATH "time" INCLUDE_FILE "units.h"
+)
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "alloc_behavior.h")
@@ -276,7 +279,7 @@ add_executable(
     kernel-source/locking/spinlock.c kernel-source/memory/units.c
     kernel-source/common/bit.c kernel-source/locking/mutex.c
     kernel-source/common/string_container.c kernel-source/common/conversions.c
-    kernel-source/refcount.c
+    kernel-source/refcount.c kernel-source/time/units.c
 )
 set_property(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
