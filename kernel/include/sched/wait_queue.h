@@ -6,6 +6,7 @@
 
 #include <sched/sched.h>
 #include <sched/task.h>
+#include <time/time.h>
 #include <locking/spinlock.h>
 
 #include <detail/sched/sched.h>
@@ -75,24 +76,13 @@ void wait_queue_wake(struct wait_queue *wq);
 void wait_queue_wake_all(struct wait_queue *wq);
 
 // Sleep until 'condition' is true, it is rechecked after every wakeup
-#define wait_event(wq, condition) do {                        \
-    struct wait_entry wait_event_entry;                       \
-                                                              \
-    might_sleep();                                            \
-                                                              \
-    if (condition)                                            \
-        break;                                                \
-                                                              \
-    wait_entry_init(&wait_event_entry, WAIT_ENTRY_FLAG_NONE); \
-                                                              \
-    for (;;) {                                                \
-        wait_queue_prepare(wq, &wait_event_entry);            \
-                                                              \
-        if (condition)                                        \
-            break;                                            \
-                                                              \
-        schedule();                                           \
-    }                                                         \
-                                                              \
-    wait_queue_finish(wq, &wait_event_entry);                 \
-} while (0)
+#define wait_event(wq, condition)                        \
+    ((void)wait_event_until(wq, condition, NO_DEADLINE))
+
+/*
+ * Same as wait_event(), except the caller stops waiting once 'timeout_ns' have
+ * passed. Evaluates to true if 'condition' became true, false if it was still
+ * false when the timeout ran out.
+ */
+#define wait_event_timeout(wq, condition, timeout_ns)        \
+    wait_event_until(wq, condition, ns_from_now(timeout_ns))

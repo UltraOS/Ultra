@@ -1511,3 +1511,114 @@ TEST_CASE(sleep_ns_goes_back_to_sleep_after_an_early_wakeup)
 
     switching_test_end();
 }
+
+static void wait_event_with_timeout(void *user)
+{
+    struct timed_sleeper *sleeper = user;
+
+    sleeper->result = wait_event_timeout(
+        sleeper->wq, *sleeper->condition, sleeper->ns
+    );
+    log_id(sleeper->id);
+}
+
+TEST_CASE(wait_event_timeout_gives_up_at_the_deadline)
+{
+    DEFINE_WAIT_QUEUE(wq)
+    bool condition = false;
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .wq = &wq, .condition = &condition,
+        .result = true,
+    };
+
+    timed_test_begin();
+    spawn(wait_event_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    wait_queue_wake_all(&wq);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    advance_time_to(1100);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(!sleeper.result);
+    ASSERT(list_is_empty(&wq.entries));
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_event_timeout_returns_when_the_condition_holds)
+{
+    DEFINE_WAIT_QUEUE(wq)
+    bool condition = false;
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .wq = &wq, .condition = &condition,
+    };
+
+    timed_test_begin();
+    spawn(wait_event_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    advance_time_to(1050);
+    condition = true;
+    wait_queue_wake_all(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(sleeper.result);
+    ASSERT(list_is_empty(&wq.entries));
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_event_timeout_takes_a_condition_met_at_the_deadline)
+{
+    DEFINE_WAIT_QUEUE(wq)
+    bool condition = false;
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .wq = &wq, .condition = &condition,
+    };
+
+    timed_test_begin();
+    spawn(wait_event_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    condition = true;
+    advance_time_to(1100);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(sleeper.result);
+
+    switching_test_end();
+}
+
+TEST_CASE(wait_event_timeout_without_a_deadline_arms_no_timer)
+{
+    DEFINE_WAIT_QUEUE(wq)
+    bool condition = false;
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = UNSIGNED_MAX(u64), .wq = &wq, .condition = &condition,
+    };
+
+    timed_test_begin();
+    spawn(wait_event_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 0);
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    condition = true;
+    wait_queue_wake_all(&wq);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(sleeper.result);
+
+    switching_test_end();
+}
