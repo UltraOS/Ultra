@@ -7,12 +7,15 @@
 #include <config.h>
 #include <sched/task.h>
 
+#include <detail/sched/rr.h>
 #include <arch/detail/task.h>
 
 // We need to know whether this arch keeps preempt_count in struct task
 #if HAS_INCLUDE(<arch/detail/preempt.h>)
 #include <arch/detail/preempt.h>
 #endif
+
+struct sched_class;
 
 #define TASK_NAME_MAX 32
 
@@ -28,6 +31,15 @@ struct task {
 #ifndef ARCH_HAS_CUSTOM_PREEMPT_COUNT
     u32 preempt_count;
 #endif
+
+    cpu_t cpu;
+    u8 prio;
+    bool on_rq;
+    const struct sched_class *sched_class;
+
+    union {
+        struct rr_entity rr;
+    };
 
     char name[TASK_NAME_MAX];
     void *stack;

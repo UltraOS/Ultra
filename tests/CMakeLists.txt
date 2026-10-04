@@ -191,17 +191,32 @@ KERNEL_FILE(INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_FILE "panic.h")
 KERNEL_FILE(INCLUDE_FILE "linker.h")
+KERNEL_FILE(INCLUDE_FILE "linker_common.ld.h")
 KERNEL_FILE(INCLUDE_PATH "locking" INCLUDE_FILE "seq.h")
 KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "init_level.h")
 KERNEL_FILE(INCLUDE_FILE "preempt.h")
 KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "preempt.h")
 KERNEL_FILE(INCLUDE_PATH "private/arch" INCLUDE_FILE "preempt.h")
+KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "rr.h")
 KERNEL_FILE(
     INCLUDE_PATH "sched" INCLUDE_FILE "task.h"
     SOURCE_PATH "sched" SOURCE_FILE "task.c"
 )
 KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "task.h")
 KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "task.h")
+KERNEL_FILE(
+    INCLUDE_PATH "private/sched" INCLUDE_FILE "core.h"
+    SOURCE_PATH "sched" SOURCE_FILE "core.c"
+)
+KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "classes.h")
+KERNEL_FILE(
+    INCLUDE_PATH "private/sched" INCLUDE_FILE "rr.h"
+    SOURCE_PATH "sched" SOURCE_FILE "rr.c"
+)
+KERNEL_FILE(
+    INCLUDE_PATH "private/sched" INCLUDE_FILE "idle.h"
+    SOURCE_PATH "sched" SOURCE_FILE "idle.c"
+)
 KERNEL_FILE(
     INCLUDE_PATH "locking" INCLUDE_FILE "spinlock.h"
     SOURCE_PATH "locking" SOURCE_FILE "spinlock.c"
@@ -253,6 +268,29 @@ target_compile_definitions(
     ULTRA_ARCH_PHYS_ADDR_WIDTH=8
     ULTRA_ARCH_WIDTH=8
 )
+
+set(TEST_LD_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/link.ld.template")
+set(TEST_LD_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/link.ld")
+
+add_custom_command(
+    OUTPUT ${TEST_LD_SCRIPT}
+    COMMAND
+        ${CMAKE_C_COMPILER} -E -xc -P -D__ASSEMBLER__
+        "-I$<JOIN:$<TARGET_PROPERTY:run_tests,INCLUDE_DIRECTORIES>,;-I>"
+        "-D$<JOIN:$<TARGET_PROPERTY:run_tests,COMPILE_DEFINITIONS>,;-D>"
+        ${TEST_LD_TEMPLATE} -o ${TEST_LD_SCRIPT}
+    DEPENDS
+        ${TEST_LD_TEMPLATE}
+        ${EXTERNAL_KERNEL_FILES_LOCAL}
+    COMMAND_EXPAND_LISTS
+)
+
+add_custom_target(link_script DEPENDS ${TEST_LD_SCRIPT})
+add_dependencies(link_script external_files)
+add_dependencies(run_tests link_script)
+
+target_link_options(run_tests PRIVATE "-Wl,-T,${TEST_LD_SCRIPT}")
+set_property(TARGET run_tests APPEND PROPERTY LINK_DEPENDS ${TEST_LD_SCRIPT})
 
 set_property(TARGET run_tests PROPERTY C_STANDARD 23)
 set_property(TARGET run_tests PROPERTY CXX_STANDARD 20)
