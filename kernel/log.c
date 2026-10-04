@@ -14,6 +14,7 @@
 #include <log_ring.h>
 #include <param.h>
 #include <panic.h>
+#include <sched/task.h>
 #include <arch_constants.h>
 
 #include <time/units.h>
@@ -459,6 +460,7 @@ void dump_stack(enum log_level level, struct registers *regs)
     };
 
     pr_lvl(level, "Hardware: %s\n", s_hw_id);
+    pr_lvl(level, "Task: %s\n", task_name(current));
     pr_lvl(level, "Call trace (most recent call first):\n");
     unwind_walk(regs, do_dump_frame, &state);
 }

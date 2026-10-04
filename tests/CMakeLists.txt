@@ -194,6 +194,12 @@ KERNEL_FILE(INCLUDE_FILE "linker.h")
 KERNEL_FILE(INCLUDE_PATH "locking" INCLUDE_FILE "seq.h")
 KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "init_level.h")
 KERNEL_FILE(
+    INCLUDE_PATH "sched" INCLUDE_FILE "task.h"
+    SOURCE_PATH "sched" SOURCE_FILE "task.c"
+)
+KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "task.h")
+KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "task.h")
+KERNEL_FILE(
     INCLUDE_PATH "locking" INCLUDE_FILE "spinlock.h"
     SOURCE_PATH "locking" SOURCE_FILE "spinlock.c"
 )
@@ -224,6 +230,7 @@ include("test-cases/files.cmake")
 add_executable(
     run_tests
     run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
+    task_state.c
     kernel-source/locking/spinlock.c kernel-source/memory/units.c
     kernel-source/common/bit.c kernel-source/locking/mutex.c
     kernel-source/common/string_container.c kernel-source/common/conversions.c
