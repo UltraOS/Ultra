@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits.h>
+
 #define DO_CONCAT(x, y) x##y
 #define CONCAT(x, y) DO_CONCAT(x, y)
 
@@ -112,6 +114,14 @@
 
 #define IS_SIGNED_TYPE(x) (((typeof(x))-1) < ((typeof(x))1))
 #define IS_UNSIGNED_TYPE(x) (!IS_SIGNED_TYPE(x))
+
+#define IS_UNSIGNED_OR_NON_NEGATIVE_CONSTANT(x)                      \
+    CHOOSE_EXPR(                                                     \
+        IS_UNSIGNED_TYPE(x), 1,                                      \
+        CHOOSE_EXPR(                                                 \
+            IS_CONSTEXPR(x), !((x) >> (sizeof(x) * CHAR_BIT - 1)), 0 \
+        )                                                            \
+    )
 
 #ifdef __has_builtin
     #define HAS_BUILTIN(x) __has_builtin(x)
