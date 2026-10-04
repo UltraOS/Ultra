@@ -155,7 +155,7 @@ static struct page_block *prep_block(
         page_set_meta(&page[i], META_MAKE_TAIL(block));
 
     if (page_type_is_refcounted(type))
-        atomic_store_relaxed(&page->refcounted.num_references, 1);
+        refcount_set(&page->refcounted.refcount, 1);
 
     if (behavior & ALLOC_ZEROED)
         memzero(page_to_virt(page), PAGE_SIZE << order);
@@ -220,38 +220,12 @@ void free_frozen_block(struct page_block *block)
 
 void block_ref(struct page_block *block)
 {
-    struct page *page = block_to_page(block);
-    u32 old;
-
-    MM_BUG_ON(!page_type_is_refcounted(page_type(page)));
-
-    old = atomic_fetch_add(
-        &page->refcounted.num_references, 1, MO_RELAXED
-    );
-    MM_BUG_ON(old == 0);
+    refcount_inc(&block_refcounted(block)->refcount);
 }
 
-/*
- * Release decrement so this owner's writes happen before the free,
- * acquire fence on the final reference so the freeing thread observes
- * every owner's writes before the block is reused.
- */
 static bool block_drop_reference(struct page_block *block)
 {
-    struct refcounted_page *refcounted;
-    u32 old;
-
-    refcounted = block_refcounted(block);
-    old = atomic_fetch_sub(
-        &refcounted->num_references, 1, MO_RELEASE
-    );
-    MM_BUG_ON(old == 0);
-
-    if (old != 1)
-        return false;
-
-    barrier_acquire();
-    return true;
+    return refcount_dec_and_test(&block_refcounted(block)->refcount);
 }
 
 void block_unref(struct page_block *block)
