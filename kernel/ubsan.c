@@ -7,16 +7,15 @@
 
 #include <log.h>
 #include <panic.h>
+#include <sched/task.h>
 
 #include <private/bug.h>
+#include <private/sched/task.h>
 #include <private/ubsan.h>
 
 #define UBSAN_MAX_INT_WIDTH BITS_PER_TYPE(u128)
 #define UBSAN_COLUMN_REPORTED UINT32_MAX
 #define UBSAN_VALUE_STR_SIZE 48
-
-// TODO: move this into struct task once we have it
-static bool s_in_report;
 
 static u32 type_bit_width(const struct ubsan_type *type)
 {
@@ -100,11 +99,21 @@ static void format_value(
     );
 }
 
+static bool ubsan_enter(void)
+{
+    return !task_test_and_set_flag(current, TASK_FLAG_IN_UBSAN_REPORT);
+}
+
+static void ubsan_leave(void)
+{
+    task_clear_flag(current, TASK_FLAG_IN_UBSAN_REPORT);
+}
+
 static bool report_begin(struct ubsan_source_location *loc, const char *check)
 {
     u32 column;
 
-    if (atomic_xchg(&s_in_report, true, MO_ACQ_REL))
+    if (!ubsan_enter())
         return false;
 
     /*
@@ -113,7 +122,7 @@ static bool report_begin(struct ubsan_source_location *loc, const char *check)
      */
     column = atomic_xchg(&loc->column, UBSAN_COLUMN_REPORTED, MO_RELAXED);
     if (column == UBSAN_COLUMN_REPORTED) {
-        atomic_store_release(&s_in_report, false);
+        ubsan_leave();
         return false;
     }
 
@@ -124,7 +133,7 @@ static bool report_begin(struct ubsan_source_location *loc, const char *check)
 static void report_end(void)
 {
     finish_warn_report(nullptr);
-    atomic_store_release(&s_in_report, false);
+    ubsan_leave();
 }
 
 void __ubsan_handle_out_of_bounds(
