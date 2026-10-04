@@ -19,3 +19,5 @@
 #define SCHED_CLASSES \
     SCHED_CLASS(rr)   \
     SCHED_CLASS(idle)
+
+#define SCHED_CLASS_IS_ABOVE(class, other) ((ptr_t)(class) < (ptr_t)(other))

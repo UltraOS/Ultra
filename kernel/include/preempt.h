@@ -14,7 +14,9 @@ static ALWAYS_INLINE void preempt_disable(void)
 static ALWAYS_INLINE void preempt_enable(void)
 {
     compiler_barrier();
-    preempt_count_sub(PREEMPT_DISABLE_UNIT);
+
+    if (unlikely(preempt_count_sub_and_test(PREEMPT_DISABLE_UNIT)))
+        preempt_schedule();
 }
 
 // True while executing in hardware interrupt context on this CPU

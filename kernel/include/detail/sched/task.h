@@ -3,6 +3,7 @@
 #include <common/types.h>
 #include <common/helpers.h>
 #include <common/bit.h>
+#include <common/atomic.h>
 
 #include <config.h>
 #include <locking/spinlock.h>
@@ -23,6 +24,7 @@ struct sched_class;
 
 enum task_flags : u32 {
     TASK_FLAG_NONE = 0,
+    TASK_FLAG_NEED_RESCHED = BIT_U32(0),
 #if IS_ENABLED(UBSAN)
     TASK_FLAG_IN_UBSAN_REPORT = BIT_U32(31),
 #endif
@@ -55,3 +57,8 @@ struct task {
 
     struct arch_task arch;
 };
+
+static inline bool task_test_flag(struct task *task, enum task_flags flag)
+{
+    return atomic_load_relaxed(&task->flags) & flag;
+}

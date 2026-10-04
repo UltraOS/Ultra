@@ -218,7 +218,9 @@ static struct rq *switching_test_begin(void)
 
     g_test_current = &g_this_cpu_idle_task;
     current->preempt_count = PREEMPT_DISABLE_DEPTH(1);
+    task_clear_flag(current, TASK_FLAG_NEED_RESCHED);
     g_test_irqs_enabled = true;
+    g_this_cpu_idle_task.flags = 0;
 
     g_sched_test_live_tasks = 0;
     g_sched_test_live_stacks = 0;
@@ -498,6 +500,170 @@ TEST_CASE(sched_wakeup_before_schedule_is_not_lost)
 
     ASSERT(sleeper.woke_self);
     ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(rq->nr_running, 0);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+struct spawner {
+    int id;
+    u8 child_prio;
+    bool disable_preemption;
+    struct runner child;
+};
+
+static void spawn_child_between_logs(void *user)
+{
+    struct spawner *spawner = user;
+
+    log_id(spawner->id);
+
+    if (spawner->disable_preemption)
+        preempt_disable();
+
+    spawn(run_to_completion, &spawner->child, spawner->child_prio);
+    log_id(spawner->id);
+
+    if (spawner->disable_preemption)
+        preempt_enable();
+
+    log_id(spawner->id);
+}
+
+TEST_CASE(sched_waking_idle_cpu_requests_a_reschedule)
+{
+    struct runner runner = { .id = 1, .rounds = 1 };
+    struct rq *rq;
+
+    rq = switching_test_begin();
+    ASSERT(!need_resched());
+
+    spawn(run_to_completion, &runner, TASK_PRIO_DEFAULT);
+    ASSERT(need_resched());
+    ASSERT_EQ(current, rq->idle);
+
+    schedule_idle();
+    ASSERT(!need_resched());
+    ASSERT_EQ(s_log_length, 1);
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_higher_priority_wakeup_preempts)
+{
+    struct spawner spawner = {
+        .id = 1,
+        .child_prio = TASK_PRIO_HIGHEST,
+        .child = { .id = 2, .rounds = 1 },
+    };
+
+    switching_test_begin();
+    spawn(spawn_child_between_logs, &spawner, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(s_log[2], 1);
+    ASSERT_EQ(s_log[3], 1);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_equal_priority_wakeup_does_not_preempt)
+{
+    struct spawner spawner = {
+        .id = 1,
+        .child_prio = TASK_PRIO_DEFAULT,
+        .child = { .id = 2, .rounds = 1 },
+    };
+
+    switching_test_begin();
+    spawn(spawn_child_between_logs, &spawner, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(s_log[2], 1);
+    ASSERT_EQ(s_log[3], 2);
+
+    switching_test_end();
+}
+
+TEST_CASE(sched_preemption_waits_for_preempt_enable)
+{
+    struct spawner spawner = {
+        .id = 1,
+        .child_prio = TASK_PRIO_HIGHEST,
+        .disable_preemption = true,
+        .child = { .id = 2, .rounds = 1 },
+    };
+
+    switching_test_begin();
+    spawn(spawn_child_between_logs, &spawner, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(s_log[2], 2);
+    ASSERT_EQ(s_log[3], 1);
+
+    switching_test_end();
+}
+
+struct preempted_sleeper {
+    struct task *task;
+    struct runner unused;
+    bool woken_by_child;
+};
+
+static void wake_parent(void *user)
+{
+    struct preempted_sleeper *sleeper = user;
+
+    log_id(2);
+    sleeper->woken_by_child = wake_up_task(
+        sleeper->task, TASK_STATE_UNINTERRUPTIBLE
+    );
+}
+
+static void get_preempted_while_going_to_sleep(void *user)
+{
+    struct preempted_sleeper *sleeper = user;
+
+    log_id(1);
+
+    set_current_state(TASK_STATE_UNINTERRUPTIBLE);
+    spawn(wake_parent, sleeper, TASK_PRIO_HIGHEST);
+    schedule();
+
+    log_id(1);
+}
+
+TEST_CASE(sched_preempted_sleeper_stays_queued)
+{
+    struct preempted_sleeper sleeper = { 0 };
+    struct rq *rq;
+
+    rq = switching_test_begin();
+
+    sleeper.task = spawn(
+        get_preempted_while_going_to_sleep, &sleeper, TASK_PRIO_DEFAULT
+    );
+    schedule_idle();
+
+    ASSERT(sleeper.woken_by_child);
+    ASSERT_EQ(s_log_length, 3);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(s_log[2], 1);
     ASSERT_EQ(rq->nr_running, 0);
     ASSERT_EQ(g_sched_test_live_tasks, 0);
 

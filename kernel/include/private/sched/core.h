@@ -44,6 +44,16 @@ struct sched_class {
 
     // Called when rq->curr yields the CPU to its peers but stays runnable
     void (*yield)(struct rq *rq);
+
+    /*
+     * Called when 'task' wakes up on 'rq' and is of the same class as
+     * rq->curr. The callback is expected to decide whether 'task' is more
+     * important than rq->curr and call resched_curr() if that's the case.
+     *
+     * NOTE: For a 'task' of a class ranked above that of rq->curr,
+     *       resched_curr() is invoked automatically.
+     */
+    void (*wakeup_preempt)(struct rq *rq, struct task *task);
 };
 
 #define DEFINE_SCHED_CLASS(name)                                      \
@@ -74,9 +84,15 @@ DECLARE_PER_CPU(struct rq, g_this_cpu_rq);
 #define cpu_rq(cpu) per_cpu_ptr(&g_this_cpu_rq, cpu)
 #define task_rq(task) cpu_rq((task)->cpu)
 
+static inline bool need_resched(void)
+{
+    return task_test_flag(current, TASK_FLAG_NEED_RESCHED);
+}
+
 void rq_enqueue(struct rq *rq, struct task *task);
 void rq_dequeue(struct rq *rq, struct task *task);
 struct task *rq_pick_next(struct rq *rq);
+void resched_curr(struct rq *rq);
 
 void schedule_idle(void);
 void sched_finish_switch(struct task *prev);

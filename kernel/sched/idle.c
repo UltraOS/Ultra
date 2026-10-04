@@ -33,9 +33,18 @@ static void idle_yield(struct rq *rq)
     BUG();
 }
 
+static void idle_wakeup_preempt(struct rq *rq, struct task *task)
+{
+    UNREFERENCED_PARAMETER(rq);
+    UNREFERENCED_PARAMETER(task);
+
+    BUG();
+}
+
 DEFINE_SCHED_CLASS(idle) = {
     .enqueue = idle_enqueue,
     .dequeue = idle_dequeue,
     .pick = idle_pick,
     .yield = idle_yield,
+    .wakeup_preempt = idle_wakeup_preempt,
 };

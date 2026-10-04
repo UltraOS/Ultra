@@ -56,6 +56,27 @@ struct task *rq_pick_next(struct rq *rq)
     BUG();
 }
 
+void resched_curr(struct rq *rq)
+{
+    BUG_ON(!spin_is_locked(&rq->lock));
+
+    if (task_test_and_set_flag(rq->curr, TASK_FLAG_NEED_RESCHED))
+        return;
+
+    BUG_ON(rq != this_rq());
+    preempt_set_need_resched();
+}
+
+static void rq_wakeup_preempt(struct rq *rq, struct task *task)
+{
+    struct task *curr = rq->curr;
+
+    if (task->sched_class == curr->sched_class)
+        task->sched_class->wakeup_preempt(rq, task);
+    else if (SCHED_CLASS_IS_ABOVE(task->sched_class, curr->sched_class))
+        resched_curr(rq);
+}
+
 /*
  * The second half of a switch, run by the task that was switched to. The
  * runqueue lock was taken by 'prev' and is released here, and every task
@@ -90,7 +111,7 @@ void sched_finish_switch(struct task *prev)
  * and only here, so that a wakeup arriving before this point finds it
  * still queued.
  */
-static void do_schedule(void)
+static void do_schedule(bool preempted)
 {
     struct rq *rq;
     struct task *prev, *next;
@@ -108,12 +129,21 @@ static void do_schedule(void)
     prev = rq->curr;
     prev_state = task_state(prev);
 
-    if (prev_state != TASK_STATE_RUNNING) {
+    /*
+     * The only way for a task to get dequeued is if it yielded execution itself
+     * (aka wasn't preempted) AND it set its state to something else besides
+     * RUNNING, e.g. UNINTERRUPTIBLE or DEAD.
+     */
+    if (!preempted && prev_state != TASK_STATE_RUNNING) {
         BUG_ON(prev == rq->idle);
         rq_dequeue(rq, prev);
     }
 
     next = rq_pick_next(rq);
+
+    task_clear_flag(prev, TASK_FLAG_NEED_RESCHED);
+    preempt_clear_need_resched();
+
     if (next == prev) {
         spin_unlock(&rq->lock);
         local_irq_enable();
@@ -155,6 +185,10 @@ bool wake_up_task(struct task *task, enum task_state state_mask)
      */
     if (task->on_rq) {
         task_set_state(task, TASK_STATE_RUNNING);
+
+        if (!task->on_cpu)
+            rq_wakeup_preempt(rq, task);
+
         spin_unlock(&rq->lock);
 
         woken = true;
@@ -180,6 +214,7 @@ bool wake_up_task(struct task *task, enum task_state state_mask)
 
     task_set_state(task, TASK_STATE_RUNNING);
     rq_enqueue(rq, task);
+    rq_wakeup_preempt(rq, task);
 
     spin_unlock(&rq->lock);
     woken = true;
@@ -189,20 +224,43 @@ out:
     return woken;
 }
 
+static ALWAYS_INLINE void preempt_enable_no_resched(void)
+{
+    compiler_barrier();
+    preempt_count_sub(PREEMPT_DISABLE_UNIT);
+}
+
 void schedule(void)
 {
-    preempt_disable();
-    do_schedule();
-    preempt_enable();
+    do {
+        preempt_disable();
+        do_schedule(false);
+        preempt_enable_no_resched();
+    } while (need_resched());
 }
 
 void schedule_idle(void)
 {
-    /*
-     * The idle task runs at a preempt depth of one for its whole life,
-     * so the level schedule() adds around this call is already there.
-     */
-    do_schedule();
+    do {
+        /*
+         * The idle task runs at a preempt depth of one for its whole life,
+         * so the level schedule() adds around this call is already there.
+         */
+        do_schedule(false);
+    } while (need_resched());
+}
+
+// Invoked by the outermost preempt_enable() if there was a pending reschedule
+void preempt_schedule(void)
+{
+    if (!local_irq_enabled())
+        return;
+
+    do {
+        preempt_disable();
+        do_schedule(true);
+        preempt_enable_no_resched();
+    } while (need_resched());
 }
 
 void yield(void)
@@ -218,7 +276,7 @@ void yield(void)
     current->sched_class->yield(rq);
     spin_unlock_irq_restore(&rq->lock, irq_state);
 
-    do_schedule();
+    do_schedule(false);
     preempt_enable();
 }
 
@@ -233,7 +291,7 @@ void task_exit(void)
     task_set_state(task, TASK_STATE_DEAD);
     spin_unlock_irq_restore(&task->lock, irq_state);
 
-    do_schedule();
+    do_schedule(false);
     BUG();
 }
 

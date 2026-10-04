@@ -52,9 +52,16 @@ static void rr_yield(struct rq *rq)
     list_insert_prev(&rr->queues[curr->prio], &curr->rr.link);
 }
 
+static void rr_wakeup_preempt(struct rq *rq, struct task *task)
+{
+    if (task->prio < rq->curr->prio)
+        resched_curr(rq);
+}
+
 DEFINE_SCHED_CLASS(rr) = {
     .enqueue = rr_enqueue,
     .dequeue = rr_dequeue,
     .pick = rr_pick,
     .yield = rr_yield,
+    .wakeup_preempt = rr_wakeup_preempt,
 };
