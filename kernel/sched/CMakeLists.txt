@@ -4,4 +4,5 @@ ultra_sources(
     rr.c
     idle.c
     kthread.c
+    wait_queue.c
 )
