@@ -58,6 +58,14 @@ static inline void timer_arm(struct timer *timer, u64 deadline_ns)
     timer_arm_with_slack(timer, deadline_ns, 0);
 }
 
+/*
+ * Like timer_arm(), for a timer that is re-armed to a later deadline far
+ * more often than it fires. If the event device is already armed for an
+ * earlier point, it is left alone, and the interrupt it raises then arms
+ * the device for this timer.
+ */
+void timer_arm_lazy(struct timer *timer, u64 deadline_ns);
+
 // The deadline the timer was last armed with
 static inline u64 timer_deadline(const struct timer *timer)
 {

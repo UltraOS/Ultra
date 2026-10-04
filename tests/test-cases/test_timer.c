@@ -759,3 +759,53 @@ TEST_CASE(timer_rearmed_while_running_elsewhere_stays_there)
     ASSERT(queue_first(this_cpu_ptr(&s_queue)) == nullptr);
     ASSERT_EQ(s_num_arms, arms_before);
 }
+
+TEST_CASE(timer_lazy_rearm_to_a_later_deadline_keeps_the_earlier_interrupt)
+{
+    struct timer timer;
+
+    reset_state();
+
+    timer_init(&timer, record);
+    timer_arm_lazy(&timer, 100);
+    ASSERT_EQ(s_armed_for, 100);
+
+    timer_arm_lazy(&timer, 400);
+    ASSERT_EQ(s_armed_for, 100);
+    ASSERT_EQ(s_num_arms, 1);
+
+    take_interrupt_at(100);
+    ASSERT_EQ(s_num_fired, 0);
+    ASSERT_EQ(s_armed_for, 400);
+
+    take_interrupt_at(400);
+    ASSERT_EQ(s_num_fired, 1);
+}
+
+TEST_CASE(timer_lazy_arm_after_a_cancel_keeps_the_earlier_interrupt)
+{
+    struct timer timer;
+
+    reset_state();
+
+    timer_init(&timer, record);
+    timer_arm_lazy(&timer, 100);
+    ASSERT(timer_cancel_nosync(&timer));
+
+    timer_arm_lazy(&timer, 400);
+    ASSERT_EQ(s_armed_for, 100);
+    ASSERT_EQ(s_num_arms, 1);
+}
+
+TEST_CASE(timer_lazy_rearm_to_an_earlier_deadline_arms_the_device)
+{
+    struct timer timer;
+
+    reset_state();
+
+    timer_init(&timer, record);
+    timer_arm_lazy(&timer, 400);
+    timer_arm_lazy(&timer, 100);
+    ASSERT_EQ(s_armed_for, 100);
+    ASSERT_EQ(s_num_arms, 2);
+}
