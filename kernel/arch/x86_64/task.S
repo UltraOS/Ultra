@@ -5,6 +5,7 @@
 
 ASM_PRELUDE
 
+.extern task_entry
 .extern g_this_cpu_task
 
 ASM_GLOBAL_FUNCTION arch_switch_to
@@ -29,3 +30,12 @@ ASM_GLOBAL_FUNCTION arch_switch_to
     mov rax, rdi
     ret
 ASM_FUNCTION_END arch_switch_to
+
+ASM_GLOBAL_FUNCTION x86_task_entry_asm
+    UNWIND_HINT_UNDEFINED(rip)
+
+    mov rdi, rax
+    mov rsi, rbx
+    mov rdx, r12
+    call task_entry
+ASM_FUNCTION_END x86_task_entry_asm

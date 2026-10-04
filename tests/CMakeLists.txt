@@ -206,11 +206,14 @@ KERNEL_FILE(
 )
 KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "task.h")
 KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "task.h")
+KERNEL_FILE(INCLUDE_PATH "private/arch" INCLUDE_FILE "task.h")
 KERNEL_FILE(
     INCLUDE_PATH "private/sched" INCLUDE_FILE "core.h"
     SOURCE_PATH "sched" SOURCE_FILE "core.c"
 )
 KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "classes.h")
+KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "sched.h")
+KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "sched.h")
 KERNEL_FILE(
     INCLUDE_PATH "private/sched" INCLUDE_FILE "rr.h"
     SOURCE_PATH "sched" SOURCE_FILE "rr.c"
@@ -249,8 +252,9 @@ include("test-cases/files.cmake")
 
 add_executable(
     run_tests
-    run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
+    run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c arch_task.c
     task_state.c sched_alloc.c
+    ${TEST_SOURCES}
     kernel-source/locking/spinlock.c kernel-source/memory/units.c
     kernel-source/common/bit.c kernel-source/locking/mutex.c
     kernel-source/common/string_container.c kernel-source/common/conversions.c

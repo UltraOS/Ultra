@@ -1,11 +1,16 @@
 #include <private/sched/core.h>
 #include <private/sched/rr.h>
 #include <private/sched/idle.h>
+#include <private/sched/task.h>
+#include <private/arch/task.h>
 
 #include <common/helpers.h>
+#include <common/atomic.h>
 
 #include <bug.h>
 #include <linker.h>
+#include <preempt.h>
+#include <irq_helpers.h>
 #include <smp.h>
 #include <init_level.h>
 #include <free_after_init.h>
@@ -45,6 +50,124 @@ struct task *rq_pick_next(struct rq *rq)
             return task;
     }
 
+    BUG();
+}
+
+/*
+ * The second half of a switch, run by the task that was switched to. The
+ * runqueue lock was taken by 'prev' and is released here, and every task
+ * gets here with the preempt count at two: one from whoever called
+ * do_schedule() and one for that lock.
+ */
+void sched_finish_switch(struct task *prev)
+{
+    struct rq *rq;
+    enum task_state prev_state;
+
+    rq = this_rq();
+    BUG_ON(preempt_count() != PREEMPT_COUNT_AT_SWITCH);
+
+    prev_state = task_state(prev);
+
+    spin_unlock(&rq->lock);
+    local_irq_enable();
+
+    /*
+     * A task cannot free its own stack that it's running on, so free it here
+     * now that we're off it.
+     */
+    if (prev_state == TASK_STATE_DEAD)
+        task_unref(prev);
+}
+
+/*
+ * Called with preemption disabled exactly once and interrupts enabled.
+ * A task that is not runnable anymore is taken off the runqueue here,
+ * and only here, so that a wakeup arriving before this point finds it
+ * still queued.
+ */
+static void do_schedule(void)
+{
+    struct rq *rq;
+    struct task *prev, *next;
+    enum task_state prev_state;
+
+    BUG_ON(in_hard_irq());
+    BUG_ON(preempt_count() != PREEMPT_DISABLE_DEPTH(1));
+    BUG_ON(!local_irq_enabled());
+
+    local_irq_disable();
+
+    rq = this_rq();
+    spin_lock(&rq->lock);
+
+    prev = rq->curr;
+    prev_state = task_state(prev);
+
+    if (prev_state != TASK_STATE_RUNNING) {
+        BUG_ON(prev == rq->idle);
+        rq_dequeue(rq, prev);
+    }
+
+    next = rq_pick_next(rq);
+    if (next == prev) {
+        spin_unlock(&rq->lock);
+        local_irq_enable();
+        return;
+    }
+
+    rq->nr_switches++;
+    rq->curr = next;
+
+    prev = arch_switch_to(prev, next);
+    sched_finish_switch(prev);
+}
+
+void schedule(void)
+{
+    preempt_disable();
+    do_schedule();
+    preempt_enable();
+}
+
+void schedule_idle(void)
+{
+    /*
+     * The idle task runs at a preempt depth of one for its whole life,
+     * so the level schedule() adds around this call is already there.
+     */
+    do_schedule();
+}
+
+void yield(void)
+{
+    struct rq *rq;
+    irq_state_t irq_state;
+
+    preempt_disable();
+
+    rq = this_rq();
+
+    irq_state = spin_lock_irq_save(&rq->lock);
+    current->sched_class->yield(rq);
+    spin_unlock_irq_restore(&rq->lock, irq_state);
+
+    do_schedule();
+    preempt_enable();
+}
+
+void task_exit(void)
+{
+    struct task *task = current;
+    irq_state_t irq_state;
+
+    preempt_disable();
+
+    irq_state = spin_lock_irq_save(&task->lock);
+    task_set_state(task, TASK_STATE_DEAD);
+    spin_unlock_irq_restore(&task->lock, irq_state);
+
+    do_schedule();
     BUG();
 }
 
