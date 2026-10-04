@@ -41,3 +41,9 @@ struct human_repr {
  * becomes { 2, 995, "GHz" }. The fraction is truncated.
  */
 void frequency_to_human(u64 hz, struct human_repr *out_human_repr);
+
+/*
+ * Express 'ns' in the largest unit it reaches, from ns up to h, e.g.
+ * 90000000000 becomes { 1, 500, "min" }. The fraction is truncated.
+ */
+void duration_to_human(u64 ns, struct human_repr *out_human_repr);
