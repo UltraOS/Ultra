@@ -8,8 +8,10 @@
 
 #include <irq_helpers.h>
 
+typedef u32 seq_t;
+
 struct seqcount {
-    u32 sequence;
+    seq_t sequence;
 };
 
 #define SEQCOUNT_INIT(name) (struct seqcount) { .sequence = 0 }
@@ -47,9 +49,9 @@ static inline void seqcount_write_end_irq_restore(
     local_irq_state_restore(state);
 }
 
-static inline u32 seqcount_read_begin(const struct seqcount *s)
+static inline seq_t seqcount_read_begin(const struct seqcount *s)
 {
-    u32 seq;
+    seq_t seq;
 
     for (;;) {
         seq = atomic_load_acquire(&s->sequence);
@@ -63,7 +65,9 @@ static inline u32 seqcount_read_begin(const struct seqcount *s)
     }
 }
 
-static inline bool seqcount_read_retry(const struct seqcount *s, u32 start_seq)
+static inline bool seqcount_read_retry(
+    const struct seqcount *s, seq_t start_seq
+)
 {
     barrier_acquire();
     return atomic_load_relaxed(&s->sequence) != start_seq;
