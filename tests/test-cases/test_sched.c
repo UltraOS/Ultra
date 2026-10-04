@@ -1622,3 +1622,105 @@ TEST_CASE(wait_event_timeout_without_a_deadline_arms_no_timer)
 
     switching_test_end();
 }
+
+static void wait_for_completion_with_timeout(void *user)
+{
+    struct timed_sleeper *sleeper = user;
+
+    sleeper->result = wait_for_completion_timeout(
+        sleeper->completion, sleeper->ns
+    );
+    log_id(sleeper->id);
+}
+
+TEST_CASE(completion_timeout_gives_up_at_the_deadline)
+{
+    DEFINE_COMPLETION(completion)
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .completion = &completion, .result = true,
+    };
+
+    timed_test_begin();
+    spawn(wait_for_completion_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+    ASSERT_EQ(s_log_length, 0);
+
+    advance_time_to(1100);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(!sleeper.result);
+    ASSERT(list_is_empty(&completion.wq.entries));
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    complete(&completion);
+    ASSERT_EQ(completion.done, 1);
+
+    switching_test_end();
+}
+
+TEST_CASE(completion_timeout_returns_when_completed)
+{
+    DEFINE_COMPLETION(completion)
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .completion = &completion,
+    };
+
+    timed_test_begin();
+    spawn(wait_for_completion_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    advance_time_to(1050);
+    complete(&completion);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(sleeper.result);
+    ASSERT_EQ(completion.done, 0);
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(completion_timeout_takes_a_complete_at_the_deadline)
+{
+    DEFINE_COMPLETION(completion)
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .completion = &completion,
+    };
+
+    timed_test_begin();
+    spawn(wait_for_completion_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    complete(&completion);
+    advance_time_to(1100);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(sleeper.result);
+    ASSERT_EQ(completion.done, 0);
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(completion_timeout_does_not_wait_when_already_done)
+{
+    DEFINE_COMPLETION(completion)
+    struct timed_sleeper sleeper = {
+        .id = 1, .ns = 100, .completion = &completion,
+    };
+
+    timed_test_begin();
+    complete(&completion);
+
+    spawn(wait_for_completion_with_timeout, &sleeper, TASK_PRIO_DEFAULT);
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT(sleeper.result);
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    switching_test_end();
+}

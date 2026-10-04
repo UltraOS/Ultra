@@ -35,11 +35,12 @@ void complete_all(struct completion *completion)
     spin_unlock_irq_restore(&wq->lock, irq_state);
 }
 
-void wait_for_completion(struct completion *completion)
+static bool do_wait(struct completion *completion, u64 deadline_ns)
 {
     struct wait_queue *wq = &completion->wq;
     struct wait_entry entry;
     irq_state_t irq_state;
+    bool timed_out = false;
 
     might_sleep();
 
@@ -48,20 +49,39 @@ void wait_for_completion(struct completion *completion)
     if (completion->done == 0) {
         wait_entry_init(&entry, WAIT_ENTRY_FLAG_EXCLUSIVE);
 
-        do {
+        for (;;) {
             wait_queue_prepare_unlocked(wq, &entry);
             spin_unlock_irq_restore(&wq->lock, irq_state);
 
-            schedule();
+            timed_out = schedule_until(deadline_ns);
 
             irq_state = spin_lock_irq_save(&wq->lock);
-        } while (completion->done == 0);
+
+            if (completion->done != 0 || timed_out)
+                break;
+        }
 
         wait_queue_remove_unlocked(wq, &entry);
+    }
+
+    if (completion->done == 0) {
+        spin_unlock_irq_restore(&wq->lock, irq_state);
+        return false;
     }
 
     if (completion->done != DONE_PERMANENT)
         completion->done--;
 
     spin_unlock_irq_restore(&wq->lock, irq_state);
+    return true;
+}
+
+void wait_for_completion(struct completion *completion)
+{
+    do_wait(completion, NO_DEADLINE);
+}
+
+bool wait_for_completion_timeout(struct completion *completion, u64 timeout_ns)
+{
+    return do_wait(completion, ns_from_now(timeout_ns));
 }
