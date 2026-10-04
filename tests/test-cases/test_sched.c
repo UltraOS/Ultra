@@ -1739,3 +1739,241 @@ TEST_CASE(completion_timeout_does_not_wait_when_already_done)
 
     switching_test_end();
 }
+
+#define SLICE_NS (10 * 1000 * 1000ull)
+
+// A timer interrupt taken by the running task, with the preemption check
+static void take_timer_interrupt_at(u64 now)
+{
+    struct registers regs = { .irq_state = true };
+    irq_state_t irq_state;
+
+    irq_state = local_irq_state_save();
+    advance_time_to(now);
+    preempt_schedule_irq(&regs);
+    local_irq_state_restore(irq_state);
+}
+
+struct spinner {
+    int id;
+    bool *stop;
+};
+
+/*
+ * Stands in for a task that computes without ever giving up the CPU. The
+ * test drives time from inside it.
+ */
+static void spin_and_log(void *user)
+{
+    struct spinner *spinner = user;
+
+    while (!*spinner->stop) {
+        log_id(spinner->id);
+
+        take_timer_interrupt_at(s_now + SLICE_NS / 2);
+
+        if (s_log_length >= 12)
+            *spinner->stop = true;
+    }
+}
+
+TEST_CASE(slice_rotates_tasks_that_never_yield)
+{
+    bool stop = false;
+    struct spinner first = { .id = 1, .stop = &stop };
+    struct spinner second = { .id = 2, .stop = &stop };
+    int i;
+
+    timed_test_begin();
+    spawn(spin_and_log, &first, TASK_PRIO_DEFAULT);
+    spawn(spin_and_log, &second, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 12);
+    for (i = 0; i < 12; i++)
+        ASSERT_EQ(s_log[i], (i / 2) % 2 + 1);
+
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+    ASSERT_EQ(count_pending_timers(), 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(slice_is_not_armed_for_a_task_alone_at_its_priority)
+{
+    bool stop = false;
+    struct spinner alone = { .id = 1, .stop = &stop };
+    struct runner lower = { .id = 2, .rounds = 1 };
+
+    timed_test_begin();
+    spawn(spin_and_log, &alone, TASK_PRIO_DEFAULT);
+    spawn(run_to_completion, &lower, TASK_PRIO_DEFAULT + 1);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 13);
+    ASSERT_EQ(count_ids(1), 12);
+    ASSERT_EQ(s_log[12], 2);
+
+    switching_test_end();
+}
+
+struct slice_user {
+    int id;
+    int rounds;
+    struct runner intruder;
+};
+
+static void get_preempted_every_round(void *user)
+{
+    struct slice_user *slice_user = user;
+    int i;
+
+    for (i = 0; i < slice_user->rounds; i++) {
+        log_id(slice_user->id);
+
+        spawn(run_to_completion, &slice_user->intruder, TASK_PRIO_HIGHEST);
+        take_timer_interrupt_at(s_now + SLICE_NS / 4);
+    }
+}
+
+TEST_CASE(slice_is_not_refilled_by_being_preempted)
+{
+    struct slice_user greedy = {
+        .id = 1, .rounds = 6, .intruder = { .id = 9, .rounds = 1 },
+    };
+    struct runner patient = { .id = 2, .rounds = 1 };
+    int i, patient_at = -1;
+
+    timed_test_begin();
+    spawn(get_preempted_every_round, &greedy, TASK_PRIO_DEFAULT);
+    spawn(run_to_completion, &patient, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    for (i = 0; i < s_log_length; i++) {
+        if (s_log[i] == 2)
+            patient_at = i;
+    }
+
+    ASSERT_EQ(count_ids(1), 6);
+    ASSERT_EQ(count_ids(9), 6);
+    ASSERT_EQ(patient_at, 8);
+
+    switching_test_end();
+}
+
+struct slice_probe {
+    int id;
+    u64 slice_left_ns;
+    int timers_while_alone;
+    int timers_with_a_peer;
+    struct runner peer;
+};
+
+static void yield_late_in_the_slice(void *user)
+{
+    struct slice_probe *probe = user;
+
+    advance_time_to(s_now + SLICE_NS - 1);
+    yield();
+
+    probe->slice_left_ns = current->rr.slice_left_ns;
+    log_id(probe->id);
+}
+
+TEST_CASE(slice_is_refilled_by_a_yield)
+{
+    struct slice_probe probe = { .id = 1 };
+    struct runner other = { .id = 2, .rounds = 1 };
+
+    timed_test_begin();
+    spawn(yield_late_in_the_slice, &probe, TASK_PRIO_DEFAULT);
+    spawn(run_to_completion, &other, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 2);
+    ASSERT_EQ(s_log[0], 2);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(probe.slice_left_ns, SLICE_NS);
+
+    switching_test_end();
+}
+
+static void run_alone_then_get_a_peer(void *user)
+{
+    struct slice_probe *probe = user;
+
+    log_id(probe->id);
+    advance_time_to(s_now + SLICE_NS / 2);
+    probe->timers_while_alone = count_pending_timers();
+
+    spawn(run_to_completion, &probe->peer, TASK_PRIO_DEFAULT);
+    probe->timers_with_a_peer = count_pending_timers();
+    log_id(probe->id);
+
+    take_timer_interrupt_at(s_now + SLICE_NS / 2 - 1);
+    log_id(probe->id);
+
+    take_timer_interrupt_at(s_now + 1);
+    log_id(probe->id);
+}
+
+TEST_CASE(slice_starts_counting_when_a_peer_shows_up)
+{
+    struct slice_probe probe = {
+        .id = 1, .peer = { .id = 2, .rounds = 1 },
+    };
+
+    timed_test_begin();
+    spawn(run_alone_then_get_a_peer, &probe, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(probe.timers_while_alone, 0);
+    ASSERT_EQ(probe.timers_with_a_peer, 1);
+
+    ASSERT_EQ(s_log_length, 5);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 1);
+    ASSERT_EQ(s_log[2], 1);
+    ASSERT_EQ(s_log[3], 2);
+    ASSERT_EQ(s_log[4], 1);
+
+    switching_test_end();
+}
+
+static void use_up_the_slice_alone_then_get_a_peer(void *user)
+{
+    struct slice_probe *probe = user;
+
+    log_id(probe->id);
+    advance_time_to(s_now + 3 * SLICE_NS);
+
+    spawn(run_to_completion, &probe->peer, TASK_PRIO_DEFAULT);
+    probe->timers_with_a_peer = count_pending_timers();
+    log_id(probe->id);
+}
+
+TEST_CASE(slice_used_up_alone_lets_a_peer_run_at_once)
+{
+    struct slice_probe probe = {
+        .id = 1, .peer = { .id = 2, .rounds = 1 },
+    };
+
+    timed_test_begin();
+    spawn(use_up_the_slice_alone_then_get_a_peer, &probe, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(probe.timers_with_a_peer, 0);
+
+    ASSERT_EQ(s_log_length, 3);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+    ASSERT_EQ(s_log[2], 1);
+
+    switching_test_end();
+}
