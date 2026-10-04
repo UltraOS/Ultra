@@ -4,6 +4,7 @@
 
 #include <arch_constants.h>
 #include <detail/init_level.h>
+#include <private/sched/classes.h>
 
 #define PHDR_READ  (1 << 2)
 #define PHDR_WRITE (1 << 1)
@@ -72,9 +73,18 @@
 
 #define INIT_LEVEL_CB_SECTIONS INIT_LEVELS
 
+#define SCHED_CLASS(x) SPECIAL_SECTION(SCHED_CLASS_SECTION(x))
+
+#define SCHED_CLASS_SECTIONS                         \
+    . = ALIGN(ULTRA_ARCH_WIDTH);                     \
+    SECTION_MARKER_BEGIN(SCHED_CLASSES_SECTION) = .; \
+    SCHED_CLASSES                                    \
+    SECTION_MARKER_END(SCHED_CLASSES_SECTION) = .;
+
 #define RODATA                                           \
     *(.rodata .rodata.*)                                 \
     *(.INIT_DATA_REFERENCE_RODATA_SECTION)               \
+    SCHED_CLASS_SECTIONS                                 \
     NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)
 
 #define RODATA_FREE_AFTER_INIT_BEGIN \

@@ -1,0 +1,7 @@
+#include <linker_common.ld.h>
+
+SECTIONS
+{
+    .sched_classes : { SCHED_CLASS_SECTIONS }
+}
+INSERT AFTER .data;

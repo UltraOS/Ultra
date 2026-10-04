@@ -13,6 +13,7 @@ add_test_cases(
     test_cpu_mask.c
     test_cpu_mask_out_of_line.c
     test_preempt.c
+    test_sched.c
     test_spinlock.c
     test_mutex.c
     test_vector_alloc.c

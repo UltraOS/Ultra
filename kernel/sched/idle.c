@@ -1,0 +1,33 @@
+#include <private/sched/core.h>
+#include <private/sched/idle.h>
+
+#include <common/helpers.h>
+
+#include <bug.h>
+
+static void idle_enqueue(struct rq *rq, struct task *task)
+{
+    UNREFERENCED_PARAMETER(rq);
+    UNREFERENCED_PARAMETER(task);
+
+    BUG();
+}
+
+static void idle_dequeue(struct rq *rq, struct task *task)
+{
+    UNREFERENCED_PARAMETER(rq);
+    UNREFERENCED_PARAMETER(task);
+
+    BUG();
+}
+
+static struct task *idle_pick(struct rq *rq)
+{
+    return rq->idle;
+}
+
+DEFINE_SCHED_CLASS(idle) = {
+    .enqueue = idle_enqueue,
+    .dequeue = idle_dequeue,
+    .pick = idle_pick,
+};
