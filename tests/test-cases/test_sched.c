@@ -44,6 +44,8 @@ u64 sched_test_now(void);
 #include <kernel-source/sched/wait_queue.c>
 #include <kernel-source/sched/completion.c>
 
+#include <locking/mutex.h>
+
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
 
@@ -1974,6 +1976,118 @@ TEST_CASE(slice_used_up_alone_lets_a_peer_run_right_away)
     ASSERT_EQ(s_log[0], 1);
     ASSERT_EQ(s_log[1], 2);
     ASSERT_EQ(s_log[2], 1);
+
+    switching_test_end();
+}
+
+struct mutex_user {
+    int id;
+    struct mutex *mutex;
+    int rounds;
+    bool yield_while_holding;
+};
+
+static void lock_log_unlock(void *user)
+{
+    struct mutex_user *mutex_user = user;
+    int i;
+
+    for (i = 0; i < mutex_user->rounds; i++) {
+        mutex_lock(mutex_user->mutex);
+        log_id(mutex_user->id);
+
+        if (mutex_user->yield_while_holding)
+            yield();
+
+        mutex_unlock(mutex_user->mutex);
+    }
+}
+
+TEST_CASE(mutex_contended_lock_sleeps_until_the_unlock)
+{
+    DEFINE_MUTEX(mutex);
+    struct mutex_user holder = {
+        .id = 1, .mutex = &mutex, .rounds = 1, .yield_while_holding = true,
+    };
+    struct mutex_user waiter = { .id = 2, .mutex = &mutex, .rounds = 1 };
+    struct rq *rq;
+
+    rq = switching_test_begin();
+    spawn(lock_log_unlock, &holder, TASK_PRIO_DEFAULT);
+    spawn(lock_log_unlock, &waiter, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 2);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(s_log[1], 2);
+
+    ASSERT_EQ(mutex.owner, 0);
+    ASSERT(list_is_empty(&mutex.waiters));
+    ASSERT_EQ(rq->nr_running, 0);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+TEST_CASE(mutex_waiters_get_the_lock_in_arrival_order)
+{
+    DEFINE_MUTEX(mutex);
+    struct mutex_user holder = {
+        .id = 1, .mutex = &mutex, .rounds = 1, .yield_while_holding = true,
+    };
+    struct mutex_user waiters[3];
+    int i;
+
+    switching_test_begin();
+    spawn(lock_log_unlock, &holder, TASK_PRIO_DEFAULT);
+
+    for (i = 0; i < 3; i++) {
+        waiters[i] = (struct mutex_user) {
+            .id = 2 + i, .mutex = &mutex, .rounds = 1,
+        };
+        spawn(lock_log_unlock, &waiters[i], TASK_PRIO_DEFAULT);
+    }
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 4);
+    for (i = 0; i < 4; i++)
+        ASSERT_EQ(s_log[i], 1 + i);
+
+    ASSERT_EQ(mutex.owner, 0);
+    ASSERT_EQ(g_sched_test_live_tasks, 0);
+
+    switching_test_end();
+}
+
+static void try_lock_and_log(void *user)
+{
+    struct mutex_user *mutex_user = user;
+
+    if (mutex_try_lock(mutex_user->mutex)) {
+        log_id(mutex_user->id);
+        mutex_unlock(mutex_user->mutex);
+    }
+}
+
+TEST_CASE(mutex_try_lock_fails_while_another_task_holds_it)
+{
+    DEFINE_MUTEX(mutex);
+    struct mutex_user holder = {
+        .id = 1, .mutex = &mutex, .rounds = 1, .yield_while_holding = true,
+    };
+    struct mutex_user other = { .id = 2, .mutex = &mutex };
+
+    switching_test_begin();
+    spawn(lock_log_unlock, &holder, TASK_PRIO_DEFAULT);
+    spawn(try_lock_and_log, &other, TASK_PRIO_DEFAULT);
+
+    schedule_idle();
+
+    ASSERT_EQ(s_log_length, 1);
+    ASSERT_EQ(s_log[0], 1);
+    ASSERT_EQ(mutex.owner, 0);
 
     switching_test_end();
 }
