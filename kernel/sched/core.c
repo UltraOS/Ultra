@@ -15,6 +15,8 @@
 #include <init_level.h>
 #include <free_after_init.h>
 
+#include <arch/cpu_helpers.h>
+
 DEFINE_PER_CPU(struct rq, g_this_cpu_rq);
 
 void rq_enqueue(struct rq *rq, struct task *task)
@@ -69,6 +71,7 @@ void sched_finish_switch(struct task *prev)
     BUG_ON(preempt_count() != PREEMPT_COUNT_AT_SWITCH);
 
     prev_state = task_state(prev);
+    atomic_store_release(&prev->on_cpu, false);
 
     spin_unlock(&rq->lock);
     local_irq_enable();
@@ -119,9 +122,71 @@ static void do_schedule(void)
 
     rq->nr_switches++;
     rq->curr = next;
+    atomic_store_relaxed(&next->on_cpu, true);
 
     prev = arch_switch_to(prev, next);
     sched_finish_switch(prev);
+}
+
+bool wake_up_task(struct task *task, enum task_state state_mask)
+{
+    struct rq *rq;
+    irq_state_t irq_state;
+    bool woken = false;
+
+    irq_state = spin_lock_irq_save(&task->lock);
+    /*
+     * Pairs with the barrier in set_current_state(), the sleeper stores
+     * its state and then checks its condition, the waker stores the
+     * condition and then loads the state here, so one of the two is
+     * guaranteed to see the other's store
+     */
+    barrier_full();
+
+    if (!(task_state(task) & state_mask))
+        goto out;
+
+    rq = task_rq(task);
+    spin_lock(&rq->lock);
+
+    /*
+     * Still queued, so its own schedule() call, whenever it gets there,
+     * will find it runnable and keep it queued.
+     */
+    if (task->on_rq) {
+        task_set_state(task, TASK_STATE_RUNNING);
+        spin_unlock(&rq->lock);
+
+        woken = true;
+        goto out;
+    }
+
+    spin_unlock(&rq->lock);
+
+    // Its CPU may still be in the middle of switching away from it
+    while (atomic_load_acquire(&task->on_cpu))
+        arch_cpu_relax();
+
+    rq = task_rq(task);
+    spin_lock(&rq->lock);
+
+    /*
+     * Give the task its own reference so it cannot be freed via an external
+     * task_unref() while it's running. This pairs with task_unref() inside
+     * sched_finish_switch() when we detect that this task has exited.
+     */
+    if (task_state(task) == TASK_STATE_NEW)
+        task_ref(task);
+
+    task_set_state(task, TASK_STATE_RUNNING);
+    rq_enqueue(rq, task);
+
+    spin_unlock(&rq->lock);
+    woken = true;
+
+out:
+    spin_unlock_irq_restore(&task->lock, irq_state);
+    return woken;
 }
 
 void schedule(void)
@@ -182,6 +247,8 @@ static void rq_init(struct rq *rq, cpu_t cpu)
 
     spin_lock_init(&rq->lock);
     rr_rq_init(&rq->rr);
+
+    idle->on_cpu = true;
 
     rq->idle = idle;
     rq->curr = idle;

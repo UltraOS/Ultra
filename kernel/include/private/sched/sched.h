@@ -17,6 +17,13 @@
 })
 
 /*
+ * Make 'task' runnable if it is in one of the states in 'state_mask'.
+ * Returns whether it was. Callable from any context that may take a
+ * spinlock, the caller must hold a reference to the task.
+ */
+bool wake_up_task(struct task *task, enum task_state state_mask);
+
+/*
  * Stay runnable but let the other tasks of the same priority run first.
  *
  * NOTE: This is not a way to wait for another task, and tasks of a lower
