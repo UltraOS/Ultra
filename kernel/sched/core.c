@@ -205,7 +205,8 @@ static void do_schedule(bool preempted)
         return;
     }
 
-    rq->nr_switches++;
+    // Read without the runqueue lock by sched_nr_switches()
+    atomic_store_relaxed(&rq->nr_switches, rq->nr_switches + 1);
     atomic_store_relaxed(&next->on_cpu, true);
 
     prev = arch_switch_to(prev, next);
@@ -419,6 +420,11 @@ void task_exit(void)
 
     do_schedule(false);
     BUG();
+}
+
+u64 sched_nr_switches(cpu_t cpu)
+{
+    return atomic_load_relaxed(&cpu_rq(cpu)->nr_switches);
 }
 
 static void rq_init(struct rq *rq, cpu_t cpu)
