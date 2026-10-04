@@ -5,6 +5,8 @@
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
 
+#include <sched/sched.h>
+
 #include <common/helpers.h>
 #include <common/atomic.h>
 
@@ -105,6 +107,16 @@ void sched_finish_switch(struct task *prev)
      */
     if (prev_state == TASK_STATE_DEAD)
         task_unref(prev);
+}
+
+void might_sleep(void)
+{
+    if (init_level_below(INIT_LEVEL_SCHEDULER_ONLINE))
+        return;
+
+    BUG_ON(preempt_count() != 0);
+    BUG_ON(!local_irq_enabled());
+    BUG_ON(task_state(current) != TASK_STATE_RUNNING);
 }
 
 /*

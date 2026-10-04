@@ -207,6 +207,7 @@ KERNEL_FILE(
 KERNEL_FILE(INCLUDE_PATH "detail/sched" INCLUDE_FILE "task.h")
 KERNEL_FILE(INCLUDE_PATH "private/sched" INCLUDE_FILE "task.h")
 KERNEL_FILE(INCLUDE_PATH "private/arch" INCLUDE_FILE "task.h")
+KERNEL_FILE(INCLUDE_PATH "sched" INCLUDE_FILE "sched.h")
 KERNEL_FILE(
     INCLUDE_PATH "private/sched" INCLUDE_FILE "core.h"
     SOURCE_PATH "sched" SOURCE_FILE "core.c"
