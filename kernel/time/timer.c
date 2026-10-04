@@ -213,6 +213,22 @@ static bool queue_should_defer_arming(struct timer_queue *queue)
     return queue->in_interrupt || queue->backing_off;
 }
 
+static bool queue_should_arm(
+    struct timer_queue *queue, struct timer *timer, bool lazy
+)
+{
+    if (queue_first(queue) != timer)
+        return false;
+    if (queue_should_defer_arming(queue))
+        return false;
+
+    // The interrupt for the earlier deadline arms the device for this one
+    if (lazy && queue->armed_ns <= timer->hard_deadline_ns)
+        return false;
+
+    return true;
+}
+
 static void queue_insert(
     struct timer_queue *queue, struct timer *timer,
     u64 deadline_ns, u64 hard_deadline_ns
@@ -243,7 +259,9 @@ static void queue_requeue(
     queue_insert(queue, timer, timer->deadline_ns, timer->hard_deadline_ns);
 }
 
-void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns)
+static void do_timer_arm(
+    struct timer *timer, u64 deadline_ns, u64 slack_ns, bool lazy
+)
 {
     struct timer_queue *queue;
     irq_state_t irq_state;
@@ -259,11 +277,21 @@ void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns)
     queue = timer_lock_queue_for_arm(timer);
     queue_insert(queue, timer, deadline_ns, hard_deadline_ns);
 
-    if (queue_first(queue) == timer && !queue_should_defer_arming(queue))
+    if (queue_should_arm(queue, timer, lazy))
         queue_arm(queue);
 
     spin_unlock(&queue->lock);
     local_irq_state_restore(irq_state);
+}
+
+void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns)
+{
+    do_timer_arm(timer, deadline_ns, slack_ns, false);
+}
+
+void timer_arm_lazy(struct timer *timer, u64 deadline_ns)
+{
+    do_timer_arm(timer, deadline_ns, 0, true);
 }
 
 bool timer_cancel_nosync(struct timer *timer)
