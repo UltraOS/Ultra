@@ -16,7 +16,27 @@ static reg_t s_cr4;
 struct x86_cpu_info g_cpu_info;
 DEFINE_PER_CPU(struct x86_cpu_info, g_this_cpu_info);
 
-static void intel_init(void)
+static u32 INIT_CODE intel_microcode_revision(void)
+{
+    u32 unused;
+    u64 value;
+    error_t ret;
+
+    // The MSR only reports the revision after a CPUID(1) for some reason
+    ret = wrmsr(MSR_IA32_BIOS_SIGN_ID, 0);
+    if (is_error(ret))
+        return 0;
+
+    cpuid_inline(1, &unused, &unused, &unused, &unused);
+
+    ret = rdmsr(MSR_IA32_BIOS_SIGN_ID, &value);
+    if (is_error(ret))
+        return 0;
+
+    return value >> 32;
+}
+
+static void INIT_CODE intel_init(struct x86_cpu_info *info)
 {
     /*
      * All x86_64 intel CPUs have constant TSC.
@@ -25,17 +45,36 @@ static void intel_init(void)
      * enter those, so for us it doesn't really matter.
      */
     all_cpus_enable(X86_FEATURE_TSC_RELIABLE);
+
+    info->microcode_revision = intel_microcode_revision();
+}
+
+static u32 INIT_CODE amd_microcode_revision(void)
+{
+    u64 value;
+    error_t ret;
+
+    ret = rdmsr(MSR_AMD64_PATCH_LEVEL, &value);
+    if (is_error(ret))
+        return 0;
+
+    return value & 0xFFFFFFFF;
+}
+
+static void INIT_CODE amd_init(struct x86_cpu_info *info)
+{
+    info->microcode_revision = amd_microcode_revision();
 }
 
 struct cpu_ident {
     char vendor_string[13];
     enum x86_cpu_vendor vendor;
-    void (*init)(void);
+    void (*init)(struct x86_cpu_info *info);
 };
 
 static const struct cpu_ident INIT_RODATA s_supported_cpus[] = {
     { "GenuineIntel", X86_VENDOR_INTEL, intel_init },
-    { "AuthenticAMD", X86_VENDOR_AMD,   nullptr    },
+    { "AuthenticAMD", X86_VENDOR_AMD,   amd_init   },
 };
 
 static void INIT_CODE cpu_vendor_detect(struct x86_cpu_info *info)
@@ -57,7 +96,7 @@ static void INIT_CODE cpu_vendor_detect(struct x86_cpu_info *info)
 
         info->vendor = this_id->vendor;
         if (this_id->init)
-            this_id->init();
+            this_id->init(info);
         break;
     }
 }

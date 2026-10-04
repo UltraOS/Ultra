@@ -314,6 +314,8 @@ struct x86_cpu_info {
     u8 stepping;
     enum x86_cpu_vendor vendor;
 
+    u32 microcode_revision;
+
     u8 phys_bits;
     u8 virt_bits;
 
