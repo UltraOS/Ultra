@@ -40,6 +40,7 @@
 #include <memory/io.h>
 #include <memory/bug.h>
 #include <arch_constants.h>
+#include <refcount.h>
 #include <locking/spinlock.h>
 
 /*
@@ -171,7 +172,7 @@ struct ptdesc_page {
 
 // Base type for every reference counted "page_type"
 struct refcounted_page {
-    u32 num_references;
+    struct refcount32 refcount;
 };
 
 struct anon_page {
@@ -364,7 +365,7 @@ static inline u32 block_num_references(const struct page_block *block)
     const struct page *page = block_to_page(block);
 
     MM_BUG_ON(!page_type_is_refcounted(page_type(page)));
-    return atomic_load_relaxed(&page->refcounted.num_references);
+    return refcount_read(&page->refcounted.refcount);
 }
 
 static inline bool block_is_kernel_heap(const struct page_block *block)
