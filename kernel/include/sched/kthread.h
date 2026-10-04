@@ -6,11 +6,12 @@
 #include <common/error.h>
 
 #include <sched/task.h>
+#include <detail/sched/task.h>
 
 /*
  * Create a kernel thread that runs fn(user) once it is started with
  * kthread_start(), and exits when the function returns. Use task_unref()
- * to release.
+ * or kthread_stop() to release.
  */
 PRINTF_DECL(3, 4)
 struct task *kthread_create(
@@ -40,3 +41,18 @@ error_t kthread_run(task_fn_t fn, void *user, const char *name_fmt, ...);
 // Exit the current kernel thread
 NORETURN
 void kthread_exit(void);
+
+/*
+ * Ask a kernel thread to stop and wait until it has exited. The thread
+ * has to cooperate by checking kthread_should_stop() whenever it is
+ * woken.
+ *
+ * NOTE: This consumes the caller reference handed out by kthread_create().
+ */
+void kthread_stop(struct task *task);
+
+// True once kthread_stop() asked the current thread to return
+static inline bool kthread_should_stop(void)
+{
+    return task_test_flag(current, TASK_FLAG_KTHREAD_SHOULD_STOP);
+}

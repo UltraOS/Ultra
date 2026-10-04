@@ -1,11 +1,28 @@
 #include <sched/kthread.h>
 
 #include <common/format.h>
+#include <common/helpers.h>
+#include <common/atomic.h>
+
+#include <sched/completion.h>
 
 #include <private/sched/task.h>
 #include <private/sched/core.h>
 #include <private/sched/rr.h>
+#include <private/sched/kthread.h>
 #include <private/arch/task.h>
+
+static void kthread_entry(void *user)
+{
+    struct kthread *kthread = &current->kthread;
+
+    UNREFERENCED_PARAMETER(user);
+
+    if (kthread_should_stop())
+        return;
+
+    kthread->fn(kthread->user);
+}
 
 struct task *kthread_vcreate(
     task_fn_t fn, void *user, const char *name_fmt, va_list vlist
@@ -22,7 +39,13 @@ struct task *kthread_vcreate(
     task->cpu = current->cpu;
     task->prio = TASK_PRIO_DEFAULT;
     task->sched_class = &SCHED_CLASS_INSTANCE(rr);
-    arch_task_frame_init(task, fn, user);
+    task->flags |= TASK_FLAG_KTHREAD;
+    task->kthread.fn = fn;
+    task->kthread.user = user;
+
+    completion_init(&task->kthread.exited);
+
+    arch_task_frame_init(task, kthread_entry, nullptr);
 
     return task;
 }
@@ -67,4 +90,18 @@ error_t kthread_run(task_fn_t fn, void *user, const char *name_fmt, ...)
 void kthread_exit(void)
 {
     task_exit();
+}
+
+void kthread_did_exit(struct task *task)
+{
+    complete_all(&task->kthread.exited);
+}
+
+void kthread_stop(struct task *task)
+{
+    task_set_flag(task, TASK_FLAG_KTHREAD_SHOULD_STOP);
+    wake_up_task(task, TASK_STATE_NEW | TASK_STATE_UNINTERRUPTIBLE);
+    wait_for_completion(&task->kthread.exited);
+
+    task_unref(task);
 }

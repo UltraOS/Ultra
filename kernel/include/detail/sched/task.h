@@ -10,6 +10,7 @@
 #include <sched/task.h>
 
 #include <detail/refcount.h>
+#include <detail/sched/kthread.h>
 #include <detail/sched/rr.h>
 #include <arch/detail/task.h>
 
@@ -25,6 +26,8 @@ struct sched_class;
 enum task_flags : u32 {
     TASK_FLAG_NONE = 0,
     TASK_FLAG_NEED_RESCHED = BIT_U32(0),
+    TASK_FLAG_KTHREAD = BIT_U32(1),
+    TASK_FLAG_KTHREAD_SHOULD_STOP = BIT_U32(2),
 #if IS_ENABLED(UBSAN)
     TASK_FLAG_IN_UBSAN_REPORT = BIT_U32(31),
 #endif
@@ -54,6 +57,10 @@ struct task {
     char name[TASK_NAME_MAX];
     void *stack;
     size_t stack_size;
+
+    union {
+        struct kthread kthread;
+    };
 
     struct arch_task arch;
 };

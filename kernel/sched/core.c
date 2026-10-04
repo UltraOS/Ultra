@@ -1,6 +1,7 @@
 #include <private/sched/core.h>
 #include <private/sched/rr.h>
 #include <private/sched/idle.h>
+#include <private/sched/kthread.h>
 #include <private/sched/task.h>
 #include <private/arch/task.h>
 #include <private/arch/preempt.h>
@@ -322,6 +323,9 @@ void task_exit(void)
     irq_state = spin_lock_irq_save(&task->lock);
     task_set_state(task, TASK_STATE_DEAD);
     spin_unlock_irq_restore(&task->lock, irq_state);
+
+    if (task_is_kthread(task))
+        kthread_did_exit(task);
 
     do_schedule(false);
     BUG();
