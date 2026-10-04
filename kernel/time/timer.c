@@ -8,6 +8,7 @@
 
 #include <common/atomic.h>
 #include <common/bit.h>
+#include <common/overflow.h>
 
 #include <bug.h>
 #include <per_cpu.h>
@@ -50,7 +51,7 @@ static bool timer_expires_before(
     new_timer = rb_entry(new_node, struct timer, node);
     old_timer = rb_entry(old_node, struct timer, node);
 
-    return new_timer->deadline_ns < old_timer->deadline_ns;
+    return new_timer->hard_deadline_ns < old_timer->hard_deadline_ns;
 }
 
 static struct timer *queue_first(struct timer_queue *queue)
@@ -78,7 +79,7 @@ static u64 queue_next_deadline(struct timer_queue *queue)
     if (first == nullptr)
         return NO_DEADLINE;
 
-    return first->deadline_ns;
+    return first->hard_deadline_ns;
 }
 
 static void queue_arm_device(struct timer_queue *queue, u64 deadline_ns)
@@ -204,26 +205,35 @@ static bool queue_should_defer_arming(struct timer_queue *queue)
 }
 
 static void queue_insert(
-    struct timer_queue *queue, struct timer *timer, u64 deadline_ns
+    struct timer_queue *queue, struct timer *timer,
+    u64 deadline_ns, u64 hard_deadline_ns
 )
 {
     if (timer->flags & TIMER_FLAG_QUEUED)
         queue_remove(queue, timer);
 
     timer->deadline_ns = deadline_ns;
+    timer->hard_deadline_ns = hard_deadline_ns;
 
     rb_node_insert_cached(&timer->node, &queue->timers, timer_expires_before);
     timer->flags |= TIMER_FLAG_QUEUED;
 }
 
-void timer_arm(struct timer *timer, u64 deadline_ns)
+void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns)
 {
     struct timer_queue *queue;
     irq_state_t irq_state;
+    u64 hard_deadline_ns;
+
+    /*
+     * A hard deadline that wraps around would sit at the front of the queue
+     * and keep every timer behind it from running
+     */
+    BUG_ON(check_add_overflow(deadline_ns, slack_ns, &hard_deadline_ns));
 
     irq_state = local_irq_state_save();
     queue = timer_lock_queue_for_arm(timer);
-    queue_insert(queue, timer, deadline_ns);
+    queue_insert(queue, timer, deadline_ns, hard_deadline_ns);
 
     if (queue_first(queue) == timer && !queue_should_defer_arming(queue))
         queue_arm(queue);

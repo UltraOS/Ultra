@@ -250,6 +250,44 @@ TEST_CASE(timer_early_interrupt_arms_the_device_again)
     ASSERT_EQ(s_num_arms, 2);
 }
 
+TEST_CASE(timer_with_slack_rides_an_earlier_interrupt)
+{
+    struct timer exact, relaxed;
+
+    reset_state();
+
+    timer_init(&exact, record);
+    timer_init(&relaxed, record);
+
+    timer_arm(&exact, 100);
+    timer_arm_with_slack(&relaxed, 90, 410);
+    ASSERT_EQ(s_armed_for, 100);
+    ASSERT_EQ(s_num_arms, 1);
+
+    take_interrupt_at(100);
+
+    ASSERT_EQ(s_num_fired, 2);
+    ASSERT_EQ(s_fired[0], &exact);
+    ASSERT_EQ(s_fired[1], &relaxed);
+    ASSERT_EQ(s_armed_for, NOT_ARMED);
+}
+
+TEST_CASE(timer_with_slack_alone_waits_until_the_slack_runs_out)
+{
+    struct timer relaxed;
+
+    reset_state();
+
+    timer_init(&relaxed, record);
+    timer_arm_with_slack(&relaxed, 90, 410);
+    ASSERT_EQ(s_armed_for, 500);
+    ASSERT_EQ(timer_deadline(&relaxed), 90);
+
+    take_interrupt_at(80);
+    ASSERT_EQ(s_num_fired, 0);
+    ASSERT_EQ(s_armed_for, 500);
+}
+
 struct periodic {
     struct timer timer;
     u64 period_ns;

@@ -28,6 +28,15 @@ typedef enum timer_result (*timer_fn_t)(struct timer *timer);
 void timer_init(struct timer *timer, timer_fn_t fn);
 
 /*
+ * Same as timer_arm(timer, deadline_ns + slack_ns), except the callback may
+ * end up running earlier, but no earlier than 'deadline_ns'. This allows for
+ * interrupt coalescing in case another timer's deadline happens to arrive in
+ * that window. timer_deadline() reports the 'deadline_ns' value for such
+ * timers.
+ */
+void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns);
+
+/*
  * Arm the timer to run its callback once at an absolute 'deadline_ns' in
  * ns_since_boot() time. If 'deadline_ns' is in the past, the callback is
  * invoked as soon as possible. To run it periodically, arm the timer again
@@ -38,7 +47,10 @@ void timer_init(struct timer *timer, timer_fn_t fn);
  *       on another CPU at that moment, in which case it stays there. Arming a
  *       timer that is already armed changes its deadline.
  */
-void timer_arm(struct timer *timer, u64 deadline_ns);
+static inline void timer_arm(struct timer *timer, u64 deadline_ns)
+{
+    timer_arm_with_slack(timer, deadline_ns, 0);
+}
 
 // The deadline the timer was last armed with
 static inline u64 timer_deadline(const struct timer *timer)
