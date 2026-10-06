@@ -58,3 +58,6 @@ void ktest_skip(const char *reason);
     if (!KTEST_CHECK_STREQ(lhs, rhs))     \
         ktest_abort();                    \
 } while (0)
+
+#define KTEST_RUN_THREADS(fn, user, num, name)                         \
+    ktest_run_threads(__FILE__, __LINE__, (fn), (user), (num), (name))

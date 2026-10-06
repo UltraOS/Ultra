@@ -22,6 +22,11 @@ void ktest_fail_cmp(
 NORETURN
 void ktest_abort(void);
 
+u32 ktest_run_threads(
+    const char *file, u32 line, void (*fn)(void *user, u32 index), void *user,
+    u32 num, const char *name
+);
+
 #define KTEST_IS_SIGNED(value) _Generic((value), \
     int: true,                                   \
     long: true,                                  \

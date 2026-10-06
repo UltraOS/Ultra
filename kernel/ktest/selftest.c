@@ -75,3 +75,24 @@ KTEST_CASE_WITH_TIMEOUT(late_results_have_a_case_to_land_in, 1000)
 {
     sleep_ns(100 * NS_PER_MS);
 }
+
+static void mark_index(void *user, u32 index)
+{
+    bool *ran = user;
+
+    ran[index] = true;
+}
+
+KTEST_CASE(threads_have_all_returned_when_the_case_goes_on)
+{
+    bool ran[4] = { 0 };
+    u32 i, num_started;
+
+    num_started = KTEST_RUN_THREADS(
+        mark_index, ran, ARRAY_SIZE(ran), "marker"
+    );
+    KTEST_EXPECT_EQ(num_started, ARRAY_SIZE(ran));
+
+    for (i = 0; i < num_started; i++)
+        KTEST_EXPECT(ran[i]);
+}

@@ -100,6 +100,60 @@ void ktest_skip(const char *reason)
     run_finish(run);
 }
 
+struct ktest_thread {
+    void (*fn)(void *user, u32 index);
+    void *user;
+    u32 index;
+    struct completion *done;
+};
+
+static void thread_entry(void *user)
+{
+    struct ktest_thread *thread = user;
+
+    thread->fn(thread->user, thread->index);
+    complete(thread->done);
+}
+
+u32 ktest_run_threads(
+    const char *file, u32 line, void (*fn)(void *user, u32 index), void *user,
+    u32 num, const char *name
+)
+{
+    struct ktest_thread *threads;
+    struct completion done;
+    u32 i, num_started = 0;
+    error_t ret;
+
+    threads = alloc(num * sizeof(*threads), ALLOC_GENERIC);
+    if (threads == nullptr) {
+        ktest_fail(file, line, "no memory for %u threads", num);
+        return 0;
+    }
+
+    completion_init(&done);
+
+    for (i = 0; i < num; i++) {
+        threads[i] = (struct ktest_thread) { fn, user, i, &done };
+
+        ret = kthread_run(thread_entry, &threads[i], "%s-%u", name, i);
+        if (is_error(ret)) {
+            ktest_fail(
+                file, line, "could not start %s-%u: %pE", name, i, &ret
+            );
+            break;
+        }
+
+        num_started++;
+    }
+
+    for (i = 0; i < num_started; i++)
+        wait_for_completion(&done);
+
+    free(threads);
+    return num_started;
+}
+
 static void case_thread(void *user)
 {
     struct ktest_run *run = user;
