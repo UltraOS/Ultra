@@ -14,6 +14,12 @@ extern "C" {
 
 struct boot_context g_boot_ctx;
 
+extern "C" {
+
+__thread bool g_test_irqs_enabled = true;
+
+}
+
 /*
  * There is no loader-provided memory map in userspace, so boot_alloc_init()
  * has nothing to walk. Tests seed the boot allocator by writing its range
