@@ -7,3 +7,8 @@ ultra_sources(
     wait_queue.c
     completion.c
 )
+
+ultra_sources_if(
+    CONFIG_KTEST_SCHED
+    tests/sched.c
+)
