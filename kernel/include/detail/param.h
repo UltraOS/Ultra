@@ -1,8 +1,10 @@
 #pragma once
 
 #include <common/helpers.h>
+#include <common/attributes.h>
 #include <common/string_container.h>
 
+#include <linker.h>
 #include <free_after_init.h>
 
 /*
@@ -46,8 +48,32 @@
         STR_CONSTEXPR(#name)                                    \
     )
 
-#define PARAM_ENTRY(name, value, ops, flags) \
-    { PARAM_NAME(name), &(ops), { &(value), PARAM_CAPACITY(value) }, (flags) }
+#define PARAM_NO_MODULE_NAME NULL_STR()
+#define PARAM_THIS_MODULE_NAME STR_CONSTEXPR(ULTRA_MODULE_NAME)
+
+#define PARAM_ENTRY(module_name, name, value, ops, flags) { \
+    PARAM_NAME(name), &(ops), (module_name),                \
+    { &(value), PARAM_CAPACITY(value) }, (flags)            \
+}
+
+#define DO_CUSTOM_PARAMETER(module_name, name, value, ops, flags)      \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param)        \
+    s_param_##name = PARAM_ENTRY(module_name, name, value, ops, flags)
+
+#ifdef ULTRA_RUNTIME_MODULE
+
+#define INIT_PARAM_VAR(name)                                         \
+    static const struct param INIT_RODATA UNUSED_DECL s_param_##name
+
+#else
+
+#define INIT_PARAM_VAR(name)                                           \
+    SECTION_VAR(                                                       \
+        FREE_AFTER_INIT_PARAMETERS_SECTION, static const, struct param \
+    )                                                                  \
+    s_param_##name
+
+#endif
 
 #define PARAM_ACTION_OPS(name, fn, placement)                        \
     static const struct param_ops placement s_param_##name##_ops = { \
@@ -55,8 +81,15 @@
         .set = (fn),                                                 \
     }
 
-#define PARAM_ACTION_ENTRY(name, flags) \
-    { PARAM_NAME(name), &s_param_##name##_ops, { nullptr, 0 }, (flags) }
+#define PARAM_ACTION_ENTRY(module_name, name, flags) {      \
+    PARAM_NAME(name), &s_param_##name##_ops, (module_name), \
+    { nullptr, 0 }, (flags)                                 \
+}
+
+#define DO_ACTION_PARAMETER(module_name, name, fn, flags)         \
+    PARAM_ACTION_OPS(name, fn, );                                 \
+    SECTION_VAR(PARAMETERS_SECTION, static const, struct param)   \
+    s_param_##name = PARAM_ACTION_ENTRY(module_name, name, flags)
 
 #define PARAM_TYPE_SET(value) _Generic(&(value), \
     char (*)[sizeof(value)]: param_set_string,   \
