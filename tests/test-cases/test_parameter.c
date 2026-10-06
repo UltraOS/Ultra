@@ -46,6 +46,18 @@ struct test_param {
         },                                             \
     }
 
+#define DEFINE_MODULE_PARAM(type, mod, param_name, init, expected) \
+    {                                                              \
+        .value = { .as_##type = init, },                           \
+        .expect = { .as_##type = expected, },                      \
+        .stored_type = st_##type,                                  \
+        .param = {                                                 \
+            .name = STR(#param_name),                              \
+            .module_name = STR(#mod),                              \
+            .ops = &g_param_##type##_ops,                          \
+        },                                                         \
+    }
+
 #define CMDLINE_TEST(cmdline, ...)                        \
     struct test_param params[] = {                        \
         __VA_ARGS__                                       \
@@ -219,6 +231,48 @@ TEST_CASE(unknown_dotted_keys_are_skipped_silently)
     prints = g_test_num_prints;
     CMDLINE_PARSE_CHECKED();
     ASSERT_EQ(g_test_num_prints, prints);
+}
+
+TEST_CASE(module_parameters_are_keyed_by_module_and_name)
+{
+    size_t prints;
+
+    CMDLINE_TEST(
+        "demo.foo=5 bar demo.flag",
+        DEFINE_MODULE_PARAM(u8, demo, foo, 0, 5),
+        DEFINE_MODULE_PARAM(bool, demo, flag, false, true),
+        DEFINE_PARAM(bool, bar, false, true),
+    );
+
+    prints = g_test_num_prints;
+    CMDLINE_PARSE_CHECKED();
+    ASSERT_EQ(g_test_num_prints, prints);
+}
+
+TEST_CASE(module_parameters_need_their_prefix)
+{
+    size_t prints;
+
+    CMDLINE_TEST(
+        "foo=5 other.foo=6 demo.bar=1",
+        DEFINE_MODULE_PARAM(u8, demo, foo, 0, 0),
+        DEFINE_PARAM(bool, bar, false, false),
+    );
+
+    prints = g_test_num_prints;
+    CMDLINE_PARSE_CHECKED();
+    ASSERT_EQ(g_test_num_prints, prints + 1);
+}
+
+TEST_CASE(module_parameters_dashes_are_underscores)
+{
+    CMDLINE_TEST(
+        "my-demo.some_flag my_demo.other-flag=1",
+        DEFINE_MODULE_PARAM(bool, my_demo, some_flag, false, true),
+        DEFINE_MODULE_PARAM(bool, my_demo, other_flag, false, true),
+    );
+
+    CMDLINE_PARSE_CHECKED();
 }
 
 TEST_CASE(dashes_are_underscores)
@@ -499,8 +553,12 @@ TEST_CASE(suboptions_actions)
 TEST_CASE(tables_are_searched_in_order)
 {
     bool a = false, b = false;
-    struct param first[] = { PARAM_ENTRY(a, a, g_param_bool_ops, 0) };
-    struct param second[] = { PARAM_ENTRY(b, b, g_param_bool_ops, 0) };
+    struct param first[] = {
+        PARAM_ENTRY(PARAM_NO_MODULE_NAME, a, a, g_param_bool_ops, 0),
+    };
+    struct param second[] = {
+        PARAM_ENTRY(PARAM_NO_MODULE_NAME, b, b, g_param_bool_ops, 0),
+    };
     struct param_table tables[] = {
         { first, ARRAY_SIZE(first) }, { second, ARRAY_SIZE(second) },
     };

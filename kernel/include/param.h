@@ -5,7 +5,6 @@
 #include <common/string_container.h>
 #include <common/error.h>
 
-#include <linker.h>
 #include <common/bit.h>
 
 #include <detail/param.h>
@@ -58,7 +57,11 @@ struct param {
     struct string name;
     const struct param_ops *ops;
 
-    // TODO: reference to the module defining this parameter
+    /*
+     * The name of the module a parameter belongs to (empty if it doesn't belong
+     * to one). The command line key of a module parameter is module_name.name.
+     */
+    struct string module_name;
 
     struct param_value value;
     u32 flags;
@@ -106,20 +109,26 @@ PARAMETER_OPS_DECL(string)
  * custom_parameter is the fully explicit form, the shorthands deduce the
  * name from the variable, the ops from its type, or both.
  */
-#define custom_parameter(name, value, ops, flags)               \
-    SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
-    s_param_##name = PARAM_ENTRY(name, value, ops, flags)
+#define custom_parameter(name, value, ops, flags)                      \
+    DO_CUSTOM_PARAMETER(PARAM_NO_MODULE_NAME, name, value, ops, flags)
+
+/*
+ * Every parameter macro other than the init ones has a module_ variant like
+ * this one, which defines a module parameter instead. Its command line key is
+ * module_name.name, where module_name is the ULTRA_MODULE_NAME of the source
+ * file that defines the parameter.
+ */
+#define module_custom_parameter(name, value, ops, flags)                 \
+    DO_CUSTOM_PARAMETER(PARAM_THIS_MODULE_NAME, name, value, ops, flags)
 
 /*
  * An init parameter is released after init together with everything it
  * references, its ops, its setter and whatever the setter uses may be INIT_*
  * as well. It is parsed at boot and neither written nor read afterwards.
  */
-#define custom_init_parameter(name, value, ops)                        \
-    SECTION_VAR(                                                       \
-        FREE_AFTER_INIT_PARAMETERS_SECTION, static const, struct param \
-    )                                                                  \
-    s_param_##name = PARAM_ENTRY(name, value, ops, 0)
+#define custom_init_parameter(name, value, ops)                \
+    INIT_PARAM_VAR(name) =                                     \
+        PARAM_ENTRY(PARAM_NO_MODULE_NAME, name, value, ops, 0)
 
 #define renamed_init_parameter(name, var) \
     custom_init_parameter(name, var, PARAM_TYPE_OPS(var))
@@ -129,36 +138,52 @@ PARAMETER_OPS_DECL(string)
 
 #define renamed_parameter_with_ops(name, var, ops) \
     custom_parameter(name, var, ops, 0)
+#define module_renamed_parameter_with_ops(name, var, ops) \
+    module_custom_parameter(name, var, ops, 0)
 
 #define renamed_parameter_with_flags(name, var, flags)      \
     custom_parameter(name, var, PARAM_TYPE_OPS(var), flags)
 #define renamed_parameter(name, var) renamed_parameter_with_flags(name, var, 0)
 
+#define module_renamed_parameter_with_flags(name, var, flags)      \
+    module_custom_parameter(name, var, PARAM_TYPE_OPS(var), flags)
+#define module_renamed_parameter(name, var)           \
+    module_renamed_parameter_with_flags(name, var, 0)
+
 #define parameter_with_ops_and_flags(var, ops, flags) \
     custom_parameter(var, var, ops, flags)
 #define parameter_with_ops(var, ops) parameter_with_ops_and_flags(var, ops, 0)
 
+#define module_parameter_with_ops_and_flags(var, ops, flags) \
+    module_custom_parameter(var, var, ops, flags)
+#define module_parameter_with_ops(var, ops)          \
+    module_parameter_with_ops_and_flags(var, ops, 0)
+
 #define parameter_with_flags(var, flags)          \
     renamed_parameter_with_flags(var, var, flags)
 #define parameter(var) parameter_with_flags(var, 0)
+
+#define module_parameter_with_flags(var, flags)          \
+    module_renamed_parameter_with_flags(var, var, flags)
+#define module_parameter(var) module_parameter_with_flags(var, 0)
 
 /*
  * Action parameters have no stored value, fn is called with whatever value
  * the parameter is given, including an empty one, and the parameter is never
  * exposed to readers. fn has the signature of the set callback.
  */
-#define action_parameter_with_flags(name, fn, flags)            \
-    PARAM_ACTION_OPS(name, fn, );                               \
-    SECTION_VAR(PARAMETERS_SECTION, static const, struct param) \
-    s_param_##name = PARAM_ACTION_ENTRY(name, flags)
+#define action_parameter_with_flags(name, fn, flags)           \
+    DO_ACTION_PARAMETER(PARAM_NO_MODULE_NAME, name, fn, flags)
 #define action_parameter(name, fn) action_parameter_with_flags(name, fn, 0)
 
-#define init_action_parameter(name, fn)                                \
-    PARAM_ACTION_OPS(name, fn, INIT_RODATA);                           \
-    SECTION_VAR(                                                       \
-        FREE_AFTER_INIT_PARAMETERS_SECTION, static const, struct param \
-    )                                                                  \
-    s_param_##name = PARAM_ACTION_ENTRY(name, 0)
+#define module_action_parameter_with_flags(name, fn, flags)      \
+    DO_ACTION_PARAMETER(PARAM_THIS_MODULE_NAME, name, fn, flags)
+#define module_action_parameter(name, fn)           \
+    module_action_parameter_with_flags(name, fn, 0)
+
+#define init_action_parameter(name, fn)                                      \
+    PARAM_ACTION_OPS(name, fn, INIT_RODATA);                                 \
+    INIT_PARAM_VAR(name) = PARAM_ACTION_ENTRY(PARAM_NO_MODULE_NAME, name, 0)
 
 enum suboption_flags : u32 {
     SUBOPTION_FLAG_NONE = 0,

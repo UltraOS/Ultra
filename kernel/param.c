@@ -120,6 +120,23 @@ static bool cmdline_name_compare(char lhs, char rhs)
     return dash_to_underscore(lhs) == dash_to_underscore(rhs);
 }
 
+static bool param_matches(const struct param *p, struct string key)
+{
+    struct string module_name = p->module_name, name;
+
+    if (str_empty(module_name))
+        return str_equals_with_cb(p->name, key, cmdline_name_compare);
+
+    if (key.size <= module_name.size || key.text[module_name.size] != '.')
+        return false;
+
+    name = str_substring(key, module_name.size + 1, key.size);
+    key = str_substring(key, 0, module_name.size);
+
+    return str_equals_with_cb(module_name, key, cmdline_name_compare) &&
+           str_equals_with_cb(p->name, name, cmdline_name_compare);
+}
+
 static struct param *find_param(
     struct string name, struct param *params, size_t num_params
 )
@@ -130,7 +147,7 @@ static struct param *find_param(
     for (i = 0; i < num_params; i++) {
         p = &params[i];
 
-        if (str_equals_with_cb(p->name, name, cmdline_name_compare))
+        if (param_matches(p, name))
             return p;
     }
 
