@@ -360,12 +360,27 @@ def hyper_get_iso_br() -> str:
     return ret
 
 
-def qemu_watch_run_for(qp: subprocess.Popen, run_for: float) -> None:
+QEMU_DRAIN_SECONDS = 1
+
+# The colored console wraps parts of a line in escape sequences
+ANSI_ESCAPE = re.compile(rb"\x1b\[[0-9;]*m")
+
+
+# Streams the kernel output, returns the first match of 'until' or None
+# when QEMU exited or the wait ran out. With 'until' the run is bounded by
+# 'run_for' seconds of total output, otherwise by 'run_for' seconds since
+# the first output byte.
+def qemu_watch(
+    qp: subprocess.Popen, run_for: float,
+    until: Optional[re.Pattern] = None
+) -> Optional[re.Match]:
     assert qp.stdout is not None
     sel = selectors.DefaultSelector()
     sel.register(qp.stdout, selectors.EVENT_READ)
     deadline = None
     silent_deadline = time.monotonic() + run_for + QEMU_SILENT_BOOT_SECONDS
+    tail = b""
+    match = None
 
     while qp.poll() is None:
         if deadline is not None:
@@ -388,7 +403,16 @@ def qemu_watch_run_for(qp: subprocess.Popen, run_for: float) -> None:
         sys.stdout.buffer.flush()
         if deadline is None:
             deadline = time.monotonic() + run_for
+        if until is not None and match is None:
+            tail = (tail + data)[-4096:]
+            match = until.search(ANSI_ESCAPE.sub(b"", tail))
+            if match is not None:
+                deadline = time.monotonic() + QEMU_DRAIN_SECONDS
+    if match is not None:
+        sys.stdout.buffer.write(b"\n")
+        sys.stdout.buffer.flush()
     qp.wait()
+    return match
 
 
 def run_qemu(
@@ -452,7 +476,7 @@ def run_qemu(
     if run_for is not None and not debug:
         qp = subprocess.Popen(args, stdout=subprocess.PIPE)
         try:
-            qemu_watch_run_for(qp, run_for)
+            qemu_watch(qp, run_for)
         except KeyboardInterrupt:
             qp.terminate()
             qp.wait()
