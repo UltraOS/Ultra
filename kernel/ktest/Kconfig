@@ -22,5 +22,6 @@ config KTEST_SELFTEST
     default KTEST_ALL_TESTS
 
 rsource "../sched/tests/Kconfig"
+rsource "../time/tests/Kconfig"
 
 endif

@@ -5,3 +5,8 @@ ultra_sources(
     timer.c
     units.c
 )
+
+ultra_sources_if(
+    CONFIG_KTEST_TIME
+    tests/time.c
+)
