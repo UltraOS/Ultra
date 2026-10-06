@@ -34,11 +34,15 @@ void for_each_memory_map_range(
     UNREFERENCED_PARAMETER(user);
 }
 
+__thread size_t g_test_num_prints;
+
 void vprint(const char *msg, va_list vlist)
 {
     // TODO: save to a buffer and only show if a test fails
     UNREFERENCED_PARAMETER(msg);
     UNREFERENCED_PARAMETER(vlist);
+
+    g_test_num_prints++;
 }
 
 void print(const char *msg, ...)

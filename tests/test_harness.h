@@ -13,6 +13,8 @@ struct test_case {
 extern "C" {
 #endif
 
+extern __thread size_t g_test_num_prints;
+
 void add_test_case(struct test_case *test, const char *file);
 void teardown_callback_register(void (*callback)(void), const char *file);
 
