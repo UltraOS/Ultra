@@ -95,6 +95,59 @@ jobs:
       - name: Build the kernel
         run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --config ${{ matrix.preset }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
 
+  ktest:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            toolchain: clang
+            accel: kvm
+          - os: ubuntu-latest
+            arch: x86_64
+            toolchain: gcc
+            accel: tcg
+          - os: macos-latest
+            arch: x86_64
+            toolchain: clang
+            accel: tcg
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - if: ${{ matrix.toolchain == 'gcc' }}
+        id: toolchain-version
+        name: Get the toolchain version
+        run: |
+          python3 -c 'import scripts.build_utils.toolchain_builder as tb
+          print(f"key=gcc-{tb.GCC_VERSION}-binutils-{tb.BINUTILS_VERSION}")' \
+            >> "$GITHUB_OUTPUT"
+
+      - if: ${{ matrix.toolchain == 'gcc' }}
+        name: Restore the toolchain cache
+        uses: actions/cache/restore@v4.2.2
+        with:
+          path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
+          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-${{ steps.toolchain-version.outputs.key }}"
+
+      - name: Build the platform toolchain
+        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native --toolchain-only"
+
+      - if: ${{ matrix.accel == 'kvm' }}
+        name: Give the runner access to KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the in-kernel tests
+        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native --ktest ${{ matrix.accel == 'kvm' && '--kvm' || '' }}"
+
   unit-tests:
     runs-on: ubuntu-latest
 
