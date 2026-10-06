@@ -1,5 +1,6 @@
 ultra_sources_if(
     CONFIG_KTEST
+    helpers.c
     ktest.c
 )
 

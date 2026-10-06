@@ -6,7 +6,8 @@ menuconfig KTEST
         in its own thread with a timeout and the results are printed
         in KTAP format, ending in a summary line.
 
-        Nothing runs unless the kernel command line has ktest.run=all.
+        Nothing runs unless the kernel command line selects tests with
+        ktest.run=all or ktest.run=suite,suite.case.
 
 if KTEST
 
