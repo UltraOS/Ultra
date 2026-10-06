@@ -8,13 +8,17 @@
 
 #include <detail/ktest/ktest.h>
 
-#define KTEST_CASE(fn_name)                                           \
+#define KTEST_DEFAULT_TIMEOUT_MS 30000
+
+#define KTEST_CASE_WITH_TIMEOUT(fn_name, ms)                          \
     static void fn_name(void);                                        \
     SECTION_VAR(KTEST_CASES_SECTION, static const, struct ktest_case) \
     s_ktest_case_##fn_name = {                                        \
-        ULTRA_MODULE_NAME, #fn_name, fn_name,                         \
+        ULTRA_MODULE_NAME, #fn_name, fn_name, (ms),                   \
     };                                                                \
     static void fn_name(void)
+#define KTEST_CASE(fn_name)                                    \
+    KTEST_CASE_WITH_TIMEOUT(fn_name, KTEST_DEFAULT_TIMEOUT_MS)
 
 NORETURN
 void ktest_skip(const char *reason);

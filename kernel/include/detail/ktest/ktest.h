@@ -8,6 +8,7 @@ struct ktest_case {
     const char *suite;
     const char *name;
     void (*fn)(void);
+    u32 timeout_ms;
 };
 
 PRINTF_DECL(3, 4)

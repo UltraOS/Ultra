@@ -31,6 +31,7 @@ struct ktest_run {
     u32 num_failures;
     bool skipped;
     const char *skip_reason;
+    bool finished;
 };
 
 void ktest_fail(const char *file, u32 line, const char *fmt, ...)
@@ -45,6 +46,14 @@ void ktest_fail(const char *file, u32 line, const char *fmt, ...)
     va_start(vlist, fmt);
     vsnprintf(message, sizeof(message), fmt, vlist);
     va_end(vlist);
+
+    if (atomic_load_relaxed(&run->finished)) {
+        print(
+            LOG_NOTICE "# %s:%u: %s (late, %s.%s is already finished)\n",
+            file, line, message, run->test->suite, run->test->name
+        );
+        return;
+    }
 
     atomic_fetch_add(&run->num_failures, 1, MO_RELAXED);
     print(LOG_NOTICE "# %s:%u: %s\n", file, line, message);
@@ -108,7 +117,7 @@ static enum ktest_result run_case(const struct ktest_case *test, u32 index)
 {
     struct ktest_run *run;
     u64 start_ns, duration_ms;
-    bool passed;
+    bool done, passed;
     enum ktest_result result;
     error_t ret;
 
@@ -126,13 +135,19 @@ static enum ktest_result run_case(const struct ktest_case *test, u32 index)
     start_ns = ns_since_boot();
 
     ret = kthread_run(case_thread, run, "ktest-%s", test->name);
-    if (!is_error(ret))
-        wait_for_completion(&run->done);
+    if (is_error(ret)) {
+        done = false;
+    } else {
+        done = wait_for_completion_timeout(
+            &run->done, (u64)test->timeout_ms * NS_PER_MS
+        );
+    }
 
     duration_ms = (ns_since_boot() - start_ns) / NS_PER_MS;
     current->ktest_run = nullptr;
+    atomic_store_relaxed(&run->finished, true);
 
-    passed = !is_error(ret) && run->num_failures == 0;
+    passed = done && run->num_failures == 0;
 
     if (run->skipped) {
         print(
@@ -146,13 +161,22 @@ static enum ktest_result run_case(const struct ktest_case *test, u32 index)
         );
     }
 
-    if (is_error(ret))
+    if (is_error(ret)) {
         print(LOG_NOTICE "# could not start the thread: %pE\n", &ret);
+    } else if (!done) {
+        print(
+            LOG_NOTICE "# timed out after %u ms, thread left running\n",
+            test->timeout_ms
+        );
+    }
 
     print(
         LOG_NOTICE "# %s.%s: %llu ms\n", test->suite, test->name,
         duration_ms
     );
+
+    if (!done)
+        return KTEST_FAILED;
 
     result = KTEST_FAILED;
     if (run->skipped)

@@ -3,8 +3,8 @@ menuconfig KTEST
     help
         A runner for tests that need the real kernel around them, e.g.
         interrupts, timers and threads on real hardware. Each test runs
-        in its own thread and the results are printed in KTAP format,
-        ending in a summary line.
+        in its own thread with a timeout and the results are printed
+        in KTAP format, ending in a summary line.
 
         Nothing runs unless the kernel command line has ktest.run=all.
 
