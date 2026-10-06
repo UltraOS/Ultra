@@ -384,7 +384,13 @@ struct string cmdline_parse_tables(
 
         p = find_param_in_tables(key, tables, num_tables);
         if (p == nullptr) {
-            warn_unknown_param(key, value);
+            /*
+             * A key with a dot in it belongs to whatever owns the part before
+             * the dot, e.g. a module that isn't loaded yet, so we don't warn
+             * about it.
+             */
+            if (str_find_one(key, '.', 0) == -1)
+                warn_unknown_param(key, value);
             goto do_next;
         }
 
