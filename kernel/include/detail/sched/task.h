@@ -20,6 +20,7 @@
 #endif
 
 struct sched_class;
+struct ktest_run;
 
 #define TASK_NAME_MAX 32
 
@@ -61,6 +62,11 @@ struct task {
     union {
         struct kthread kthread;
     };
+
+#if IS_ENABLED(KTEST)
+    // The test run this thread reports to, inherited by the threads it creates
+    struct ktest_run *ktest_run;
+#endif
 
     struct arch_task arch;
 };

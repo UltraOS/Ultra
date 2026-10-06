@@ -35,6 +35,7 @@
 #define ABORTABLE_INSTRUCTIONS_SECTION abortable_instructions
 #define BUG_TABLE_SECTION bug_table
 #define PARAMETERS_SECTION parameters
+#define KTEST_CASES_SECTION ktest_cases
 #define PER_CPU_SECTION per_cpu
 
 #define FREE_AFTER_INIT_SECTION free_after_init

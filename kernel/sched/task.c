@@ -1,6 +1,7 @@
 #include <private/sched/task.h>
 #include <private/arch/task.h>
 #include <private/sched/core.h>
+#include <private/sched/kthread.h>
 
 #include <common/format.h>
 
@@ -106,6 +107,9 @@ void task_unref(struct task *task)
 {
     if (!refcount_dec_and_test(&task->refcount))
         return;
+
+    if (task_is_kthread(task))
+        kthread_release(task);
 
     vrelease(task->stack);
     free(task);

@@ -11,6 +11,7 @@
 #include <private/sched/rr.h>
 #include <private/sched/kthread.h>
 #include <private/arch/task.h>
+#include <private/ktest/task.h>
 
 static void kthread_entry(void *user)
 {
@@ -44,6 +45,8 @@ struct task *kthread_vcreate(
     task->kthread.user = user;
 
     completion_init(&task->kthread.exited);
+
+    ktest_inherit_run(task);
 
     arch_task_frame_init(task, kthread_entry, nullptr);
 
@@ -95,6 +98,11 @@ void kthread_exit(void)
 void kthread_did_exit(struct task *task)
 {
     complete_all(&task->kthread.exited);
+}
+
+void kthread_release(struct task *task)
+{
+    ktest_release_run(task);
 }
 
 void kthread_wait_for_exit(struct task *task)

@@ -96,4 +96,5 @@ endmenu
 rsource "arch/Kconfig"
 rsource "irq/Kconfig"
 rsource "drivers/Kconfig"
+rsource "ktest/Kconfig"
 rsource "demo/Kconfig"
