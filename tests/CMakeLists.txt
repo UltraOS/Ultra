@@ -191,10 +191,16 @@ KERNEL_FILE(INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_FILE "panic.h")
 KERNEL_FILE(INCLUDE_FILE "linker.h")
-KERNEL_FILE(INCLUDE_FILE "seq.h")
+KERNEL_FILE(INCLUDE_PATH "locking" INCLUDE_FILE "seq.h")
 KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "init_level.h")
-KERNEL_FILE(INCLUDE_FILE "spinlock.h" SOURCE_FILE "spinlock.c")
-KERNEL_FILE(INCLUDE_FILE "mutex.h" SOURCE_FILE "mutex.c")
+KERNEL_FILE(
+    INCLUDE_PATH "locking" INCLUDE_FILE "spinlock.h"
+    SOURCE_PATH "locking" SOURCE_FILE "spinlock.c"
+)
+KERNEL_FILE(
+    INCLUDE_PATH "locking" INCLUDE_FILE "mutex.h"
+    SOURCE_PATH "locking" SOURCE_FILE "mutex.c"
+)
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "vm_flags.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page_table.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "address_space.h")
@@ -216,8 +222,8 @@ include("test-cases/files.cmake")
 add_executable(
     run_tests
     run_tests.cpp kernel_helpers.cpp test_harness.cpp memory_map.c ${TEST_SOURCES}
-    kernel-source/spinlock.c kernel-source/memory/units.c
-    kernel-source/common/bit.c kernel-source/mutex.c
+    kernel-source/locking/spinlock.c kernel-source/memory/units.c
+    kernel-source/common/bit.c kernel-source/locking/mutex.c
     kernel-source/common/string_container.c kernel-source/common/conversions.c
 )
 set_property(

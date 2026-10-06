@@ -1,6 +1,6 @@
 #pragma once
 
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 /*
  * A mutual exclusion lock for process context only. Holders are

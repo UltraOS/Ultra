@@ -1,4 +1,4 @@
-#include <mutex.h>
+#include <locking/mutex.h>
 #include <irq_helpers.h>
 #include <bug.h>
 

@@ -3,7 +3,7 @@
 #include <private/irq.h>
 
 #include <bug.h>
-#include <mutex.h>
+#include <locking/mutex.h>
 #include <init_level.h>
 #include <memory/alloc.h>
 #include <common/atomic.h>

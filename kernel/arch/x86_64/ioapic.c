@@ -12,7 +12,7 @@
 #include <arch_constants.h>
 #include <init_level.h>
 #include <free_after_init.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 #include <memory/io.h>
 #include <memory/alloc.h>

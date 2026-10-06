@@ -103,8 +103,6 @@ ultra_sources(
     console.c
     log.c
     symbols.c
-    spinlock.c
-    mutex.c
     unwind.c
     param.c
     log_ring.c
@@ -167,6 +165,7 @@ ultra_link_options(
 
 add_subdirectory(arch/${ULTRA_ARCH})
 add_subdirectory(common)
+add_subdirectory(locking)
 add_subdirectory(irq)
 add_subdirectory(memory)
 add_subdirectory(time)

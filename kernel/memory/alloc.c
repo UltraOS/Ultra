@@ -15,7 +15,7 @@
 #include <private/buddy.h>
 
 #include <bug.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 #include <free_after_init.h>
 #include <init_level.h>
 #include <log.h>

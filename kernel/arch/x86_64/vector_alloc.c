@@ -2,7 +2,7 @@
 #include <arch/private/vectors.h>
 
 #include <smp.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 #include <per_cpu.h>
 #include <bug.h>
 

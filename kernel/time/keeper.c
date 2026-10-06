@@ -5,8 +5,8 @@
 
 #include <bug.h>
 #include <init_level.h>
-#include <spinlock.h>
-#include <seq.h>
+#include <locking/spinlock.h>
+#include <locking/seq.h>
 #include <time/time.h>
 
 #include <arch/cpu_helpers.h>

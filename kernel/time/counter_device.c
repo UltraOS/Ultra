@@ -8,7 +8,7 @@
 #include <private/time/keeper.h>
 
 #include <log.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 static LIST_HEAD(s_counter_devices);
 static DEFINE_SPINLOCK(s_counter_lock);
