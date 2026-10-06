@@ -241,6 +241,60 @@ void ktest_skip(const char *reason)
     kthread_exit();
 }
 
+struct ktest_thread {
+    void (*fn)(void *user, u32 index);
+    void *user;
+    u32 index;
+    struct task *task;
+};
+
+static void thread_entry(void *user)
+{
+    struct ktest_thread *thread = user;
+
+    thread->fn(thread->user, thread->index);
+}
+
+void ktest_run_threads(
+    const char *file, u32 line, void (*fn)(void *user, u32 index), void *user,
+    u32 num, const char *name
+)
+{
+    struct ktest_thread *threads;
+    struct task *task;
+    u32 i, num_started = 0;
+
+    threads = alloc(num * sizeof(*threads), ALLOC_GENERIC);
+    if (unlikely(threads == nullptr)) {
+        ktest_fail(file, line, "no memory for %u threads", num);
+        ktest_abort();
+    }
+
+    for (i = 0; i < num; i++) {
+        threads[i] = (struct ktest_thread) { fn, user, i, nullptr };
+
+        task = kthread_create(thread_entry, &threads[i], "%s-%u", name, i);
+        if (unlikely(task == nullptr)) {
+            ktest_fail(file, line, "no memory for %s-%u", name, i);
+            break;
+        }
+
+        threads[i].task = task;
+        kthread_start(task);
+        num_started++;
+    }
+
+    for (i = 0; i < num_started; i++) {
+        kthread_wait_for_exit(threads[i].task);
+        task_unref(threads[i].task);
+    }
+
+    free(threads);
+
+    if (unlikely(num_started != num))
+        ktest_abort();
+}
+
 static void case_thread(void *user)
 {
     struct ktest_run *run = user;

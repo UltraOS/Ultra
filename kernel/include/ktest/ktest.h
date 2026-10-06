@@ -58,3 +58,12 @@ void ktest_skip(const char *reason);
 #define KTEST_ASSERT_LE(lhs, rhs) KTEST_CMP_ASSERT(lhs, <=, rhs, #lhs, #rhs)
 #define KTEST_ASSERT_GT(lhs, rhs) KTEST_CMP_ASSERT(lhs, >, rhs, #lhs, #rhs)
 #define KTEST_ASSERT_GE(lhs, rhs) KTEST_CMP_ASSERT(lhs, >=, rhs, #lhs, #rhs)
+
+/*
+ * Run fn(user, i) for every i in [0, num), each in its own thread, and return
+ * once all of them have exited. If a thread can't be started, no more threads
+ * are started, and once the threads that did start have exited, the failure
+ * is handled like a failed KTEST_ASSERT*().
+ */
+#define KTEST_RUN_THREADS(fn, user, num, name)                         \
+    ktest_run_threads(__FILE__, __LINE__, (fn), (user), (num), (name))

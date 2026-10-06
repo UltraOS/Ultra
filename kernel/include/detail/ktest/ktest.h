@@ -23,6 +23,11 @@ void ktest_fail(const char *file, u32 line, const char *fmt, ...);
 NORETURN
 void ktest_abort(void);
 
+void ktest_run_threads(
+    const char *file, u32 line, void (*fn)(void *user, u32 index), void *user,
+    u32 num, const char *name
+);
+
 enum ktest_value_type : u8 {
     KTEST_VALUE_INTEGER,
     KTEST_VALUE_POINTER,
