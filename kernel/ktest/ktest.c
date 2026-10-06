@@ -1,8 +1,10 @@
 #define MSG_FMT(msg) "ktest: " msg
 
 #include <ktest/ktest.h>
+#include <private/ktest/select.h>
 #include <detail/sched/task.h>
 
+#include <common/string_container.h>
 #include <common/format.h>
 #include <common/string.h>
 #include <common/atomic.h>
@@ -190,23 +192,33 @@ static enum ktest_result run_case(const struct ktest_case *test, u32 index)
 static void runner_thread(void *user)
 {
     const struct ktest_case *test;
-    u32 num_passed = 0, num_failed = 0, num_skipped = 0;
-    u32 num_cases, index = 0;
+    struct string run;
+    u32 num_selected = 0, num_passed = 0, num_failed = 0, num_skipped = 0;
+    u32 index = 0;
 
     UNREFERENCED_PARAMETER(user);
 
-    if (strcmp(s_run, "all") != 0) {
+    run = MAKE_STR(s_run, strlen(s_run));
+
+    for (test = SECTION_ARRAY_BEGIN(KTEST_CASES_SECTION);
+         test < SECTION_ARRAY_END(KTEST_CASES_SECTION); test++) {
+        if (ktest_case_is_selected(test->suite, test->name, run))
+            num_selected++;
+    }
+
+    if (num_selected == 0) {
         pr_notice("nothing matched \"%s\"\n", s_run);
         return;
     }
 
-    num_cases = SECTION_ARRAY_SIZE(KTEST_CASES_SECTION);
-
     print(LOG_NOTICE "KTAP version 1\n");
-    print(LOG_NOTICE "1..%u\n", num_cases);
+    print(LOG_NOTICE "1..%u\n", num_selected);
 
     for (test = SECTION_ARRAY_BEGIN(KTEST_CASES_SECTION);
          test < SECTION_ARRAY_END(KTEST_CASES_SECTION); test++) {
+        if (!ktest_case_is_selected(test->suite, test->name, run))
+            continue;
+
         switch (run_case(test, ++index)) {
         case KTEST_PASSED:
             num_passed++;

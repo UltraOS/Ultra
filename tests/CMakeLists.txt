@@ -182,6 +182,10 @@ KERNEL_FILE(
     INCLUDE_PATH "time" INCLUDE_FILE "units.h"
 )
 KERNEL_FILE(
+    SOURCE_PATH "ktest" SOURCE_FILE "select.c"
+    INCLUDE_PATH "private/ktest" INCLUDE_FILE "select.h"
+)
+KERNEL_FILE(
     SOURCE_PATH "time" SOURCE_FILE "timer.c"
     INCLUDE_PATH "time" INCLUDE_FILE "timer.h"
 )
