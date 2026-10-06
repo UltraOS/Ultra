@@ -8,13 +8,21 @@
 
 #include <detail/ktest/ktest.h>
 
-#define KTEST_CASE(fn_name)                                           \
+#define KTEST_DEFAULT_TIMEOUT_MS 30000
+
+/*
+ * Define a test case that fails if it hasn't finished within 'ms' milliseconds.
+ * The thread is left abandoned in this case.
+ */
+#define KTEST_CASE_WITH_TIMEOUT(fn_name, ms)                          \
     static void fn_name(void);                                        \
     SECTION_VAR(KTEST_CASES_SECTION, static const, struct ktest_case) \
     s_ktest_case_##fn_name = {                                        \
-        STR(ULTRA_MODULE_NAME), STR(#fn_name), fn_name,               \
+        STR(ULTRA_MODULE_NAME), STR(#fn_name), fn_name, (ms),         \
     };                                                                \
     static void fn_name(void)
+#define KTEST_CASE(fn_name)                                    \
+    KTEST_CASE_WITH_TIMEOUT(fn_name, KTEST_DEFAULT_TIMEOUT_MS)
 
 // End the case and report it as skipped, printing 'reason' with the result
 NORETURN

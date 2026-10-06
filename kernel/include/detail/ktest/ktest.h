@@ -14,6 +14,7 @@ struct ktest_case {
     struct string suite;
     struct string name;
     void (*fn)(void);
+    u32 timeout_ms;
 };
 
 PRINTF_DECL(3, 4)

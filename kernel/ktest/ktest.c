@@ -30,6 +30,7 @@ struct ktest_run {
     u32 num_failures;
     bool skipped;
     const char *skip_reason;
+    bool finished;
 };
 
 static void run_ref(struct ktest_run *run)
@@ -71,8 +72,16 @@ void ktest_fail(const char *file, u32 line, const char *fmt, ...)
     message.fmt = fmt;
     message.vlist = &vlist;
 
-    atomic_fetch_add(&run->num_failures, 1, MO_RELAXED);
-    print(LOG_NOTICE "# %s:%u: %pV\n", file, line, &message);
+    if (atomic_load_relaxed(&run->finished)) {
+        print(
+            LOG_NOTICE "# %s:%u: %pV (late, %pS.%pS is already finished)\n",
+            file, line, &message, &run->test->suite, &run->test->name
+        );
+    } else {
+        atomic_fetch_add(&run->num_failures, 1, MO_RELAXED);
+        print(LOG_NOTICE "# %s:%u: %pV\n", file, line, &message);
+    }
+
     va_end(vlist);
 }
 
@@ -261,6 +270,7 @@ enum ktest_result : u8 {
 static bool run_case_thread(struct ktest_run *run)
 {
     struct task *thread;
+    bool exited;
 
     thread = create_case_thread(run);
     if (unlikely(thread == nullptr)) {
@@ -269,10 +279,19 @@ static bool run_case_thread(struct ktest_run *run)
     }
 
     kthread_start(thread);
-    kthread_wait_for_exit(thread);
+    exited = kthread_wait_for_exit_timeout(
+        thread, MS_TO_NS(run->test->timeout_ms)
+    );
     task_unref(thread);
 
-    return true;
+    if (!exited) {
+        print(
+            LOG_NOTICE "# timed out after %u ms, thread left running\n",
+            run->test->timeout_ms
+        );
+    }
+
+    return exited;
 }
 
 static enum ktest_result case_result(const struct ktest_run *run, bool exited)
@@ -329,6 +348,13 @@ static enum ktest_result run_case(const struct ktest_case *test, u32 index)
     exited = run_case_thread(run);
     duration_ms = NS_TO_MS(ns_since_boot() - start_ns);
 
+    /*
+     * The case fails if the main thread hasn't exited within the timeout,
+     * but the threads that it started may still be running. If they report
+     * a result after this point it's simply discarded as "late" and is not
+     * counted.
+     */
+    atomic_store_relaxed(&run->finished, true);
     result = case_result(run, exited);
 
     print(
