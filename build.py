@@ -235,7 +235,7 @@ def build_ultra(
 
 
 QEMU_HYPER_OPTIONS = """
-cmdline = "log-level=debug earlycon=e9,colored"
+cmdline = "log-level=debug earlycon=e9,colored{cmdline_extra}"
 
 # Hardcode a resolution that's good enough for local testing,
 # we don't need a huge QEMU window.
@@ -250,7 +250,15 @@ IMAGE_TARGETS = {
 }
 
 
-def make_hyper_config(arch: str, target: str) -> str:
+# The QEMU image gets a fixed command line, extra arguments are appended
+def image_target_options(target: str, extra_cmdline: str) -> str:
+    if extra_cmdline:
+        extra_cmdline = " " + extra_cmdline
+
+    return IMAGE_TARGETS[target].replace("{cmdline_extra}", extra_cmdline)
+
+
+def make_hyper_config(arch: str, target: str, extra_cmdline: str) -> str:
     return \
 f"""
 default-entry = ultra-{arch}
@@ -266,7 +274,7 @@ binary:
 page-table:
     levels = 5
     constraint = maximum
-{IMAGE_TARGETS[target]}
+{image_target_options(target, extra_cmdline)}
 [ultra-aarch64]
 protocol = ultra
 higher-half-exclusive = true
@@ -290,7 +298,8 @@ def get_kernel_path(execution_node: str, build_dir: str) -> str:
 def make_hyper_image(
     br_type: str, fs_type: str, arch: str, target: str, build_dir: str,
     hyper_installer: Optional[str], hyper_iso_br: Optional[str],
-    hyper_uefi_binaries: List[str], image_path: str, force_regenerate: bool
+    hyper_uefi_binaries: List[str], image_path: str, force_regenerate: bool,
+    extra_cmdline: str
 ) -> Optional[ultr.DiskImage]:
     kernel_path = get_kernel_path(arch, build_dir)
     image_root_path = os.path.join(build_dir, "image-root")
@@ -309,7 +318,7 @@ def make_hyper_image(
 
     return ultr.DiskImage(
         image_root_path, br_type, fs_type,
-        hyper_config=make_hyper_config(arch, target),
+        hyper_config=make_hyper_config(arch, target, extra_cmdline),
         hyper_uefi_binary_paths=hyper_uefi_binaries,
         hyper_iso_br_path=hyper_iso_br,
         hyper_installer_path=hyper_installer,
@@ -525,6 +534,9 @@ def main() -> None:
                        help="Produce a bootable image after building, "
                             "for QEMU or for real hardware with "
                             "'baremetal' (default: qemu)")
+    image.add_argument("--cmdline", type=str, default="",
+                       help="Extra kernel command line arguments (implies "
+                            "--make-image unless this is a baremetal run)")
     image.add_argument("--image-type", choices=["iso", "raw"], default="iso",
                        help="Image type to produce (with --make-image)")
     image.add_argument("--hyper-installer", type=str,
@@ -593,6 +605,10 @@ def main() -> None:
     rc = bmc.early_action(args, hyper_pxe_loaders)
     if rc is not None:
         sys.exit(rc)
+
+    # A changed command line only reaches QEMU through a new image
+    if args.cmdline and args.machines is None and args.make_image is None:
+        args.make_image = "qemu"
 
     config_layers = cl.build_layers(args.config, args.arch)
     config_file = config_layers[-1]
@@ -688,7 +704,7 @@ def main() -> None:
         make_hyper_image(
             "MBR", fs_type, args.arch, image_target, build_dir,
             hyper_installer, hyper_iso_br, hyper_uefi_binary_paths,
-            image_path, args.make_image is not None
+            image_path, args.make_image is not None, args.cmdline
         )
 
     if should_run:
