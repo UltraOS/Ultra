@@ -21,4 +21,6 @@ config KTEST_SELFTEST
     bool "Tests of the test runner itself" if !KTEST_ALL_TESTS
     default KTEST_ALL_TESTS
 
+rsource "../sched/tests/Kconfig"
+
 endif
