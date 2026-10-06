@@ -1,0 +1,3 @@
+config KTEST_MUTEX
+    bool "Mutex tests" if !KTEST_ALL_TESTS
+    default KTEST_ALL_TESTS
