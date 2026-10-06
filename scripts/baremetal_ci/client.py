@@ -115,9 +115,11 @@ class CiClient:
         return self._request("/api/state")
 
 
-def load_default_criteria() -> Dict[str, Any]:
+# criteria.json is the default, criteria-<name>.json the named ones
+def load_criteria(name: Optional[str] = None) -> Dict[str, Any]:
+    file_name = f"criteria-{name}.json" if name else "criteria.json"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "criteria.json")
+                        file_name)
     with open(path) as f:
         criteria: Dict[str, Any] = json.load(f)
     return criteria
@@ -149,6 +151,11 @@ def add_run_args(target: argparse._ActionsContainer, prefix: str = "",
                             help="Extra kernel command line, appended "
                                  "after the machine's console line and "
                                  "the server's base")
+    target.add_argument(f"--{prefix}criteria", dest="criteria",
+                        metavar="NAME",
+                        help="Judge the run by criteria-NAME.json "
+                             "instead of criteria.json, e.g. ktest "
+                             "for a ktest.run= boot")
     target.add_argument(f"--{prefix}timeout", dest="timeout",
                         type=float, metavar="SECONDS",
                         help="Give up on a run after this long, the "
@@ -223,14 +230,16 @@ def run_from_args(args: argparse.Namespace, arch: str, kernel_path: str,
 def payload_from_args(args: argparse.Namespace,
                       kernel_path: str) -> Dict[str, Any]:
     return build_payload(kernel_path, args.run_for is None, args.machines,
-                         args.run_for, args.timeout, args.cmdline)
+                         args.run_for, args.timeout, args.cmdline,
+                         args.criteria)
 
 
 def build_payload(kernel_path: str, ci: bool,
                   machines: Optional[str],
                   run_for: Optional[float],
                   timeout: Optional[float],
-                  cmdline: Optional[str]) -> Dict[str, Any]:
+                  cmdline: Optional[str],
+                  criteria_name: Optional[str] = None) -> Dict[str, Any]:
     with open(kernel_path, "rb") as f:
         kernel = f.read()
 
@@ -246,12 +255,12 @@ def build_payload(kernel_path: str, ci: bool,
             m.strip() for m in machines.split(",") if m.strip()
         ]
     if ci:
-        criteria = load_default_criteria()
+        criteria = load_criteria(criteria_name)
         payload["success"] = criteria["success"]
         payload["failures"] = criteria.get("failures", [])
     elif run_for is not None:
         payload["run_for"] = run_for
-        marker = load_default_criteria().get("kernel_start")
+        marker = load_criteria(criteria_name).get("kernel_start")
         if marker:
             payload["run_for_after"] = marker
     if timeout is not None:

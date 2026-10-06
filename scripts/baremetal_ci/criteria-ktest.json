@@ -1,0 +1,11 @@
+{
+  "success": "ktest: \\d+ passed, 0 failed",
+  "failures": [
+    "Kernel panic:",
+    "BUG!",
+    "Oops!",
+    "ktest: \\d+ passed, [1-9]\\d* failed",
+    "ktest: nothing matched"
+  ],
+  "kernel_start": "Starting ultra kernel"
+}
