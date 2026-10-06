@@ -46,6 +46,7 @@ function(add_ultra_module)
         ${MODULE_OBJECT_TARGET}
         PRIVATE
         $<TARGET_PROPERTY:${ULTRA_KERNEL_IFACE},INTERFACE_COMPILE_DEFINITIONS>
+        ULTRA_MODULE_NAME="${MODULE_NAME}"
         ${MODULE_PRIVATE_DEFINITIONS}
     )
     target_include_directories(

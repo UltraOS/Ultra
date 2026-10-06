@@ -54,6 +54,17 @@ function(ultra_sources)
         PRIVATE
         ${ARGN}
     )
+
+    foreach (SOURCE ${ARGN})
+        get_filename_component(SOURCE_NAME ${SOURCE} NAME_WE)
+        set_property(
+            SOURCE ${SOURCE}
+            TARGET_DIRECTORY ${ULTRA_KERNEL_OBJECTS}
+            APPEND
+            PROPERTY COMPILE_DEFINITIONS
+            ULTRA_MODULE_NAME="${SOURCE_NAME}"
+        )
+    endforeach ()
 endfunction()
 
 function(ultra_sources_if CONFIG)
