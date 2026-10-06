@@ -81,11 +81,12 @@
     SCHED_CLASSES                                    \
     SECTION_MARKER_END(SCHED_CLASSES_SECTION) = .;
 
-#define RODATA                                           \
-    *(.rodata .rodata.*)                                 \
-    *(.INIT_DATA_REFERENCE_RODATA_SECTION)               \
-    SCHED_CLASS_SECTIONS                                 \
-    NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)
+#define RODATA                                            \
+    *(.rodata .rodata.*)                                  \
+    *(.INIT_DATA_REFERENCE_RODATA_SECTION)                \
+    SCHED_CLASS_SECTIONS                                  \
+    NATURALLY_ALIGNED_MARKED_SECTION(PARAMETERS_SECTION)  \
+    NATURALLY_ALIGNED_MARKED_SECTION(KTEST_CASES_SECTION)
 
 #define RODATA_FREE_AFTER_INIT_BEGIN \
     FREE_AFTER_INIT_BEGIN(FREE_AFTER_INIT_RODATA_SECTION)

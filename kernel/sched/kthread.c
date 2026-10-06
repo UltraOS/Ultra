@@ -45,6 +45,10 @@ struct task *kthread_vcreate(
 
     completion_init(&task->kthread.exited);
 
+#if IS_ENABLED(KTEST)
+    task->ktest_run = current->ktest_run;
+#endif
+
     arch_task_frame_init(task, kthread_entry, nullptr);
 
     return task;

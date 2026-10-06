@@ -1,0 +1,23 @@
+menuconfig KTEST
+    bool "In-kernel integration tests"
+    help
+        A runner for tests that need the real kernel around them, e.g.
+        interrupts, timers and threads on real hardware. Each test runs
+        in its own thread and the results are printed in KTAP format,
+        ending in a summary line.
+
+        Nothing runs unless the kernel command line has ktest.run=all.
+
+if KTEST
+
+config KTEST_ALL_TESTS
+    bool "Build every test"
+    default y
+    help
+        Turn it off to pick the tests to build one by one.
+
+config KTEST_SELFTEST
+    bool "Tests of the test runner itself" if !KTEST_ALL_TESTS
+    default KTEST_ALL_TESTS
+
+endif
