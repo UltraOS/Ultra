@@ -360,6 +360,7 @@ def hyper_get_iso_br() -> str:
     return ret
 
 
+KTEST_TIMEOUT_SECONDS = 600
 QEMU_DRAIN_SECONDS = 1
 
 # The colored console wraps parts of a line in escape sequences
@@ -415,10 +416,18 @@ def qemu_watch(
     return match
 
 
+def ktest_verdict_pattern() -> re.Pattern:
+    criteria = bmc.load_criteria("ktest")
+    failures = "|".join(criteria["failures"])
+    return re.compile(
+        f"(?P<success>{criteria['success']})|(?P<failure>{failures})".encode()
+    )
+
+
 def run_qemu(
     arch: str, image_path: str, image_type: str, debug: bool, uefi_boot: bool,
     uefi_firmware: str, kvm: bool, la57: bool, headless: bool, dry: bool,
-    run_for: Optional[float] = None
+    run_for: Optional[float] = None, ktest: bool = False
 ) -> Optional[subprocess.Popen]:
     extra_args = []
     force_uefi = False
@@ -472,6 +481,28 @@ def run_qemu(
     if dry:
         print(" ".join(args))
         return None
+
+    if ktest:
+        verdict = ktest_verdict_pattern()
+        qp = subprocess.Popen(args, stdout=subprocess.PIPE)
+        try:
+            match = qemu_watch(qp, KTEST_TIMEOUT_SECONDS, verdict)
+        except KeyboardInterrupt:
+            qp.terminate()
+            qp.wait()
+            sys.exit(130)
+
+        if match is None:
+            print("The test run did not finish", file=sys.stderr)
+            sys.exit(2)
+
+        failure = match.group("failure")
+        if failure is not None:
+            print(f"The test run failed: {failure.decode(errors='replace')}",
+                  file=sys.stderr)
+            sys.exit(1)
+
+        sys.exit(0)
 
     if run_for is not None and not debug:
         qp = subprocess.Popen(args, stdout=subprocess.PIPE)
@@ -575,6 +606,14 @@ def main() -> None:
     qemu = parser.add_argument_group("QEMU")
     qemu.add_argument("--run", action="store_true",
                       help="Run in QEMU after building")
+    qemu.add_argument("--ktest", nargs="?", const="all", metavar="TESTS",
+                      help="Run the in-kernel tests in QEMU (or on the "
+                           "--baremetal machines) and exit with the "
+                           "verdict: 0 all passed, 1 failures, 2 the "
+                           "run did not finish. TESTS is the ktest.run= "
+                           "selection (default: all). Builds the ktest "
+                           "preset unless --config is given (implies "
+                           "--headless)")
     qemu.add_argument("--kvm", action="store_true",
                       help="Run QEMU with KVM enabled (implies --run)")
     qemu.add_argument("--la57", action="store_true",
@@ -629,6 +668,18 @@ def main() -> None:
     rc = bmc.early_action(args, hyper_pxe_loaders)
     if rc is not None:
         sys.exit(rc)
+
+    if args.ktest is not None:
+        if args.config is None:
+            args.config = "ktest"
+        if args.criteria is None:
+            args.criteria = "ktest"
+        args.headless = True
+        if args.make_image is None:
+            args.make_image = "qemu"
+        ktest_cmdline = f"ktest.run={args.ktest}"
+        args.cmdline = (f"{args.cmdline} {ktest_cmdline}" if args.cmdline
+                        else ktest_cmdline)
 
     # A changed command line only reaches QEMU through a new image
     if args.cmdline and args.machines is None and args.make_image is None:
@@ -741,7 +792,8 @@ def main() -> None:
 
         qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
                       uefi_boot, args.uefi_firmware_path, args.kvm, args.la57,
-                      args.headless, args.dry, args.run_for)
+                      args.headless, args.dry, args.run_for,
+                      args.ktest is not None)
 
     if args.debug:
         assert qp
