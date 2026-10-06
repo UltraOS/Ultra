@@ -3,7 +3,7 @@
 #include <memory/io.h>
 #include <init_level.h>
 #include <free_after_init.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 #include <arch/private/pci_type1.h>
 

@@ -5,7 +5,7 @@
 
 #include <memory/alloc.h>
 
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 struct alloc_cache {
     const char *name;

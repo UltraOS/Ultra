@@ -1,7 +1,7 @@
 #include <common/atomic.h>
 #include <arch/cpu_helpers.h>
 
-#include <spinlock.h>
+#include <locking/spinlock.h>
 #include <irq_helpers.h>
 
 #define CURRENT_TICKET_SHIFT 16

@@ -1,7 +1,7 @@
 #include <memory/page_table.h>
 #include <memory/page.h>
 
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 #define MAKE_GENERIC_PTN_POPULATE_IMPL(lvl, child_lvl)                 \
     bool pt##lvl##_populate(                                           \

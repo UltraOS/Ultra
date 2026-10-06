@@ -1,4 +1,4 @@
-#include <mutex.h>
+#include <locking/mutex.h>
 
 #include <test_harness.h>
 

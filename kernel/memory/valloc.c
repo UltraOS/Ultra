@@ -27,7 +27,7 @@
 
 #include <free_after_init.h>
 #include <init_level.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 #include <irq_helpers.h>
 #include <per_cpu.h>
 

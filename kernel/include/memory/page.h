@@ -40,7 +40,7 @@
 #include <memory/io.h>
 #include <memory/bug.h>
 #include <arch_constants.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 
 /*
  * Page type values are split into two main categories:

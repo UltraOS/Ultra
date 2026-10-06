@@ -17,7 +17,7 @@
 
 #include <free_after_init.h>
 #include <bug.h>
-#include <spinlock.h>
+#include <locking/spinlock.h>
 #include <init_level.h>
 
 #define BUDDY_NUM_ORDERS (BUDDY_MAX_ORDER + 1)

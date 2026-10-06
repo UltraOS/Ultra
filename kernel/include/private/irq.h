@@ -6,7 +6,7 @@
 #include <common/error.h>
 #include <common/list.h>
 
-#include <spinlock.h>
+#include <locking/spinlock.h>
 #include <bug.h>
 
 struct irq_domain;
