@@ -192,6 +192,35 @@ TEST_CASE(string_capacity)
     CMDLINE_PARSE_CHECKED();
 }
 
+TEST_CASE(unknown_keys_warn)
+{
+    size_t prints;
+
+    CMDLINE_TEST(
+        "foo qux=1 quux",
+        DEFINE_PARAM(bool, foo, false, true),
+    );
+
+    prints = g_test_num_prints;
+    CMDLINE_PARSE_CHECKED();
+    ASSERT_EQ(g_test_num_prints, prints + 2);
+}
+
+TEST_CASE(unknown_dotted_keys_are_skipped_silently)
+{
+    size_t prints;
+
+    CMDLINE_TEST(
+        "foo other.setting=1 other.flag foo.bar=2 bar",
+        DEFINE_PARAM(bool, foo, false, true),
+        DEFINE_PARAM(bool, bar, false, true),
+    );
+
+    prints = g_test_num_prints;
+    CMDLINE_PARSE_CHECKED();
+    ASSERT_EQ(g_test_num_prints, prints);
+}
+
 TEST_CASE(dashes_are_underscores)
 {
     CMDLINE_TEST(
