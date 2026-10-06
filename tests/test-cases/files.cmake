@@ -12,6 +12,7 @@ add_test_cases(
     test_rbtree.c
     test_cpu_mask.c
     test_cpu_mask_out_of_line.c
+    test_spinlock.c
     test_mutex.c
     test_vector_alloc.c
     test_irq.c
