@@ -5,22 +5,22 @@
 
 #define X86_RFLAGS_IF (1 << 9)
 
-static ALWAYS_INLINE void arch_irq_enable(void)
+static ALWAYS_INLINE void arch_local_irq_enable(void)
 {
     asm volatile("sti" ::: "memory");
 }
 
-static ALWAYS_INLINE void arch_irq_disable(void)
+static ALWAYS_INLINE void arch_local_irq_disable(void)
 {
     asm volatile("cli" ::: "memory");
 }
 
-static ALWAYS_INLINE bool arch_irq_is_enabled_state(irq_state_t flags)
+static ALWAYS_INLINE bool arch_local_irq_is_enabled_state(irq_state_t flags)
 {
     return flags & X86_RFLAGS_IF;
 }
 
-static ALWAYS_INLINE irq_state_t arch_irq_state(void)
+static ALWAYS_INLINE irq_state_t arch_local_irq_state(void)
 {
     irq_state_t state;
 
