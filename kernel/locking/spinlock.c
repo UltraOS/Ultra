@@ -37,7 +37,7 @@ irq_state_t spin_lock_irq_save(struct spinlock *lock)
 {
     irq_state_t irq_state;
 
-    irq_state = irq_state_save();
+    irq_state = local_irq_state_save();
     spin_lock(lock);
 
     return irq_state;
@@ -60,13 +60,13 @@ bool spin_try_lock_irq_save(struct spinlock *lock, irq_state_t *out_irq_state)
 {
     irq_state_t irq_state;
 
-    irq_state = irq_state_save();
+    irq_state = local_irq_state_save();
     if (spin_try_lock(lock)) {
         *out_irq_state = irq_state;
         return true;
     }
 
-    irq_state_restore(irq_state);
+    local_irq_state_restore(irq_state);
     return false;
 }
 
@@ -81,7 +81,7 @@ void spin_unlock(struct spinlock *lock)
 void spin_unlock_irq_restore(struct spinlock *lock, irq_state_t irq_state)
 {
     spin_unlock(lock);
-    irq_state_restore(irq_state);
+    local_irq_state_restore(irq_state);
 }
 
 bool spin_is_locked(struct spinlock *lock)

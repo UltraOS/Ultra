@@ -985,12 +985,12 @@ error_t log_ring_reserve(
         return ENOSPC;
 
     timestamp = ns_since_boot();
-    res->details.irq_state = irq_state_save();
+    res->details.irq_state = local_irq_state_save();
     res->details.ring = ring;
 
     ret = log_descriptor_alloc(ring, &res->details.id);
     if (is_error(ret)) {
-        irq_state_restore(res->details.irq_state);
+        local_irq_state_restore(res->details.irq_state);
         return ret;
     }
 
@@ -1046,7 +1046,7 @@ error_t log_ring_reserve_extend(
     struct log_descriptor_ring *desc_ring = &ring->descriptor_ring;
     bool did_reopen;
 
-    res->details.irq_state = irq_state_save();
+    res->details.irq_state = local_irq_state_save();
     res->details.id = atomic_load_acquire(&desc_ring->head_id);
     res->details.ring = ring;
 
@@ -1055,7 +1055,7 @@ error_t log_ring_reserve_extend(
         DESCRIPTOR_STATE_COMMITTED, DESCRIPTOR_STATE_RESERVED
     );
     if (!did_reopen) {
-        irq_state_restore(res->details.irq_state);
+        local_irq_state_restore(res->details.irq_state);
         return EBUSY;
     }
 
@@ -1134,7 +1134,7 @@ static bool update_reservation_state(
     );
     WARN_ON_WITH_MSG(!success, "likely state corruption, reserved record gone");
 
-    irq_state_restore(res->details.irq_state);
+    local_irq_state_restore(res->details.irq_state);
     return success;
 }
 

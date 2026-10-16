@@ -43,7 +43,7 @@ static void xapic_icr_write(u32 value, u32 dest_apic_id)
      * Both halves must reach the same APIC back to back, neither a
      * migration nor an IPI sent from an interrupt may come between.
      */
-    irq_state = irq_state_save();
+    irq_state = local_irq_state_save();
 
     xapic_wait_icr_idle();
 
@@ -51,7 +51,7 @@ static void xapic_icr_write(u32 value, u32 dest_apic_id)
     xapic_write(APIC_REG_ICR2, dest_apic_id << 24);
     xapic_write(APIC_REG_ICR, value);
 
-    irq_state_restore(irq_state);
+    local_irq_state_restore(irq_state);
 }
 
 static void xapic_send_ipi_self(u8 vector)

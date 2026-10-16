@@ -33,7 +33,7 @@ static inline irq_state_t seqcount_write_begin_irq_save(struct seqcount *s)
 {
     irq_state_t state;
 
-    state = irq_state_save();
+    state = local_irq_state_save();
     seqcount_write_begin(s);
 
     return state;
@@ -44,7 +44,7 @@ static inline void seqcount_write_end_irq_restore(
 )
 {
     seqcount_write_end(s);
-    irq_state_restore(state);
+    local_irq_state_restore(state);
 }
 
 static inline u32 seqcount_read_begin(const struct seqcount *s)
