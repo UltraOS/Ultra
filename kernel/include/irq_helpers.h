@@ -36,3 +36,13 @@ static ALWAYS_INLINE void local_irq_state_restore(irq_state_t state)
 
     arch_local_irq_enable();
 }
+
+static ALWAYS_INLINE void local_irq_disable(void)
+{
+    arch_local_irq_disable();
+}
+
+static ALWAYS_INLINE void local_irq_enable(void)
+{
+    arch_local_irq_enable();
+}

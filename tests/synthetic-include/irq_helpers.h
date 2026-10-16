@@ -17,6 +17,16 @@ static inline irq_state_t local_irq_state_save(void)
     return was_enabled;
 }
 
+static inline void local_irq_enable(void)
+{
+    g_test_irqs_enabled = true;
+}
+
+static inline void local_irq_disable(void)
+{
+    g_test_irqs_enabled = false;
+}
+
 static inline void local_irq_state_restore(irq_state_t state)
 {
     g_test_irqs_enabled = state;
