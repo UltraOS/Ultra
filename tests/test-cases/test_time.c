@@ -39,6 +39,7 @@ static void time_test_reset(void)
     seqcount_init(&s_ctx.time_seq);
     s_ctx.cd = nullptr;
     s_ctx.ns = 0;
+    s_ctx.ns_frac = 0;
     s_ctx.prev_cycles = 0;
 
     g_counter_value = 0;
@@ -296,6 +297,41 @@ TEST_CASE(keeper_reports_live_delta)
     // No tick here: the extra 500 cycles are observed live
     g_counter_value = 1500;
     ASSERT_EQ(ns_since_boot(), 1500);
+}
+
+TEST_CASE(keeper_carries_the_fraction_across_ticks)
+{
+    struct counter_device dev = TEST_CD("tsc", COUNTER_MASK(64), IDEAL);
+    u64 i;
+
+    time_test_reset();
+    counter_device_register(&dev, 400 * MHZ);
+
+    for (i = 1; i <= 1000; i++) {
+        g_counter_value = i;
+        time_keeper_tick();
+    }
+
+    ASSERT_EQ(ns_since_boot(), reference_cycles_to_ns(&dev, 1000));
+}
+
+TEST_CASE(keeper_time_does_not_step_back_across_a_tick)
+{
+    struct counter_device dev = TEST_CD("tsc", COUNTER_MASK(64), IDEAL);
+    u64 before;
+
+    time_test_reset();
+    counter_device_register(&dev, 400 * MHZ);
+
+    g_counter_value = 2;
+    before = ns_since_boot();
+
+    // The tick read the counter before the reader did, but published after it
+    g_counter_value = 1;
+    time_keeper_tick();
+
+    g_counter_value = 2;
+    ASSERT_EQ(ns_since_boot(), before);
 }
 
 /*

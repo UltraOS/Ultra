@@ -17,6 +17,7 @@ static struct keeper {
     struct counter_device *cd;
 
     u64 ns;
+    u64 ns_frac;
     u64 prev_cycles;
 } s_ctx = {
     .lock = SPINLOCK_INIT(s_ctx.lock),
@@ -25,7 +26,7 @@ static struct keeper {
 
 static void do_tick(void)
 {
-    u64 cycles, delta_cycles, delta_ns;
+    u64 cycles, delta_cycles, delta_ns, ns_frac = s_ctx.ns_frac;
     struct counter_device *cd = s_ctx.cd;
 
     if (unlikely(cd == nullptr))
@@ -33,7 +34,7 @@ static void do_tick(void)
 
     cycles = counter_device_read(cd);
     delta_cycles = counter_device_delta(cd, s_ctx.prev_cycles, cycles);
-    delta_ns = counter_device_cycles_to_ns(cd, delta_cycles);
+    delta_ns = counter_device_cycles_to_ns_frac(cd, delta_cycles, &ns_frac);
 
     seqcount_write_begin(&s_ctx.time_seq);
 
@@ -41,6 +42,7 @@ static void do_tick(void)
         &s_ctx.ns,
         atomic_load_relaxed(&s_ctx.ns) + delta_ns
     );
+    atomic_store_relaxed(&s_ctx.ns_frac, ns_frac);
     atomic_store_relaxed(&s_ctx.prev_cycles, cycles);
 
     seqcount_write_end(&s_ctx.time_seq);
@@ -65,7 +67,7 @@ void time_keeper_set_counter_device(struct counter_device *cd)
 
     // If we already had a device, accumulate its final time before dumping it
     if (s_ctx.cd) {
-        u64 old_cycles, delta_cycles;
+        u64 old_cycles, delta_cycles, ns_frac = s_ctx.ns_frac;
 
         old_cycles = counter_device_read(s_ctx.cd);
         delta_cycles = counter_device_delta(
@@ -74,8 +76,9 @@ void time_keeper_set_counter_device(struct counter_device *cd)
         atomic_store_relaxed(
             &s_ctx.ns,
             atomic_load_relaxed(&s_ctx.ns) +
-            counter_device_cycles_to_ns(s_ctx.cd, delta_cycles)
+            counter_device_cycles_to_ns_frac(s_ctx.cd, delta_cycles, &ns_frac)
         );
+        atomic_store_relaxed(&s_ctx.ns_frac, 0);
     }
 
     if (cd)
@@ -91,7 +94,7 @@ void time_keeper_set_counter_device(struct counter_device *cd)
 u64 ns_since_boot(void)
 {
     u32 seq;
-    u64 base, prev_cycles, now, delta_cycles, delta_ns;
+    u64 base, ns_frac, prev_cycles, now, delta_cycles, delta_ns;
     struct counter_device *cd;
 
     do {
@@ -104,6 +107,7 @@ u64 ns_since_boot(void)
         if (cd == nullptr)
             return base;
 
+        ns_frac = atomic_load_relaxed(&s_ctx.ns_frac);
         prev_cycles = atomic_load_relaxed(&s_ctx.prev_cycles);
         barrier_acquire();
 
@@ -111,7 +115,7 @@ u64 ns_since_boot(void)
     } while (seqcount_read_retry(&s_ctx.time_seq, seq));
 
     delta_cycles = counter_device_delta(cd, prev_cycles, now);
-    delta_ns = counter_device_cycles_to_ns(cd, delta_cycles);
+    delta_ns = counter_device_cycles_to_ns_frac(cd, delta_cycles, &ns_frac);
 
     return base + delta_ns;
 }
