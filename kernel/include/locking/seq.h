@@ -69,27 +69,29 @@ static inline bool seqcount_read_retry(const struct seqcount *s, u32 start_seq)
     return atomic_load_relaxed(&s->sequence) != start_seq;
 }
 
-typedef struct {
+struct seqlock {
     struct seqcount seqcount;
     struct spinlock lock;
-} seqlock;
+};
 
-#define SEQLOCK_INIT(name) (struct seqlock) \
-    { .seqcount = SEQCOUNT_INIT(name), .lock = SPINLOCK_INIT(name) }
+#define SEQLOCK_INIT(name) (struct seqlock) {   \
+    .seqcount = SEQCOUNT_INIT((name).seqcount), \
+    .lock = SPINLOCK_INIT((name).lock),         \
+}
 
-static inline void seqlock_write_lock(seqlock *sl)
+static inline void seqlock_write_lock(struct seqlock *sl)
 {
     spin_lock(&sl->lock);
     seqcount_write_begin(&sl->seqcount);
 }
 
-static inline void seqlock_write_unlock(seqlock *sl)
+static inline void seqlock_write_unlock(struct seqlock *sl)
 {
     seqcount_write_end(&sl->seqcount);
     spin_unlock(&sl->lock);
 }
 
-static inline irq_state_t seqlock_write_lock_irq_save(seqlock *sl)
+static inline irq_state_t seqlock_write_lock_irq_save(struct seqlock *sl)
 {
     irq_state_t state;
 
@@ -100,7 +102,7 @@ static inline irq_state_t seqlock_write_lock_irq_save(seqlock *sl)
 }
 
 static inline void seqlock_write_unlock_irq_restore(
-    seqlock *sl, irq_state_t state
+    struct seqlock *sl, irq_state_t state
 )
 {
     seqcount_write_end(&sl->seqcount);
