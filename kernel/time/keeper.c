@@ -65,11 +65,11 @@ void time_keeper_set_counter_device(struct counter_device *cd)
 
     // If we already had a device, accumulate its final time before dumping it
     if (s_ctx.cd) {
-        u64 cycles, delta_cycles;
+        u64 old_cycles, delta_cycles;
 
-        cycles = counter_device_read(s_ctx.cd);
+        old_cycles = counter_device_read(s_ctx.cd);
         delta_cycles = counter_device_delta(
-            s_ctx.cd, s_ctx.prev_cycles, cycles
+            s_ctx.cd, s_ctx.prev_cycles, old_cycles
         );
         atomic_store_relaxed(
             &s_ctx.ns,
