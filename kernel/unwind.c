@@ -66,14 +66,14 @@ static u64 s_num_fdes;
 } while (0)
 
 #define eh_consume(eh, dst) ({                             \
-    error_t ret = ERANGE;                                  \
+    error_t consume_ret = ERANGE;                          \
                                                            \
     if (likely(sizeof(typeof(dst)) <= (eh)->bytes_left)) { \
         EH_CONSUME_UNSAFE(eh, dst);                        \
-        ret = EOK;                                         \
+        consume_ret = EOK;                                 \
     }                                                      \
                                                            \
-    ret;                                                   \
+    consume_ret;                                           \
 })
 
 static void eh_data_init(struct eh_data *eh, const u8 *cursor)
