@@ -129,6 +129,7 @@ ultra_compile_options(
     -ggdb3
     -Wall
     -Wextra
+    -Wshadow
     -Werror
     -Wstrict-prototypes
     -Wmissing-prototypes
