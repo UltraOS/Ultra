@@ -11,7 +11,7 @@
  * only support statically defining the log ring, so the caller must be able to
  * "see" all the internal data structures.
  */
-#include <private/log_ring.h>
+#include <detail/log_ring.h>
 
 /*
  * Define a log ring 'name', that has 2^'size_shift' bytes of text space,

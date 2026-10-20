@@ -53,8 +53,8 @@
     INIT_LEVEL(GENERIC_MODULES_INITIALIZED) \
     ARCH_INIT_LEVELS_AFTER_GENERIC_MODULES_INITIALIZED
 
-#if HAS_INCLUDE(<arch/private/init_level.h>)
-    #include <arch/private/init_level.h>
+#if HAS_INCLUDE(<arch/detail/init_level.h>)
+#include <arch/detail/init_level.h>
 #endif
 
 #ifndef ARCH_INIT_LEVELS_AFTER_NONE

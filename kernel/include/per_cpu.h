@@ -6,7 +6,7 @@
 #include <smp.h>
 #include <per_cpu_decls.h>
 
-#include <arch/per_cpu.h>
+#include <arch/detail/per_cpu.h>
 
 #define per_cpu_ptr(ptr, cpu_number) \
     PTR_ADD_HIDE_UB(ptr, g_per_cpu_offset[cpu_number])

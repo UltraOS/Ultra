@@ -20,7 +20,21 @@
 #include <log.h>
 
 #include <private/arch/io.h>
-#include <arch/private/io.h>
+/*
+ * API provided by <arch/detail/io_access.h>:
+ *
+ * [Mandatory (64-bit versions gated by ULTRA_ARCH_WIDTH >= 8)]
+ *   arch_mmio_{read,write}{8,16,32,64}{,_relaxed}()
+ *
+ * [Optional, gated by ARCH_HAS_CUSTOM_MMIO_RW_MANY_{STRICT,RELAXED}]
+ *   arch_mmio_{read,write}N{,_relaxed}_many()
+ *
+ * [Optional, gated by ARCH_HAS_CUSTOM_PIO from <arch/detail/io.h>]
+ *   arch_{map,unmap}_pio()
+ *   arch_pio_{read,write}{8,16,32}{,_relaxed,_slowdown}()
+ *   arch_pio_{read,write}{8,16,32}{,_relaxed}_many()
+ */
+#include <arch/detail/io_access.h>
 
 /*
  * Aligns the physical address down to the nearest PT1_SIZE and expands the

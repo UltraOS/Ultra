@@ -1,4 +1,4 @@
-#include <arch/private/unwind.h>
+#include <arch/detail/unwind.h>
 #include <arch/private/asm_helpers.h>
 
 ASM_PRELUDE

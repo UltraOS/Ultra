@@ -1,5 +1,5 @@
 #include <private/arch/unwind.h>
-#include <arch/private/unwind.h>
+#include <arch/detail/unwind.h>
 
 void arch_registers_to_dwarf_registers(
     struct registers *regs, ptr_t *dwarf_regs

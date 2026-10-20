@@ -4,7 +4,7 @@
 #include <common/types.h>
 #include <common/error.h>
 
-#include <private/init_level.h>
+#include <detail/init_level.h>
 
 #include <bug.h>
 

@@ -5,7 +5,7 @@
 #include <common/attributes.h>
 
 #include <arch/registers.h>
-#include <arch/private/unwind.h>
+#include <arch/detail/unwind.h>
 
 struct eh_data {
     const u8 *cursor;

@@ -3,7 +3,7 @@
 #include <linker.h>
 
 #include <arch_constants.h>
-#include <private/init_level.h>
+#include <detail/init_level.h>
 
 #define PHDR_READ  (1 << 2)
 #define PHDR_WRITE (1 << 1)

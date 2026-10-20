@@ -1,6 +1,6 @@
 #pragma once
 
-#include <private/rb_tree.h>
+#include <detail/common/rb_tree.h>
 
 #include <common/attributes.h>
 #include <common/minmax.h>
