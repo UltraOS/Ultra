@@ -19,7 +19,6 @@
 #include <init_level.h>
 #include <log.h>
 
-#include <private/arch/io.h>
 /*
  * API provided by <arch/detail/io_access.h>:
  *
