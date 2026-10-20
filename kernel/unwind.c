@@ -1,6 +1,5 @@
 #define MSG_FMT(msg) "unwind: " msg
 
-#include <arch/private/unwind.h>
 #include <private/arch/unwind.h>
 #include <private/unwind.h>
 #include <private/symbols.h>

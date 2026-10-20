@@ -1,5 +1,5 @@
 #include <private/arch/unwind.h>
-#include <arch/private/unwind.h>
+#include <arch/detail/unwind.h>
 
 #include <symbols.h>
 #include <unwind.h>

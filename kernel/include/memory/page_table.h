@@ -1,6 +1,6 @@
 #pragma once
 
-#include <arch/page_table.h>
+#include <arch/detail/page_table.h>
 
 #include <common/atomic.h>
 #include <common/helpers.h>
@@ -158,7 +158,7 @@
  * Porting to other architectures
  * ==============================
  *
- * <arch/page_table.h> is the only mandatory header, it is expected to
+ * <arch/detail/page_table.h> is the only mandatory header, it is expected to
  * provide:
  *
  *   pt_entry_word              one machine word, loadable and
@@ -181,10 +181,10 @@
  * values only, never a struct ptN pointer, which is what makes a plain
  * load or store unrepresentable outside this file.
  *
- * <arch/page_table_extras.h> is included (if provided) after the
+ * <arch/detail/page_table_extras.h> is included (if provided) after the
  * generic definitions and holds anything that needs a struct ptN
  * pointer or a generic helper defined before it. The matching guard
- * still belongs in <arch/page_table.h>, since the guards are tested
+ * still belongs in <arch/detail/page_table.h>, since the guards are tested
  * before this header is read.
  *
  * ptN_entry_none decides whether an entry is empty. It must ignore
@@ -624,8 +624,8 @@ pt_prot pt_prot_from_vm_prot(enum vm_prot);
 typedef struct pt5 pt_root;
 #define pt_root_from_address_space(as, va) pt5_from_pt5_base((as)->pt, va)
 
-#if HAS_INCLUDE(<arch/page_table_extras.h>)
-#include <arch/page_table_extras.h>
+#if HAS_INCLUDE(<arch/detail/page_table_extras.h>)
+#include <arch/detail/page_table_extras.h>
 #endif
 
 #undef MAKE_PT_TYPE

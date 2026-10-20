@@ -1,4 +1,4 @@
-#include <arch/private/unwind.h>
+#include <arch/detail/unwind.h>
 
 .section ".text", "ax", @progbits
 

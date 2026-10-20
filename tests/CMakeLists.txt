@@ -97,7 +97,7 @@ KERNEL_FILE(
 KERNEL_FILE(
     SOURCE_FILE "drivers/smbios.c" INCLUDE_FILE "smbios.h"
 )
-KERNEL_FILE(INCLUDE_FILE "private/log_ring.h")
+KERNEL_FILE(INCLUDE_FILE "detail/log_ring.h")
 KERNEL_FILE(INCLUDE_FILE "smbios_structures.h")
 KERNEL_FILE(SOURCE_FILE "param.c"  INCLUDE_FILE "param.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "helpers.h")
@@ -149,7 +149,7 @@ KERNEL_FILE(
     SOURCE_PATH "common" SOURCE_FILE "rb_tree.c"
     INCLUDE_PATH "common" INCLUDE_FILE "rb_tree.h"
 )
-KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "rb_tree.h")
+KERNEL_FILE(INCLUDE_PATH "detail/common" INCLUDE_FILE "rb_tree.h")
 KERNEL_FILE(INCLUDE_PATH "common" INCLUDE_FILE "rb_tree_aggregated.h")
 KERNEL_FILE(
     SOURCE_PATH "memory" SOURCE_FILE "alloc.c"
@@ -188,11 +188,11 @@ KERNEL_FILE(INCLUDE_PATH "boot" INCLUDE_FILE "ultra_protocol.h")
 KERNEL_FILE(INCLUDE_FILE "config_helpers.h")
 KERNEL_FILE(INCLUDE_FILE "log.h")
 KERNEL_FILE(INCLUDE_FILE "bug.h")
-KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "bug.h")
+KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "bug.h")
 KERNEL_FILE(INCLUDE_FILE "panic.h")
 KERNEL_FILE(INCLUDE_FILE "linker.h")
 KERNEL_FILE(INCLUDE_PATH "locking" INCLUDE_FILE "seq.h")
-KERNEL_FILE(INCLUDE_PATH "private" INCLUDE_FILE "init_level.h")
+KERNEL_FILE(INCLUDE_PATH "detail" INCLUDE_FILE "init_level.h")
 KERNEL_FILE(
     INCLUDE_PATH "locking" INCLUDE_FILE "spinlock.h"
     SOURCE_PATH "locking" SOURCE_FILE "spinlock.c"

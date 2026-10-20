@@ -1,8 +1,8 @@
 #include <common/string.h>
 #include <common/attributes.h>
 
-#if HAS_INCLUDE(<arch/private/string.h>)
-#include <arch/private/string.h>
+#if HAS_INCLUDE(<arch/detail/string.h>)
+#include <arch/detail/string.h>
 #endif
 
 /*

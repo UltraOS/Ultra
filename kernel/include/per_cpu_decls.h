@@ -4,7 +4,7 @@
 #include <common/types.h>
 #include <linker.h>
 
-#include <arch/per_cpu.h>
+#include <arch/detail/per_cpu.h>
 
 #ifndef ARCH_PER_CPU_ATTRIBUTES
     #define ARCH_PER_CPU_ATTRIBUTES

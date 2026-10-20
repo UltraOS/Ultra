@@ -3,7 +3,7 @@
 #include <common/types.h>
 #include <common/attributes.h>
 
-#include <arch/private/irq_helpers.h>
+#include <arch/detail/irq_helpers.h>
 
 static ALWAYS_INLINE bool irq_enabled(void)
 {

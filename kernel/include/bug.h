@@ -5,10 +5,10 @@
 #include <common/types.h>
 #include <log.h>
 
-#include <private/bug.h>
+#include <detail/bug.h>
 
-#if HAS_INCLUDE(<arch/bug.h>)
-#include <arch/bug.h>
+#if HAS_INCLUDE(<arch/detail/bug.h>)
+#include <arch/detail/bug.h>
 #endif
 
 #ifdef ARCH_BUG_TRAP_INSTRUCTION

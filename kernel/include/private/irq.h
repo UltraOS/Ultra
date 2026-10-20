@@ -15,10 +15,10 @@ struct irq_chip;
 /*
  * Allocation facts only the architecture's own levels fill and read.
  * An architecture with such facts defines the struct in
- * <arch/irq_alloc_request.h>, the empty default covers the rest.
+ * <arch/detail/irq_alloc_request.h>, the empty default covers the rest.
  */
-#if HAS_INCLUDE(<arch/irq_alloc_request.h>)
-#include <arch/irq_alloc_request.h>
+#if HAS_INCLUDE(<arch/detail/irq_alloc_request.h>)
+#include <arch/detail/irq_alloc_request.h>
 #else
 struct arch_irq_alloc_request {
 };
