@@ -15,7 +15,7 @@ struct spinlock;
 
 static inline void spin_lock_init(struct spinlock *lock)
 {
-    lock->control = 0;
+    *lock = SPINLOCK_INIT(*lock);
 }
 
 void spin_lock(struct spinlock*);

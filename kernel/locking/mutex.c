@@ -4,7 +4,7 @@
 
 void mutex_init(struct mutex *mutex)
 {
-    spin_lock_init(&mutex->lock);
+    *mutex = MUTEX_INIT(*mutex);
 }
 
 void mutex_lock(struct mutex *mutex)

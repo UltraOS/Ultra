@@ -19,8 +19,8 @@ static struct keeper {
     u64 ns;
     u64 prev_cycles;
 } s_ctx = {
-    .lock = SPINLOCK_INIT(&s_ctx.lock),
-    .time_seq = SEQCOUNT_INIT(&s_ctx.time_seq),
+    .lock = SPINLOCK_INIT(s_ctx.lock),
+    .time_seq = SEQCOUNT_INIT(s_ctx.time_seq),
 };
 
 static void do_tick(void)
