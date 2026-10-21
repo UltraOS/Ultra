@@ -1,15 +1,10 @@
 #pragma once
 
+#include <arch/private/msr_definitions.h>
+
 #include <common/types.h>
 #include <common/error.h>
 #include <common/bit.h>
-
-#define MSR_IA32_EFER 0xC0000080 // please use efer_feature_enable() instead
-#define MSR_FS_BASE 0xC000'0100
-#define MSR_GS_BASE 0xC000'0101
-#define MSR_KERNEL_GS_BASE 0xC000'0102
-#define MSR_IA32_APIC_BASE  0x0000'001B
-#define MSR_IA32_PAT 0x00000277
 
 // MSR_IA32_APIC_BASE
 #define IA32_APIC_BASE_ADDRESS_MASK MAKE_BIT_MASK(51, 12)
