@@ -4,6 +4,7 @@
 
 #include <linker.h>
 #include <per_cpu.h>
+#include <smp.h>
 #include <log.h>
 #include <bug.h>
 #include <panic.h>
@@ -57,7 +58,7 @@ static error_t INIT_CODE per_cpu_setup(void)
     this_cpu_offset = g_per_cpu_base;
     this_cpu_offset -= (ptr_t)SECTION_MARKER_BEGIN(PER_CPU_SECTION);
 
-    for (i = 0; i < g_num_present_cpus; i++) {
+    for_each_present_cpu(i) {
         g_per_cpu_offset[i] = this_cpu_offset;
 
         // Give every CPU its own copy of the static per-cpu section
