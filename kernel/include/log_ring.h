@@ -14,6 +14,12 @@
 #include <detail/log_ring.h>
 
 /*
+ * An opaque log ring, defined with MAKE_LOG_RING(). Use the
+ * log_ring_* helpers, all fields are internal.
+ */
+struct log_ring;
+
+/*
  * Define a log ring 'name', that has 2^'size_shift' bytes of text space,
  * with an expected average message length of 2^'avg_msg_length_shift' bytes.
  */
