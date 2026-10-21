@@ -17,7 +17,7 @@
 
 #include <test_harness.h>
 
-u32 g_num_present_cpus;
+cpu_t g_num_present_cpus;
 
 static size_t s_last_alloc_size;
 
@@ -62,7 +62,8 @@ TEST_CASE(cpu_mask_out_of_line_ops_are_bounded)
 {
     struct cpu_mask full = { };
     cpu_mask_handle handle;
-    u32 cpu, count = 0;
+    cpu_t cpu;
+    u32 count = 0;
 
     g_num_present_cpus = 70;
 

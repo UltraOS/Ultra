@@ -15,7 +15,7 @@ struct cpu_mask {
  * operation may ever touch bits past it.
  */
 #if IS_ENABLED(CPU_MASK_OUT_OF_LINE)
-extern u32 g_num_present_cpus;
+extern cpu_t g_num_present_cpus;
 #define CPU_MASK_NUM_BITS g_num_present_cpus
 #else
 #define CPU_MASK_NUM_BITS ULTRA_MAX_CPUS
@@ -24,17 +24,17 @@ extern u32 g_num_present_cpus;
 #define CPU_MASK_NUM_BYTES \
     (NUM_UNITS_FOR_BITS(CPU_MASK_NUM_BITS) * sizeof(reg_t))
 
-static inline void cpu_mask_set(struct cpu_mask *mask, u32 cpu)
+static inline void cpu_mask_set(struct cpu_mask *mask, cpu_t cpu)
 {
     bit_set(mask->bits, cpu);
 }
 
-static inline void cpu_mask_clear(struct cpu_mask *mask, u32 cpu)
+static inline void cpu_mask_clear(struct cpu_mask *mask, cpu_t cpu)
 {
     bit_clear(mask->bits, cpu);
 }
 
-static inline bool cpu_mask_test(const struct cpu_mask *mask, u32 cpu)
+static inline bool cpu_mask_test(const struct cpu_mask *mask, cpu_t cpu)
 {
     return bit_test(mask->bits, cpu);
 }
@@ -59,19 +59,19 @@ static inline void cpu_mask_and(
     bit_array_and(dst->bits, lhs->bits, rhs->bits, CPU_MASK_NUM_BITS);
 }
 
-static inline u32 cpu_mask_weight(const struct cpu_mask *mask)
+static inline cpu_t cpu_mask_weight(const struct cpu_mask *mask)
 {
     return bit_array_count_set(mask->bits, CPU_MASK_NUM_BITS);
 }
 
 // Returns CPU_MASK_NUM_BITS if no set bits are present
-static inline u32 cpu_mask_first(const struct cpu_mask *mask)
+static inline cpu_t cpu_mask_first(const struct cpu_mask *mask)
 {
     return find_first_set_bit(mask->bits, CPU_MASK_NUM_BITS);
 }
 
 // Returns CPU_MASK_NUM_BITS if no set bits are present after 'prev'
-static inline u32 cpu_mask_next(const struct cpu_mask *mask, u32 prev)
+static inline cpu_t cpu_mask_next(const struct cpu_mask *mask, cpu_t prev)
 {
     return find_next_set_bit(mask->bits, CPU_MASK_NUM_BITS, prev + 1);
 }

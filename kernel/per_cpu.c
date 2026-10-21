@@ -27,7 +27,8 @@ extern u8 SECTION_MARKER_END(PER_CPU_SECTION)[];
 
 static error_t INIT_CODE per_cpu_setup(void)
 {
-    size_t static_size, per_cpu_size, alloc_size, i;
+    size_t static_size, per_cpu_size, alloc_size;
+    cpu_t i;
     ptr_t this_cpu_offset;
     void *this_cpu_ptr;
     phys_addr_t addr;

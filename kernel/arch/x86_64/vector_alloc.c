@@ -15,11 +15,11 @@ static DEFINE_PER_CPU(struct vector_pool, s_pool);
 static struct spinlock s_lock;
 
 error_t vector_alloc(
-    const struct cpu_mask *allowed, u32 *out_cpu, u8 *out_vector
+    const struct cpu_mask *allowed, cpu_t *out_cpu, u8 *out_vector
 )
 {
     struct vector_pool *pool, *best_pool = nullptr;
-    u32 cpu, best_cpu = 0;
+    cpu_t cpu, best_cpu = 0;
     reg_t bit;
 
     spin_lock(&s_lock);
@@ -59,7 +59,7 @@ error_t vector_alloc(
     return EOK;
 }
 
-void vector_free(u32 cpu, u8 vector)
+void vector_free(cpu_t cpu, u8 vector)
 {
     struct vector_pool *pool;
     reg_t bit;

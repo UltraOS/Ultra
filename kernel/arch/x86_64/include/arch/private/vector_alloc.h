@@ -8,7 +8,7 @@
  * by 'allowed' (NULL means any online CPU).
  */
 error_t vector_alloc(
-    const struct cpu_mask *allowed, u32 *out_cpu, u8 *out_vector
+    const struct cpu_mask *allowed, cpu_t *out_cpu, u8 *out_vector
 );
 
-void vector_free(u32 cpu, u8 vector);
+void vector_free(cpu_t cpu, u8 vector);

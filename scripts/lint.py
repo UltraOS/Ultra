@@ -319,6 +319,7 @@ class Rule(NamedTuple):
 
 INT_RULE = Rule(SHORT_LENGTHS, SIGNED + "c", "%d")
 UINT_RULE = Rule(SHORT_LENGTHS, UNSIGNED, "%u or %X")
+CPU_RULE = Rule(SHORT_LENGTHS, "u", "%u")
 CHAR_RULE = Rule(("",), "cd", "%c or %d")
 U64_RULE = Rule(("ll",), UNSIGNED, "%llu or %llX")
 I64_RULE = Rule(("ll",), SIGNED, "%lld")
@@ -335,6 +336,7 @@ TYPEDEF_RULES = {
     "ptr_t": SIZE_RULE,
     "reg_t": SIZE_RULE,
     "virt_addr_t": SIZE_RULE,
+    "cpu_t": CPU_RULE,
     "ssize_t": SSIZE_RULE,
     "u64": U64_RULE,
     "i64": I64_RULE,

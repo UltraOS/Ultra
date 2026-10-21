@@ -34,7 +34,8 @@ TEST_CASE(cpu_mask_iteration_order)
 {
     struct cpu_mask mask = { };
     u32 expected[] = { 2, 63, 64, 100, ULTRA_MAX_CPUS - 1 };
-    u32 cpu, i = 0;
+    cpu_t cpu;
+    u32 i = 0;
 
     ASSERT_EQ(cpu_mask_first(&mask), ULTRA_MAX_CPUS);
 
