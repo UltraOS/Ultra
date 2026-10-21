@@ -60,7 +60,7 @@ out:
 // The domain's private bookkeeping for one allocated interrupt
 struct lapic_route {
     cpu_t cpu;
-    u32 dest_apic_id;
+    apic_id_t dest_apic_id;
     u8 vector;
 };
 

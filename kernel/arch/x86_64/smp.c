@@ -25,9 +25,9 @@
 #define X2APIC_ID_NONE 0xFFFF'FFFF
 
 DEFINE_PER_CPU(cpu_t, g_this_cpu_id);
-DEFINE_PER_CPU(u32, g_this_cpu_apic_id);
+DEFINE_PER_CPU(apic_id_t, g_this_cpu_apic_id);
 
-static INIT_DATA u32 s_early_cpu_to_apic_id[ULTRA_MAX_CPUS] = {
+static INIT_DATA apic_id_t s_early_cpu_to_apic_id[ULTRA_MAX_CPUS] = {
     [0 ... (ULTRA_MAX_CPUS - 1)] = APIC_ID_NONE,
 };
 
@@ -70,7 +70,7 @@ static INIT_CODE uacpi_iteration_decision check_if_madt_has_lapic(
     return UACPI_ITERATION_DECISION_CONTINUE;
 }
 
-static INIT_CODE void register_apic_id(u32 apic_id)
+static INIT_CODE void register_apic_id(apic_id_t apic_id)
 {
     cpu_t i;
 
@@ -111,7 +111,7 @@ static INIT_CODE void register_apic_id(u32 apic_id)
     g_num_present_cpus++;
 }
 
-static INIT_CODE error_t register_cpu(u32 apic_id)
+static INIT_CODE error_t register_cpu(apic_id_t apic_id)
 {
     /*
      * This is the first CPU to be registered, we expect that it's the BSP since
@@ -193,7 +193,7 @@ static INIT_CODE uacpi_iteration_decision detect_lapics(
 )
 {
     struct madt_iter_ctx *ctx = user;
-    u32 apic_id;
+    apic_id_t apic_id;
     u32 flags;
 
     switch (hdr->type) {

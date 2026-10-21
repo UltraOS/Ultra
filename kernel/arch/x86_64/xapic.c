@@ -35,7 +35,7 @@ static void xapic_wait_icr_idle(void)
         arch_cpu_relax();
 }
 
-static void xapic_icr_write(u32 value, u32 dest_apic_id)
+static void xapic_icr_write(u32 value, apic_id_t dest_apic_id)
 {
     irq_state_t irq_state;
 

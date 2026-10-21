@@ -3,6 +3,9 @@
 #include <common/types.h>
 #include <common/bit.h>
 
+// The hardware ID of a local APIC
+typedef u32 apic_id_t;
+
 enum apic_reg : u32 {
     APIC_REG_ID = 0x20,
     APIC_REG_VERSION = 0x30,
@@ -70,16 +73,16 @@ enum apic_mode : u32 {
 extern struct apic *g_apic;
 extern enum apic_mode g_apic_mode;
 
-extern u32 g_bsp_apic_id;
-extern u32 g_boot_cpu_apic_id;
-extern u32 g_max_apic_id;
+extern apic_id_t g_bsp_apic_id;
+extern apic_id_t g_boot_cpu_apic_id;
+extern apic_id_t g_max_apic_id;
 
 struct apic {
     void (*setup)(void);
     u32 (*read)(enum apic_reg);
     void (*write)(enum apic_reg, u32 value);
 
-    void (*icr_write)(u32 value, u32 dest_apic_id);
+    void (*icr_write)(u32 value, apic_id_t dest_apic_id);
     void (*send_ipi_self)(u8 vector);
 };
 
@@ -92,8 +95,8 @@ void apic_eoi(void);
 bool apic_vector_in_isr(u8 vector);
 bool apic_vector_in_tmr(u8 vector);
 
-void apic_icr_write(u32 value, u32 dest_apic_id);
-void apic_send_fixed_ipi(u32 dest_apic_id, u8 vector);
+void apic_icr_write(u32 value, apic_id_t dest_apic_id);
+void apic_send_fixed_ipi(apic_id_t dest_apic_id, u8 vector);
 void apic_send_ipi_self(u8 vector);
 
 void apic_set_known_frequency(u64 hz);

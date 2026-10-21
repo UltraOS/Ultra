@@ -29,7 +29,7 @@ static void x2apic_write(enum apic_reg reg, u32 data)
 }
 
 // A single 64-bit write, no busy bit or separate destination half
-static void x2apic_icr_write(u32 value, u32 dest_apic_id)
+static void x2apic_icr_write(u32 value, apic_id_t dest_apic_id)
 {
     u64 icr;
 
