@@ -1,6 +1,6 @@
 #pragma once
 
-#include <abortable_instructions.h>
+#include <private/arch/abortable_instructions.h>
 #include <linker.h>
 #include <common/attributes.h>
 
