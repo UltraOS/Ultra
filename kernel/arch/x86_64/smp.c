@@ -14,6 +14,7 @@
 #include <bug.h>
 #include <panic.h>
 #include <per_cpu.h>
+#include <smp.h>
 #include <free_after_init.h>
 #include <init_level.h>
 
@@ -78,7 +79,7 @@ static INIT_CODE void register_apic_id(u32 apic_id)
                  apic_id == g_bsp_apic_id))
         return;
 
-    for (i = 0; i < g_num_present_cpus; ++i) {
+    for_each_present_cpu(i) {
         // APIC has been registered before
         if (s_early_cpu_to_apic_id[i] == apic_id)
             return;
@@ -375,7 +376,7 @@ static error_t INIT_CODE x86_per_cpu_setup(void)
     // Do the boot CPU setup here, AP CPUs call it elsewhere
     this_cpu_enable_per_cpu(0);
 
-    for (i = 0; i < g_num_present_cpus; ++i) {
+    for_each_present_cpu(i) {
         per_cpu(g_this_cpu_id, i) = i;
         per_cpu(g_this_cpu_apic_id, i) = s_early_cpu_to_apic_id[i];
     }
