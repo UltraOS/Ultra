@@ -36,6 +36,8 @@ enum apic_reg : u32 {
         #define APIC_ICR_DEST_SELF BIT_U32(18)
 
     APIC_REG_ICR2 = 0x310,
+        #define APIC_ICR2_XAPIC_DEST MAKE_BIT_MASK_U32(31, 24)
+
     APIC_REG_LVT_TIMER = 0x320,
     APIC_REG_LVT_THERMAL = 0x330,
     APIC_REG_LVT_PERF = 0x340,

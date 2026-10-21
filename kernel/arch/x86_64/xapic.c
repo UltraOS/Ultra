@@ -53,7 +53,9 @@ static void xapic_icr_write(u32 value, apic_id_t dest_apic_id)
     xapic_wait_icr_idle();
 
     // The destination half must be programmed first, ICR sends
-    xapic_write(APIC_REG_ICR2, dest_apic_id << 24);
+    xapic_write(
+        APIC_REG_ICR2, BIT_FIELD_MAKE(APIC_ICR2_XAPIC_DEST, dest_apic_id)
+    );
     xapic_write(APIC_REG_ICR, value);
 
     local_irq_state_restore(irq_state);
