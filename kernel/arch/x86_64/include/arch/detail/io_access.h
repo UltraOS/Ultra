@@ -4,7 +4,7 @@
 #include <common/helpers.h>
 #include <common/error.h>
 
-#include <memory/io.h>
+#include <detail/io.h>
 
 #define X86_NUM_PORTS 0x10000
 
