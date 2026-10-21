@@ -2,22 +2,13 @@
 
 #include <common/types.h>
 
-struct spinlock {
-    union {
-        u32 control;
+#include <detail/locking/spinlock.h>
 
-        struct {
-        #ifdef ULTRA_ARCH_LITTLE_ENDIAN
-            u16 last_freed_ticket;
-            u16 current_ticket;
-        #else
-            u16 current_ticket;
-            u16 last_freed_ticket;
-        #endif
-
-        };
-    };
-};
+/*
+ * An opaque spinlock, initialized with SPINLOCK_INIT() or spin_lock_init().
+ * Use the spin_* helpers, all fields are internal.
+ */
+struct spinlock;
 
 #define SPINLOCK_INIT(name) (struct spinlock) { { .control = 0 } }
 #define DEFINE_SPINLOCK(name) struct spinlock name = SPINLOCK_INIT(name)
