@@ -5,7 +5,7 @@
 #include <common/bit.h>
 
 #include <arch/memory.h>
-#include <arch/io.h>
+#include <detail/io.h>
 
 #define MAX_PHYS_ADDR BIT_OF_TYPE(phys_addr_t, MAX_PHYS_BITS)
 
@@ -21,26 +21,15 @@ static inline void *phys_to_virt(phys_addr_t phys)
     return (void*)(phys + g_direct_map_base);
 }
 
-enum io_type : u8 {
-    IO_TYPE_INVALID = 0,
-    IO_TYPE_PORT_IO,
-    IO_TYPE_MEM_IO,
-    IO_TYPE_UNMAPPED = 0xFF,
-};
-
-#ifndef ARCH_HAS_CUSTOM_PIO
-typedef void *pio_addr_t;
-#endif
-
-typedef struct io_window {
-    union {
-        void *mmio_address;
-        pio_addr_t port_address;
-    };
-
-    size_t length;
-    u8 type;
-} io_window;
+/*
+ * An opaque MMIO/PIO handle, mapped with one of io_window_map* helpers and
+ * accessed via io{read/write}* or io_window_raw_ptr for memory mapped as
+ * cached. Use io_window_unmap() to unmap.
+ *
+ * NOTE: May be defined as a static/stack variable, but all fields are
+ *       internal.
+ */
+struct io_window;
 
 /*
  * Helpers for mapping MMIO into the CPU address space.
