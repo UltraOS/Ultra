@@ -38,7 +38,7 @@ reg_t find_next_bit_base(
 
         // If there are any valid 1s left, find the lowest one
         if (unit != 0) {
-            bit = BIT_UNIT_FIND_FIRST_SET(unit) - 1;
+            bit = BIT_FIND_FIRST_SET(unit) - 1;
             return (i * BITS_PER_UNIT) + bit;
         }
     }

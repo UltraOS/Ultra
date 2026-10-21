@@ -43,8 +43,14 @@
 #define MAKE_BIT_MASK(end_bit, start_bit) \
     MAKE_BIT_MASK_OF_TYPE(end_bit, start_bit, reg_t)
 
-#define BIT_UNIT_FIND_FIRST_SET(unit) __builtin_ffsl(unit)
-#define BIT_FIELD_SHIFT(mask) (BIT_UNIT_FIND_FIRST_SET(mask) - 1)
+// 1-based index of the lowest set bit of 'x', 0 if no bit is set
+#define BIT_FIND_FIRST_SET(x) (         \
+    sizeof(x) <= sizeof(unsigned int) ? \
+        __builtin_ffs((int)(x)) :       \
+        __builtin_ffsll((long long)(x)) \
+)
+
+#define BIT_FIELD_SHIFT(mask) (BIT_FIND_FIRST_SET(mask) - 1)
 
 #define BIT_FIELD_VALIDATE_INPUT(mask, value)                                    \
     EMBED_STATIC_ASSERT(IS_UNSIGNED_TYPE(mask), "field mask must be unsigned") + \
