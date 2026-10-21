@@ -2,6 +2,8 @@
 
 #include <locking/spinlock.h>
 
+#include <detail/locking/mutex.h>
+
 /*
  * A mutual exclusion lock for process context only. Holders are
  * allowed to block, so it must never be acquired from interrupt
@@ -11,9 +13,7 @@
  * spinlock that must be free when taken, but every caller must
  * already honor the contract as if it could sleep.
  */
-struct mutex {
-    struct spinlock lock;
-};
+struct mutex;
 
 #define MUTEX_INIT(name) (struct mutex) { SPINLOCK_INIT(name.lock) }
 #define DEFINE_MUTEX(name) struct mutex name = MUTEX_INIT(name);
