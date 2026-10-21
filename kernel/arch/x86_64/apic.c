@@ -19,9 +19,9 @@ static UNUSED_DECL u64 s_freq_hz;
 struct apic *g_apic = nullptr;
 enum apic_mode g_apic_mode = APIC_MODE_NONE;
 
-u32 g_bsp_apic_id = APIC_ID_NONE;
-u32 g_boot_cpu_apic_id = APIC_ID_NONE;
-u32 g_max_apic_id = 0xFF - 1;
+apic_id_t g_bsp_apic_id = APIC_ID_NONE;
+apic_id_t g_boot_cpu_apic_id = APIC_ID_NONE;
+apic_id_t g_max_apic_id = 0xFF - 1;
 
 extern struct apic g_xapic;
 extern struct apic g_x2apic;
@@ -78,12 +78,12 @@ void apic_eoi(void)
     g_apic->write(APIC_REG_EOI, 0);
 }
 
-void apic_icr_write(u32 value, u32 dest_apic_id)
+void apic_icr_write(u32 value, apic_id_t dest_apic_id)
 {
     g_apic->icr_write(value, dest_apic_id);
 }
 
-void apic_send_fixed_ipi(u32 dest_apic_id, u8 vector)
+void apic_send_fixed_ipi(apic_id_t dest_apic_id, u8 vector)
 {
     apic_icr_write(APIC_ICR_DELIVERY_FIXED | vector, dest_apic_id);
 }
