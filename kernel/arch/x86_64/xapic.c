@@ -28,6 +28,11 @@ static void xapic_write(enum apic_reg reg, u32 data)
     iowrite32(&s_xapic_io, (u32)reg, data);
 }
 
+static apic_id_t xapic_read_id(void)
+{
+    return BIT_FIELD_READ(xapic_read(APIC_REG_ID), APIC_ID_XAPIC);
+}
+
 // A new command written while one is still being sent is dropped
 static void xapic_wait_icr_idle(void)
 {
@@ -83,6 +88,7 @@ struct apic DATA_REFERENCES_INIT_DATA g_xapic = {
     .read = xapic_read,
     .write = xapic_write,
 
+    .read_id = xapic_read_id,
     .icr_write = xapic_icr_write,
     .send_ipi_self = xapic_send_ipi_self,
 };

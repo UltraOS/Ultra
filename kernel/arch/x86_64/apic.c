@@ -59,7 +59,7 @@ void INIT_CODE apic_detect(void)
     pr_info("using %s mode\n", s_apic_mode_strings[g_apic_mode]);
     g_apic->setup();
 
-    g_boot_cpu_apic_id = g_apic->read(APIC_REG_ID);
+    g_boot_cpu_apic_id = apic_read_id();
     if (unlikely(!(apic_base_msr & IA32_APIC_BASE_IS_BSP))) {
         pr_warn("boot CPU (0x%08X) is not the BSP!\n", g_boot_cpu_apic_id);
         return;
@@ -76,6 +76,11 @@ void apic_set_known_frequency(u64 hz)
 void apic_eoi(void)
 {
     g_apic->write(APIC_REG_EOI, 0);
+}
+
+apic_id_t apic_read_id(void)
+{
+    return g_apic->read_id();
 }
 
 void apic_icr_write(u32 value, apic_id_t dest_apic_id)
