@@ -79,6 +79,7 @@ extern apic_id_t g_max_apic_id;
 
 struct apic {
     void (*setup)(void);
+
     u32 (*read)(enum apic_reg);
     void (*write)(enum apic_reg, u32 value);
 
