@@ -59,9 +59,10 @@ static void INIT_CODE x2apic_setup(void)
 }
 
 struct apic DATA_REFERENCES_INIT_DATA g_x2apic = {
+    .setup = x2apic_setup,
+
     .read = x2apic_read,
     .write = x2apic_write,
-    .setup = x2apic_setup,
 
     .icr_write = x2apic_icr_write,
     .send_ipi_self = x2apic_send_ipi_self,
