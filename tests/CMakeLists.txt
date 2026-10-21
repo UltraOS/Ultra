@@ -202,6 +202,7 @@ KERNEL_FILE(
     INCLUDE_PATH "locking" INCLUDE_FILE "mutex.h"
     SOURCE_PATH "locking" SOURCE_FILE "mutex.c"
 )
+KERNEL_FILE(INCLUDE_PATH "detail/locking" INCLUDE_FILE "mutex.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "vm_flags.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "page_table.h")
 KERNEL_FILE(INCLUDE_PATH "memory" INCLUDE_FILE "address_space.h")
