@@ -8,6 +8,9 @@ typedef u32 apic_id_t;
 
 enum apic_reg : u32 {
     APIC_REG_ID = 0x20,
+        // x2APIC mode uses the whole register as the ID
+        #define APIC_ID_XAPIC MAKE_BIT_MASK_U32(31, 24)
+
     APIC_REG_VERSION = 0x30,
     APIC_REG_TPR = 0x80,
     APIC_REG_APR = 0x90,
@@ -83,6 +86,7 @@ struct apic {
     u32 (*read)(enum apic_reg);
     void (*write)(enum apic_reg, u32 value);
 
+    apic_id_t (*read_id)(void);
     void (*icr_write)(u32 value, apic_id_t dest_apic_id);
     void (*send_ipi_self)(u8 vector);
 };
@@ -96,6 +100,7 @@ void apic_eoi(void);
 bool apic_vector_in_isr(u8 vector);
 bool apic_vector_in_tmr(u8 vector);
 
+apic_id_t apic_read_id(void);
 void apic_icr_write(u32 value, apic_id_t dest_apic_id);
 void apic_send_fixed_ipi(apic_id_t dest_apic_id, u8 vector);
 void apic_send_ipi_self(u8 vector);

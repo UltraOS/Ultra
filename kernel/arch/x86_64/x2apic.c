@@ -28,6 +28,11 @@ static void x2apic_write(enum apic_reg reg, u32 data)
     wrmsr_or_die(x2apic_reg_to_offset(reg), data);
 }
 
+static apic_id_t x2apic_read_id(void)
+{
+    return x2apic_read(APIC_REG_ID);
+}
+
 // A single 64-bit write, no busy bit or separate destination half
 static void x2apic_icr_write(u32 value, apic_id_t dest_apic_id)
 {
@@ -64,6 +69,7 @@ struct apic DATA_REFERENCES_INIT_DATA g_x2apic = {
     .read = x2apic_read,
     .write = x2apic_write,
 
+    .read_id = x2apic_read_id,
     .icr_write = x2apic_icr_write,
     .send_ipi_self = x2apic_send_ipi_self,
 };
