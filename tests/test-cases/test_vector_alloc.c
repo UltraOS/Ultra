@@ -12,7 +12,7 @@ static struct vector_pool s_fake_pools[ULTRA_MAX_CPUS];
 
 static void reset_state(void)
 {
-    u32 i;
+    cpu_t i;
 
     memset(s_fake_pools, 0, sizeof(s_fake_pools));
     for (i = 0; i < ULTRA_MAX_CPUS; i++)
@@ -24,7 +24,8 @@ static void reset_state(void)
 
 TEST_CASE(vector_alloc_sequential_and_exhaustion)
 {
-    u32 cpu, i;
+    cpu_t cpu;
+    u32 i;
     u8 vector, first_vector;
 
     reset_state();
@@ -51,7 +52,7 @@ TEST_CASE(vector_alloc_sequential_and_exhaustion)
 
 TEST_CASE(vector_alloc_least_busy)
 {
-    u32 cpu;
+    cpu_t cpu;
     u8 vector;
 
     reset_state();
@@ -80,7 +81,8 @@ TEST_CASE(vector_alloc_least_busy)
 TEST_CASE(vector_alloc_mask_filter_is_strict)
 {
     struct cpu_mask allowed = { };
-    u32 cpu, i;
+    cpu_t cpu;
+    u32 i;
     u8 vector;
 
     reset_state();
@@ -107,7 +109,7 @@ TEST_CASE(vector_alloc_mask_filter_is_strict)
 TEST_CASE(vector_alloc_offline_cpus_skipped)
 {
     struct cpu_mask allowed = { };
-    u32 cpu;
+    cpu_t cpu;
     u8 vector;
 
     reset_state();

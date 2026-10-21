@@ -48,6 +48,9 @@ typedef u64 phys_addr_t;
 typedef ptr_t virt_addr_t;
 typedef size_t pfn_t;
 
+// A logical CPU number, or a number of CPUs
+typedef u32 cpu_t;
+
 #define LITERAL_SUFFIX_i32
 #define LITERAL_SUFFIX_i64 ll
 #define LITERAL_SUFFIX_u32 u

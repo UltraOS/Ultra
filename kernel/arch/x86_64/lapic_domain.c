@@ -21,7 +21,7 @@
 static DEFINE_PER_CPU(struct irq*, s_dynamic_vectors[NUM_DYNAMIC_VECTORS]);
 static DEFINE_PER_CPU(u64, s_num_unexpected);
 
-static struct irq **dynamic_vector_slot(u32 cpu, u8 vector)
+static struct irq **dynamic_vector_slot(cpu_t cpu, u8 vector)
 {
     BUG_ON(vector < VECTOR_DYNAMIC_FIRST || vector > VECTOR_DYNAMIC_LAST);
     return &per_cpu(s_dynamic_vectors[vector - VECTOR_DYNAMIC_FIRST], cpu);
@@ -59,7 +59,7 @@ out:
 
 // The domain's private bookkeeping for one allocated interrupt
 struct lapic_route {
-    u32 cpu;
+    cpu_t cpu;
     u32 dest_apic_id;
     u8 vector;
 };

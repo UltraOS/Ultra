@@ -24,7 +24,7 @@
 #define LAPIC_ID_NONE 0xFF
 #define X2APIC_ID_NONE 0xFFFF'FFFF
 
-DEFINE_PER_CPU(u32, g_this_cpu_id);
+DEFINE_PER_CPU(cpu_t, g_this_cpu_id);
 DEFINE_PER_CPU(u32, g_this_cpu_apic_id);
 
 static INIT_DATA u32 s_early_cpu_to_apic_id[ULTRA_MAX_CPUS] = {
@@ -72,7 +72,7 @@ static INIT_CODE uacpi_iteration_decision check_if_madt_has_lapic(
 
 static INIT_CODE void register_apic_id(u32 apic_id)
 {
-    u32 i;
+    cpu_t i;
 
     // Don't allow registering the BSP if it's not also the boot CPU
     if (unlikely(g_bsp_apic_id != g_boot_cpu_apic_id &&
@@ -358,7 +358,7 @@ void INIT_CODE setup_smp_topology(void)
     uacpi_table_unref(&tbl);
 }
 
-static void this_cpu_enable_per_cpu(u32 my_id)
+static void this_cpu_enable_per_cpu(cpu_t my_id)
 {
     struct descriptor_ptr gdt_ptr = {
         .limit = sizeof(g_this_cpu_gdt) - 1,
@@ -371,7 +371,7 @@ static void this_cpu_enable_per_cpu(u32 my_id)
 
 static error_t INIT_CODE x86_per_cpu_setup(void)
 {
-    size_t i;
+    cpu_t i;
 
     // Do the boot CPU setup here, AP CPUs call it elsewhere
     this_cpu_enable_per_cpu(0);

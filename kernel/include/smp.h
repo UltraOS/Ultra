@@ -4,8 +4,8 @@
 
 #include <cpu_mask.h>
 
-extern u32 g_num_present_cpus;
-extern u32 g_num_online_cpus;
+extern cpu_t g_num_present_cpus;
+extern cpu_t g_num_online_cpus;
 
 extern struct cpu_mask g_online_cpus;
 
