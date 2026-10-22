@@ -25,6 +25,8 @@ ultra_sources(
     pci_type1.c
     tsc.c
 )
+setup_asm_offsets(asm_offsets.c)
+
 ultra_include_directories(include)
 
 check_c_compiler_flag(

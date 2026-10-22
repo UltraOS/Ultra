@@ -7,34 +7,10 @@
 
 #include <arch/private/idt.h>
 #include <arch/registers.h>
-#include <arch/private/asm_registers.h>
 #include <arch/private/abortable_instructions.h>
 
 #include <private/arch/abortable_instructions.h>
 #include <private/arch/bug.h>
-
-// Ensure both ASM and C code have the same idea about register layout
-BUILD_BUG_ON(R15_OFFSET != offsetof(struct registers, r15));
-BUILD_BUG_ON(R14_OFFSET != offsetof(struct registers, r14));
-BUILD_BUG_ON(R13_OFFSET != offsetof(struct registers, r13));
-BUILD_BUG_ON(R12_OFFSET != offsetof(struct registers, r12));
-BUILD_BUG_ON(RBP_OFFSET != offsetof(struct registers, rbp));
-BUILD_BUG_ON(RBX_OFFSET != offsetof(struct registers, rbx));
-BUILD_BUG_ON(R11_OFFSET != offsetof(struct registers, r11));
-BUILD_BUG_ON(R10_OFFSET != offsetof(struct registers, r10));
-BUILD_BUG_ON(R9_OFFSET  != offsetof(struct registers, r9));
-BUILD_BUG_ON(R8_OFFSET  != offsetof(struct registers, r8));
-BUILD_BUG_ON(RAX_OFFSET != offsetof(struct registers, rax));
-BUILD_BUG_ON(RCX_OFFSET != offsetof(struct registers, rcx));
-BUILD_BUG_ON(RDX_OFFSET != offsetof(struct registers, rdx));
-BUILD_BUG_ON(RSI_OFFSET != offsetof(struct registers, rsi));
-BUILD_BUG_ON(RDI_OFFSET != offsetof(struct registers, rdi));
-BUILD_BUG_ON(AUX_OFFSET != offsetof(struct registers, error_code));
-BUILD_BUG_ON(RIP_OFFSET != offsetof(struct registers, rip));
-BUILD_BUG_ON(CS_OFFSET  != offsetof(struct registers, cs));
-BUILD_BUG_ON(FLAGS_OFFSET != offsetof(struct registers, flags));
-BUILD_BUG_ON(RSP_OFFSET != offsetof(struct registers, rsp));
-BUILD_BUG_ON(SS_OFFSET != offsetof(struct registers, ss));
 
 #define STUB_EXCEPTION(x)                             \
     EXCEPTION_HANDLER(x)                              \
