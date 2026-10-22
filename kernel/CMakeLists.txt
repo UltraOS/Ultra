@@ -6,6 +6,7 @@ include(target_helpers.cmake)
 include(module.cmake)
 include(ld_template.cmake)
 include(ubsan.cmake)
+include(asm_offsets.cmake)
 
 # The base kernel executable that contains an empty stub symbol table
 set(
