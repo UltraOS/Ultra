@@ -8,6 +8,7 @@
 #include <memory/io.h>
 #include <memory/page.h>
 
+#include <private/per_cpu.h>
 #include <private/symbols.h>
 
 #include <init_level.h>
@@ -222,6 +223,7 @@ typedef struct string (*describer_t)(
  */
 static const describer_t s_describers[] = {
     symbol_describe,
+    per_cpu_describe,
     kheap_describe,
     page_describe,
 };

@@ -10,10 +10,14 @@
 #include <panic.h>
 #include <free_after_init.h>
 #include <config.h>
+#include <symbols.h>
+#include <private/per_cpu.h>
 
 #include <common/string.h>
 #include <common/error.h>
 #include <common/align.h>
+#include <common/format.h>
+#include <common/minmax.h>
 
 #include <memory/io.h>
 
@@ -73,3 +77,48 @@ static error_t INIT_CODE per_cpu_setup(void)
     return EOK;
 }
 INIT_CALL_AT(PER_CPU_AVAILABLE, per_cpu_setup);
+
+struct string per_cpu_describe(
+    const void *addr, char out_desc_buf[static MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    char name_buf[MAX_SYMBOL_LENGTH];
+    size_t offset, symbol_size, per_cpu_size;
+    struct string name;
+    ptr_t begin, template;
+    cpu_t cpu;
+
+    if (init_level_below(INIT_LEVEL_PER_CPU_AVAILABLE))
+        return NULL_STR();
+
+    begin = SECTION_MARKER_BEGIN_ADDR(PER_CPU_SECTION);
+    per_cpu_size = PAGE_ROUND_UP(SECTION_SIZE(PER_CPU_SECTION));
+
+    /*
+     * Every CPU, the boot CPU included, runs on a copy of the section made by
+     * per_cpu_setup(). Map the address back onto the section to find the
+     * variable.
+     */
+    for_each_present_cpu(cpu) {
+        template = (ptr_t)addr - g_per_cpu_offset[cpu];
+        if (!within_bounds(template, begin, begin + per_cpu_size))
+            continue;
+
+        name = symbol_lookup_data_by_address(
+            template, name_buf, &offset, &symbol_size
+        );
+        if (!str_is_null(name)) {
+            return str_printf(
+                out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+                "%pS+0x%zx/0x%zx on CPU %u", &name, offset, symbol_size, cpu
+            );
+        }
+
+        return str_printf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+            "per-CPU area of CPU %u +0x%zx", cpu, template - begin
+        );
+    }
+
+    return NULL_STR();
+}
