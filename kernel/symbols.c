@@ -1,4 +1,5 @@
 #include <common/string.h>
+#include <common/format.h>
 
 #include <leb128.h>
 #include <symbols.h>
@@ -114,4 +115,49 @@ struct string symbol_lookup_data_by_address(
     return do_lookup_symbol(
         address, out_name_buf, out_offset_within, out_size, true
     );
+}
+
+struct string symbol_describe(
+    const void *addr, char out_desc_buf[static MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    char name_buf[MAX_SYMBOL_LENGTH];
+    size_t offset, symbol_size;
+    struct string name;
+    ptr_t address;
+
+    address = (ptr_t)addr;
+
+    if (address_is_kernel_code(address)) {
+        name = symbol_lookup_code_by_address(
+            address, name_buf, &offset, &symbol_size
+        );
+        if (str_is_null(name))
+            return name;
+
+        return str_printf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "%pS+0x%zx/0x%zx", &name,
+            offset, symbol_size
+        );
+    }
+
+    if (address_is_kernel_data(address)) {
+        name = symbol_lookup_data_by_address(
+            address, name_buf, &offset, &symbol_size
+        );
+
+        // Padding, or an object the table has no size for
+        if (str_is_null(name)) {
+            return str_printf(
+                out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "unnamed kernel data"
+            );
+        }
+
+        return str_printf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "%pS+0x%zx/0x%zx", &name,
+            offset, symbol_size
+        );
+    }
+
+    return NULL_STR();
 }

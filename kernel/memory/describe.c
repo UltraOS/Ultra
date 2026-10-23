@@ -8,6 +8,8 @@
 #include <memory/io.h>
 #include <memory/page.h>
 
+#include <private/symbols.h>
+
 #include <init_level.h>
 #include <unsafe_access.h>
 
@@ -219,6 +221,7 @@ typedef struct string (*describer_t)(
  * try_memcpy().
  */
 static const describer_t s_describers[] = {
+    symbol_describe,
     kheap_describe,
     page_describe,
 };
