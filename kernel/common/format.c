@@ -185,7 +185,7 @@ static void write_symbol(
     error_t ret;
     int len;
 
-    ret = symbol_lookup_by_address(pc - is_return_address, sym, &offset);
+    ret = symbol_lookup_code_by_address(pc - is_return_address, sym, &offset);
     if (is_error(ret)) {
         len = snprintf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
         write_many(fb_state, sym, len);
