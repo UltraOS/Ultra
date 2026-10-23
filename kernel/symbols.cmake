@@ -22,7 +22,7 @@ function(ultra_symbol_file)
         OUTPUT ${ARG_OUTPUT_PATH}
         COMMAND
         Python3::Interpreter ${GENERATOR}
-        ${ARG_OUTPUT_PATH} ${BINARY_FLAGS}
+        ${ARG_OUTPUT_PATH} ${BINARY_FLAGS} --all-symbols
         ${DEPENDENCY_FLAGS}
         COMMAND_EXPAND_LISTS
     )

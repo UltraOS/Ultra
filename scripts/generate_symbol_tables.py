@@ -176,9 +176,10 @@ class Context(ABC):
 
     def __init__(
         self, text_start_name: str, text_end_name: str,
-        binary_path: Optional[str]
+        binary_path: Optional[str], all_symbols: bool
     ) -> None:
         self._text = Section(text_start_name, text_end_name, 0, 0)
+        self._all_symbols = all_symbols
         self.__symbols: List[Symbol] = []
 
         if binary_path:
@@ -273,10 +274,10 @@ class Context(ABC):
 class LinuxContext(Context):
     MAX_SYMBOL_LENGTH = 511
 
-    def __init__(self, binary_path: Optional[str]):
+    def __init__(self, binary_path: Optional[str], all_symbols: bool):
         self.__init_text = Section("_sinittext", "_einittext", 0, 0)
         self.__text_anchor = 0
-        super().__init__("_stext", "_etext", binary_path)
+        super().__init__("_stext", "_etext", binary_path, all_symbols)
 
     def anchor(self) -> int:
         return self.__text_anchor
@@ -309,6 +310,9 @@ class LinuxContext(Context):
             return
 
     def _should_drop(self, symbol):
+        if self._all_symbols:
+            return False
+
         if symbol.name.startswith(("__start_", "__stop_")):
             return False
 
@@ -352,24 +356,60 @@ class UltraContext(Context):
         assert not pc_relative
         return CGenerator(out_path)
 
+    def _on_symbol_added(self, symbol: Symbol) -> None:
+        super()._on_symbol_added(symbol)
+
+        for section in self.__data_sections:
+            if symbol.name == section.start_name:
+                section.begin = symbol.address
+            elif symbol.name == section.end_name:
+                section.end = symbol.address
+
+    def __is_data(self, symbol: Symbol) -> bool:
+        return any(
+            section.begin <= symbol.address < section.end
+            for section in self.__data_sections
+        )
+
     def _should_drop(self, symbol):
         # We don't need linker symbols since they can't appear in traces
         if symbol.name.startswith(UltraContext.LINKER_SYMBOL_PREFIX):
             return True
+
+        if self.__is_data(symbol):
+            # Keep data if asked, but only if it has an associated size
+            if not self._all_symbols or symbol.size == 0:
+                return True
+
+            # The table changes size between links, keep its own symbols out
+            if symbol.name.startswith(CGenerator.SYMBOL_PREFIX):
+                return True
+
+            return False
+
         return super()._should_drop(symbol)
 
-    def __init__(self, binary_path: Optional[str]):
+    def __init__(self, binary_path: Optional[str], all_symbols: bool):
+        self.__data_sections = [
+            Section(
+                UltraContext.LINKER_SYMBOL_PREFIX + f"{kind}_data_begin",
+                UltraContext.LINKER_SYMBOL_PREFIX + f"{kind}_data_end", 0, 0
+            )
+            for kind in ("readonly", "readwrite")
+        ]
         super().__init__(
             UltraContext.text_begin_symbol(), UltraContext.text_end_symbol(),
-            binary_path
+            binary_path, all_symbols
         )
 
 
-def make_context(mode: Mode, binary_path: Optional[str]) -> Context:
+def make_context(
+    mode: Mode, binary_path: Optional[str], all_symbols: bool
+) -> Context:
     return {
         Mode.LINUX: LinuxContext,
         Mode.ULTRA: UltraContext,
-    }[mode](binary_path)
+    }[mode](binary_path, all_symbols)
 
 
 class TokenTable:
@@ -586,6 +626,8 @@ class TableGenerator(ABC):
 
 
 class CGenerator(TableGenerator):
+    SYMBOL_PREFIX = "g_symbol_"
+
     def __init__(self, path: str) -> None:
         super().__init__(path)
 
@@ -606,7 +648,7 @@ class CGenerator(TableGenerator):
 
     @staticmethod
     def __table_type_to_string(table_type: TableType) -> str:
-        return "g_symbol_" + {
+        return CGenerator.SYMBOL_PREFIX + {
             TableType.SYMBOL_COUNT: "count",
             TableType.SYMBOL_NAMES: "compressed_names",
             TableType.SYMBOL_MARKERS: "name_offsets",
@@ -858,6 +900,8 @@ def main() -> None:
     parser.add_argument("--linux-mode", action="store_true",
                         help="Enables GAS backend & linux-specific symbols"
                              " (fully compatible with kallsyms)")
+    parser.add_argument("--all-symbols", action="store_true",
+                        help="Include data symbols as well")
     parser.add_argument("--pc-relative", action="store_true",
                         help="Emit the offsets as PC-relative references "
                              "to _text instead of absolute addresses "
@@ -869,7 +913,7 @@ def main() -> None:
 
     ctx = make_context(
         Mode.LINUX if args.linux_mode else Mode.ULTRA,
-        args.binary
+        args.binary, args.all_symbols
     )
     token_table = TokenTable(ctx.symbols)
 
