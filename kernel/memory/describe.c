@@ -1,0 +1,159 @@
+#include <common/format.h>
+#include <common/helpers.h>
+#include <common/minmax.h>
+
+#include <memory/describe.h>
+#include <memory/io.h>
+#include <memory/page.h>
+
+#include <init_level.h>
+#include <unsafe_access.h>
+
+static const char *const s_page_type_names[] = {
+    [PAGE_TYPE_RESERVED] = "reserved",
+    [PAGE_TYPE_BUDDY] = "free",
+    [PAGE_TYPE_GENERIC_FROZEN] = "frozen",
+    [PAGE_TYPE_KHEAP] = "kheap",
+    [PAGE_TYPE_KHEAP_LARGE] = "kheap large",
+    [PAGE_TYPE_PTDESC] = "page table",
+    [PAGE_TYPE_VALLOC_MANAGED] = "valloc",
+    [PAGE_TYPE_GENERIC] = "generic",
+    [PAGE_TYPE_ANON] = "anon",
+    [PAGE_TYPE_PAGE_CACHE] = "page cache",
+};
+
+static const char *page_type_name(enum page_type type)
+{
+    if (unlikely(type >= ARRAY_SIZE(s_page_type_names) ||
+                 s_page_type_names[type] == nullptr))
+        return "unknown";
+
+    return s_page_type_names[type];
+}
+
+// A pfn or a tail link can point anywhere, check before reading
+static bool address_is_struct_page(ptr_t address)
+{
+    return within_bounds(address, MEMORY_MAP_BASE, MEMORY_MAP_END) &&
+           (address - MEMORY_MAP_BASE) % sizeof(struct page) == 0;
+}
+
+/*
+ * Read the meta of 'page', or of its block's page 0 if it is a tail,
+ * without faulting on a bad pointer. False if either is unreadable.
+ */
+static bool read_block_meta(
+    const struct page *page, const struct page **out_block, ptr_t *out_meta
+)
+{
+    ptr_t meta;
+
+    if (!address_is_struct_page((ptr_t)page))
+        return false;
+    if (try_memcpy(&meta, &page->meta, sizeof(meta)) != EOK)
+        return false;
+
+    if (META_IS_TAIL(meta)) {
+        if (!address_is_struct_page(META_TO_BLOCK_PTR(meta)))
+            return false;
+
+        page = block_to_page(META_TO_BLOCK(meta));
+        if (try_memcpy(&meta, &page->meta, sizeof(meta)) != EOK)
+            return false;
+    }
+
+    *out_block = page;
+    *out_meta = meta;
+    return true;
+}
+
+static int describe_struct_page(
+    const void *addr, char out_desc_buf[MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    const struct page *page, *block;
+    size_t offset;
+    ptr_t meta;
+
+    offset = ((ptr_t)addr - MEMORY_MAP_BASE) % sizeof(struct page);
+    page = addr - offset;
+
+    if (!read_block_meta(page, &block, &meta)) {
+        return scnprintf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+            "unreadable struct page of pfn 0x%zx +0x%zx", page_to_pfn(page),
+            offset
+        );
+    }
+
+    return scnprintf(
+        out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+        "struct page of pfn 0x%zx +0x%zx, %s block pfn 0x%zx order %hhu",
+        page_to_pfn(page), offset, page_type_name(META_TO_TYPE(meta)),
+        page_to_pfn(block), META_TO_ORDER(meta)
+    );
+}
+
+static int page_describe(
+    const void *addr, char out_desc_buf[MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    const struct page *block;
+    phys_addr_t phys;
+    ptr_t meta;
+
+    if (init_level_below(INIT_LEVEL_MEMORY_MAP_AVAILABLE))
+        return 0;
+
+    if (within_bounds((ptr_t)addr, MEMORY_MAP_BASE, MEMORY_MAP_END))
+        return describe_struct_page(addr, out_desc_buf);
+
+    if (!pointer_is_direct_map(addr))
+        return 0;
+
+    phys = virt_to_phys(addr);
+    if (!read_block_meta(phys_to_page(phys), &block, &meta)) {
+        return scnprintf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+            "direct map %pPA without a page", &phys
+        );
+    }
+
+    return scnprintf(
+        out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+        "%s block pfn 0x%zx order %hhu +0x%zx",
+        page_type_name(META_TO_TYPE(meta)), page_to_pfn(block),
+        META_TO_ORDER(meta), (size_t)(phys - page_to_phys(block))
+    );
+}
+
+typedef int (*describer_t)(
+    const void *addr, char out_desc_buf[MAX_MEM_DESCRIPTION_LENGTH]
+);
+
+/*
+ * Each describer handles one kind of memory and returns 0 for an address
+ * that isn't its own. A report can come from any context with any address,
+ * so a describer only takes relaxed reads and copies through try_memcpy().
+ */
+static const describer_t s_describers[] = {
+    page_describe,
+};
+
+int mem_describe(
+    const void *addr, char out_desc_buf[MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    size_t i;
+    int len;
+
+    for (i = 0; i < ARRAY_SIZE(s_describers); i++) {
+        len = s_describers[i](addr, out_desc_buf);
+        if (len != 0)
+            return len;
+    }
+
+    return scnprintf(
+        out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "unknown memory"
+    );
+}

@@ -3,6 +3,7 @@
 #include <common/types.h>
 #include <common/error.h>
 #include <common/bit.h>
+#include <common/minmax.h>
 
 #include <arch/memory.h>
 #include <detail/io.h>
@@ -19,6 +20,17 @@ static inline phys_addr_t virt_to_phys(const void *virt)
 static inline void *phys_to_virt(phys_addr_t phys)
 {
     return (void*)(phys + g_direct_map_base);
+}
+
+static inline bool address_is_direct_map(virt_addr_t address)
+{
+    return within_bounds(address, g_direct_map_base,
+                                  g_direct_map_base + MAX_PHYS_ADDR);
+}
+
+static inline bool pointer_is_direct_map(const void *ptr)
+{
+    return address_is_direct_map((virt_addr_t)ptr);
 }
 
 /*
