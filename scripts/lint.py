@@ -297,7 +297,7 @@ SUPPORTED_CONVERSIONS = "cspdiouxX"
 
 PRINTF_SOURCE = "kernel/common/format.c"
 
-POINTER_EXTENSIONS = ("RSM", "SM", "S", "E", "PCI", "PA", "V")
+POINTER_EXTENSIONS = ("RSM", "SM", "S", "E", "PCI", "PA", "MEM", "V")
 POINTER_EXTENSION_TYPES = {
     "PA": ("phys_addr_t",),
     "E": ("error_t",),

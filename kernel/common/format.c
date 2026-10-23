@@ -9,6 +9,7 @@
 
 #include <symbols.h>
 #include <pci/address.h>
+#include <memory/describe.h>
 
 struct fmt_buf_state {
     char *buffer;
@@ -467,6 +468,15 @@ static MAYBE_NERR(int) do_vsnprintf(
                     text, sizeof(text), "%04x:%02x:%02x.%x", addr->segment,
                     addr->bus, addr->device, addr->function
                 );
+                write_many(fb_state, text, len);
+                continue;
+            }
+
+            if (consume(&fmt, STR("MEM"))) {
+                char text[MAX_MEM_DESCRIPTION_LENGTH];
+                int len;
+
+                len = mem_describe(va_arg(vlist, void*), text);
                 write_many(fb_state, text, len);
                 continue;
             }
