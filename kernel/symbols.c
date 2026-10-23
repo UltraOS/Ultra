@@ -53,7 +53,7 @@ static const u8 *get_compressed_symbol_name_cursor(u32 index)
     return cursor;
 }
 
-error_t symbol_lookup_by_address(
+error_t symbol_lookup_code_by_address(
     ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
     size_t *out_offset_within
 )
