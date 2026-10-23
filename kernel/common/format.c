@@ -181,12 +181,12 @@ static void write_symbol(
 )
 {
     char sym[MAX_SYMBOL_LENGTH];
-    size_t offset;
+    size_t offset, size;
     error_t ret;
     int len;
 
     ret = symbol_lookup_code_by_address(
-        pc - is_return_address, sym, &offset, nullptr
+        pc - is_return_address, sym, &offset, &size
     );
     if (is_error(ret)) {
         len = snprintf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
@@ -198,7 +198,7 @@ static void write_symbol(
 
     write_cstr(fb_state, sym);
     if (offset) {
-        len = snprintf(sym, sizeof(sym), "+%zu", offset);
+        len = snprintf(sym, sizeof(sym), "+%zu/%zu", offset, size);
         write_many(fb_state, sym, len);
     }
 }
