@@ -84,9 +84,9 @@ ultra_compile_definitions(
 set_property(GLOBAL PROPERTY ULTRA_OBJECT_TARGETS "${ULTRA_KERNEL_OBJECTS}")
 
 # Number of times to re-link the kernel to stabilize symbols
-set(ULTRA_NUM_RELINKS 1)
+set(ULTRA_NUM_RELINKS 2)
 if (CONFIG_LTO)
-    set(ULTRA_NUM_RELINKS 2)
+    set(ULTRA_NUM_RELINKS 3)
 endif ()
 
 setup_symbol_table_link_steps(${ULTRA_NUM_RELINKS})
