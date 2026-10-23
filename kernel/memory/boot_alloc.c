@@ -97,7 +97,7 @@ static ssize_t INIT_CODE find_range(
     if (right >= 0) {
         struct memory_range *mr = &s_buffer[right];
 
-        if (mr->physical_address < value && value < mr_end(mr))
+        if (within_bounds(value, mr->physical_address, mr_end(mr)))
             return right;
     }
 

@@ -23,6 +23,7 @@
 #include <common/string.h>
 #include <common/format.h>
 #include <common/bit.h>
+#include <common/minmax.h>
 
 #define IOAPIC_IOREGSEL 0x00
 #define IOAPIC_IOWIN 0x10
@@ -83,11 +84,14 @@ static u32 ioapic_num_pins(struct ioapic *ioapic)
 
 static struct ioapic *find_ioapic_for_gsi(u32 gsi)
 {
+    struct ioapic *ioapic;
     size_t i;
 
     for (i = 0; i < s_num_ioapics; i++) {
-        if (s_ioapics[i].gsi_base <= gsi && gsi <= s_ioapics[i].gsi_last)
-            return &s_ioapics[i];
+        ioapic = &s_ioapics[i];
+
+        if (within_bounds_inclusive(gsi, ioapic->gsi_base, ioapic->gsi_last))
+            return ioapic;
     }
 
     return nullptr;

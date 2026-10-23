@@ -1,5 +1,6 @@
 #include <common/types.h>
 #include <common/error.h>
+#include <common/minmax.h>
 
 #include <linker.h>
 
@@ -17,8 +18,10 @@ DECLARE_LINKER_SYMBOL(eh_frame_end);
 
 static inline bool address_is_kernel_code(ptr_t address)
 {
-    return address >= LINKER_SYMBOL_ADDR(text_begin) &&
-           address <= LINKER_SYMBOL_ADDR(text_end);
+    return within_bounds_inclusive(
+        address, LINKER_SYMBOL_ADDR(text_begin),
+                 LINKER_SYMBOL_ADDR(text_end)
+    );
 }
 
 error_t symbol_lookup_by_address(
