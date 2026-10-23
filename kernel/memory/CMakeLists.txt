@@ -7,4 +7,5 @@ ultra_sources(
     page_table.c
     buddy.c
     valloc.c
+    describe.c
 )

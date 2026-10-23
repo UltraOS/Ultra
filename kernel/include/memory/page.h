@@ -136,6 +136,7 @@ static inline bool page_type_is_buddy_managed(enum page_type type)
 #define META_TO_ORDER(meta) ((u8)BIT_FIELD_READ(meta, META_ORDER_MASK))
 
 #define META_TO_BLOCK_PTR(meta) ((meta) & ~META_TAIL_BIT)
+#define META_TO_BLOCK(meta) ((struct page_block*)META_TO_BLOCK_PTR(meta))
 
 #define META_MAKE_BLOCK(type, order)          \
     (BIT_FIELD_MAKE(META_TYPE_MASK, (type)) | \
