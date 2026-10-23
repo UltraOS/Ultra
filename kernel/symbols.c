@@ -1,4 +1,5 @@
 #include <common/string.h>
+#include <common/format.h>
 
 #include <leb128.h>
 #include <symbols.h>
@@ -114,4 +115,49 @@ error_t symbol_lookup_data_by_address(
     return do_lookup_symbol(
         address, out_name_buf, out_offset_within, out_size, true
     );
+}
+
+int symbol_describe(
+    const void *addr, char out_desc_buf[MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    char name[MAX_SYMBOL_LENGTH];
+    size_t offset, symbol_size;
+    ptr_t address;
+    error_t ret;
+
+    address = (ptr_t)addr;
+
+    if (address_is_kernel_code(address)) {
+        ret = symbol_lookup_code_by_address(
+            address, name, &offset, &symbol_size
+        );
+        if (is_error(ret))
+            return 0;
+
+        return scnprintf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "%s+0x%zx/0x%zx", name,
+            offset, symbol_size
+        );
+    }
+
+    if (address_is_kernel_data(address)) {
+        ret = symbol_lookup_data_by_address(
+            address, name, &offset, &symbol_size
+        );
+
+        // Padding, or an object the table has no size for
+        if (is_error(ret)) {
+            return scnprintf(
+                out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "unnamed kernel data"
+            );
+        }
+
+        return scnprintf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "%s+0x%zx/0x%zx", name,
+            offset, symbol_size
+        );
+    }
+
+    return 0;
 }

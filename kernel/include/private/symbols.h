@@ -1,5 +1,7 @@
 #include <common/types.h>
 
+#include <memory/describe.h>
+
 // Number of kernel symbols
 extern const u32 g_symbol_count;
 
@@ -54,3 +56,7 @@ extern const u32 g_symbol_sizes[];
  * tables. This can be used for O(log N) lookups of name -> address.
  */
 extern const u8 g_symbol_name_index_to_address_index[];
+
+int symbol_describe(
+    const void *addr, char out_desc_buf[MAX_MEM_DESCRIPTION_LENGTH]
+);
