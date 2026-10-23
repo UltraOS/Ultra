@@ -2,6 +2,8 @@
 #include <common/helpers.h>
 #include <common/minmax.h>
 
+#include <memory/alloc_cache.h>
+#include <memory/buddy.h>
 #include <memory/describe.h>
 #include <memory/io.h>
 #include <memory/page.h>
@@ -127,6 +129,85 @@ static struct string page_describe(
     );
 }
 
+static struct string describe_slab(
+    const struct page *block, ptr_t meta, size_t offset,
+    char out_desc_buf[static MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    struct alloc_cache cache, *cache_ptr;
+    char name[32] = { 0 };
+    size_t slab_size, index;
+
+    // The slab can be freed and reused meanwhile, so trust nothing in it
+    if (try_memcpy(&cache_ptr, &block->kheap.cache, sizeof(cache_ptr)) != EOK)
+        goto out_unreadable;
+    if (try_memcpy(&cache, cache_ptr, sizeof(cache)) != EOK)
+        goto out_unreadable;
+    if (try_memcpy(name, cache.name, sizeof(name) - 1) != EOK)
+        goto out_unreadable;
+    if (cache.object_size == 0)
+        goto out_unreadable;
+
+    slab_size = order_to_bytes(META_TO_ORDER(meta));
+    index = offset / cache.object_size;
+
+    // The leftover bytes at the end of a slab that fit no object
+    if (index >= slab_size / cache.object_size) {
+        return str_printf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+            "kheap %s slab pfn 0x%zx tail +0x%zx", name, page_to_pfn(block),
+            offset
+        );
+    }
+
+    return str_printf(
+        out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH, "kheap %s object %p +0x%zx",
+        name, (char*)page_to_virt(block) + index * cache.object_size,
+        offset % cache.object_size
+    );
+
+out_unreadable:
+    return str_printf(
+        out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+        "kheap slab pfn 0x%zx +0x%zx, unreadable cache", page_to_pfn(block),
+        offset
+    );
+}
+
+static struct string kheap_describe(
+    const void *addr, char out_desc_buf[static MAX_MEM_DESCRIPTION_LENGTH]
+)
+{
+    const struct page *block;
+    phys_addr_t phys;
+    size_t offset;
+    ptr_t meta;
+
+    if (init_level_below(INIT_LEVEL_HEAP_AVAILABLE))
+        return NULL_STR();
+    if (!pointer_is_direct_map(addr))
+        return NULL_STR();
+
+    phys = virt_to_phys(addr);
+    if (!read_block_meta(phys_to_page(phys), &block, &meta))
+        return NULL_STR();
+
+    offset = phys - page_to_phys(block);
+
+    switch (META_TO_TYPE(meta)) {
+    case PAGE_TYPE_KHEAP:
+        return describe_slab(block, meta, offset, out_desc_buf);
+    case PAGE_TYPE_KHEAP_LARGE:
+        return str_printf(
+            out_desc_buf, MAX_MEM_DESCRIPTION_LENGTH,
+            "kheap large allocation %p order %hhu +0x%zx",
+            page_to_virt(block), META_TO_ORDER(meta), offset
+        );
+    default:
+        return NULL_STR();
+    }
+}
+
 typedef struct string (*describer_t)(
     const void *addr, char out_desc_buf[static MAX_MEM_DESCRIPTION_LENGTH]
 );
@@ -138,6 +219,7 @@ typedef struct string (*describer_t)(
  * try_memcpy().
  */
 static const describer_t s_describers[] = {
+    kheap_describe,
     page_describe,
 };
 
