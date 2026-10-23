@@ -24,5 +24,6 @@ config KTEST_SELFTEST
 rsource "../sched/tests/Kconfig"
 rsource "../time/tests/Kconfig"
 rsource "../locking/tests/Kconfig"
+rsource "../memory/tests/Kconfig"
 
 endif
