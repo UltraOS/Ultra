@@ -9,3 +9,8 @@ ultra_sources(
     valloc.c
     describe.c
 )
+
+ultra_sources_if(
+    CONFIG_KTEST_MEMORY_DESCRIBE
+    tests/describe.c
+)
