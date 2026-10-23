@@ -5,6 +5,7 @@ add_test_cases(
     test_bit.c
     test_console.c
     test_string.c
+    test_minmax.c
     test_smbios.c
     test_list.c
     test_slist.c
