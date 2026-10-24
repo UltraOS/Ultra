@@ -53,16 +53,13 @@ static const u8 *get_compressed_symbol_name_cursor(u32 index)
     return cursor;
 }
 
-error_t symbol_lookup_code_by_address(
+static error_t do_lookup_symbol(
     ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
-    size_t *out_offset_within, size_t *out_size
+    size_t *out_offset_within, size_t *out_size, bool ensure_within_bounds
 )
 {
-    u32 rel_address, symbol_base;
-    u32 i, begin = 0, end = g_symbol_count;
+    u32 rel_address, offset, i, begin = 0, end = g_symbol_count;
 
-    if (unlikely(!address_is_kernel_code(address)))
-        return EINVAL;
     if (unlikely(g_symbol_count == 0))
         return ENOSYS;
 
@@ -77,9 +74,12 @@ error_t symbol_lookup_code_by_address(
             end = i;
     }
 
-    symbol_base = g_symbol_relative_addresses[begin];
+    offset = rel_address - g_symbol_relative_addresses[begin];
+    if (ensure_within_bounds && offset >= g_symbol_sizes[begin])
+        return ENOENT;
+
     if (out_offset_within != nullptr)
-        *out_offset_within = rel_address - symbol_base;
+        *out_offset_within = offset;
     if (out_size != nullptr)
         *out_size = g_symbol_sizes[begin];
 
@@ -88,4 +88,30 @@ error_t symbol_lookup_code_by_address(
         out_name_buf
     );
     return EOK;
+}
+
+error_t symbol_lookup_code_by_address(
+    ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
+    size_t *out_offset_within, size_t *out_size
+)
+{
+    if (unlikely(!address_is_kernel_code(address)))
+        return EINVAL;
+
+    return do_lookup_symbol(
+        address, out_name_buf, out_offset_within, out_size, false
+    );
+}
+
+error_t symbol_lookup_data_by_address(
+    ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
+    size_t *out_offset_within, size_t *out_size
+)
+{
+    if (unlikely(!address_is_kernel_data(address)))
+        return EINVAL;
+
+    return do_lookup_symbol(
+        address, out_name_buf, out_offset_within, out_size, true
+    );
 }
