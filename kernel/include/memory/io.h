@@ -11,7 +11,7 @@
 
 extern ptr_t g_direct_map_base;
 
-static inline phys_addr_t virt_to_phys(void *virt)
+static inline phys_addr_t virt_to_phys(const void *virt)
 {
     return (ptr_t)virt - g_direct_map_base;
 }
