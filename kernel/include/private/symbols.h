@@ -35,12 +35,11 @@ extern const char g_symbol_token_table[];
 extern const u16 g_symbol_token_offsets[];
 
 /*
- * An array of 'g_symbol_count' symbol addresses relative to 'g_symbol_base'
- * sorted in ascending order. Note that both this table and
+ * An array of 'g_symbol_count' symbol addresses relative to the start of
+ * text sorted in ascending order. Note that both this table and
  * 'g_symbol_compressed_names' are sorted in the same order.
  */
 extern const u32 g_symbol_relative_addresses[];
-extern const ptr_t g_symbol_base;
 
 /*
  * An array of 'g_symbol_count' 3-byte indices of names sorted in

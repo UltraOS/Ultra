@@ -66,7 +66,7 @@ error_t symbol_lookup_code_by_address(
     if (unlikely(g_symbol_count == 0))
         return ENOSYS;
 
-    rel_address = address - g_symbol_base;
+    rel_address = address - LINKER_SYMBOL_ADDR(text_begin);
 
     while (end - begin > 1) {
         i = begin + ((end - begin) / 2);
