@@ -165,7 +165,6 @@ class Section:
 
 class Context(ABC):
     MAX_SYMBOL_LENGTH: int
-    HAS_RELATIVE_BASE: bool = False
 
     def __init__(
         self, text_start_name: str, text_end_name: str,
@@ -200,7 +199,7 @@ class Context(ABC):
     def start_of_text(self) -> int:
         return self._text.begin
 
-    def address_base(self) -> int:
+    def anchor(self) -> int:
         return self.start_of_text()
 
     def _should_drop(self, symbol: Symbol) -> bool:
@@ -213,7 +212,9 @@ class Context(ABC):
 
     @staticmethod
     @abstractmethod
-    def make_table_generator(out_path: str) -> 'TableGenerator':
+    def make_table_generator(
+        out_path: str, pc_relative: bool
+    ) -> 'TableGenerator':
         pass
 
     def _on_symbol_added(self, symbol: Symbol) -> None:
@@ -259,25 +260,31 @@ class Context(ABC):
 
 class LinuxContext(Context):
     MAX_SYMBOL_LENGTH = 511
-    HAS_RELATIVE_BASE = True
 
     def __init__(self, binary_path: Optional[str]):
         self.__init_text = Section("_sinittext", "_einittext", 0, 0)
+        self.__text_anchor = 0
         super().__init__("_stext", "_etext", binary_path)
 
-    def address_base(self) -> int:
-        return self.symbols[0].address if self.symbols else 0
+    def anchor(self) -> int:
+        return self.__text_anchor
 
     @staticmethod
     def make_symbol(name: str, type: str, index: int, address: int) -> Symbol:
         return LinuxSymbol(name, type, index, address)
 
     @staticmethod
-    def make_table_generator(out_path: str) -> 'TableGenerator':
-        return GASGenerator(out_path)
+    def make_table_generator(
+        out_path: str, pc_relative: bool
+    ) -> 'TableGenerator':
+        return GASGenerator(out_path, pc_relative)
 
     def _on_symbol_added(self, symbol: Symbol) -> None:
         super()._on_symbol_added(symbol)
+
+        if symbol.name == "_text":
+            self.__text_anchor = symbol.address
+            return
 
         if symbol.name == self.__init_text.start_name:
             self.__init_text.begin = symbol.address
@@ -322,7 +329,10 @@ class UltraContext(Context):
         return UltraSymbol(name, type, index, address)
 
     @staticmethod
-    def make_table_generator(out_path: str) -> 'TableGenerator':
+    def make_table_generator(
+        out_path: str, pc_relative: bool
+    ) -> 'TableGenerator':
+        assert not pc_relative
         return CGenerator(out_path)
 
     def _should_drop(self, symbol):
@@ -496,7 +506,6 @@ class TableType(Enum):
     SYMBOL_NAMES = 1
     SYMBOL_MARKERS = 2
     SYMBOL_ADDRESSES = 3
-    SYMBOL_BASE = 4
     SYMBOL_INDICES = 5
     TOKEN_TABLE = 6
     TOKEN_OFFSETS = 7
@@ -551,6 +560,10 @@ class TableGenerator(ABC):
 
     @abstractmethod
     def emit(self, table_type: TableType, value: Value) -> None:
+        pass
+
+    @abstractmethod
+    def emit_addresses(self, symbols: List[Symbol], anchor: int) -> None:
         pass
 
 
@@ -657,36 +670,55 @@ class CGenerator(TableGenerator):
     def array(self, table_type: TableType, type: ValueType) -> ArrayEmitter:
         return CGenerator.ArrayEmitter(self, table_type, type)
 
+    def emit_addresses(self, symbols: List[Symbol], anchor: int) -> None:
+        with self.array(TableType.SYMBOL_ADDRESSES, ValueType.U32) as arr:
+            for symbol in symbols:
+                arr.emit(
+                    Value.u32(symbol.address - anchor),
+                    comment=symbol.canonical_name()
+                )
+
 
 class GASGenerator(TableGenerator):
-    def __init__(self, path: str) -> None:
+    SIZED_TABLES = (
+        TableType.SYMBOL_NAMES, TableType.SYMBOL_MARKERS,
+        TableType.TOKEN_TABLE, TableType.SYMBOL_ADDRESSES,
+    )
+
+    def __init__(self, path: str, pc_relative: bool) -> None:
         super().__init__(path)
 
-        self._write("#include <asm/bitsperlong.h>\n")
-        self._write("#if BITS_PER_LONG == 64\n")
-        self._write("#define PTR .quad\n")
-        self._write("#define ALGN .balign 8\n")
-        self._write("#else\n")
-        self._write("#define PTR .long\n")
-        self._write("#define ALGN .balign 4\n")
-        self._write("#endif\n")
+        self._address_entry = (
+            GASGenerator._pc_relative_entry if pc_relative
+            else GASGenerator._absolute_entry
+        )
         self._write("\t.section .rodata, \"a\"\n")
 
-    def _emit_label(self, table_type: TableType) -> None:
-        name = "kallsyms_" + {
+    @staticmethod
+    def _label(table_type: TableType) -> str:
+        return "kallsyms_" + {
             TableType.SYMBOL_COUNT: "num_syms",
             TableType.SYMBOL_NAMES: "names",
             TableType.SYMBOL_MARKERS: "markers",
             TableType.SYMBOL_ADDRESSES: "offsets",
-            TableType.SYMBOL_BASE: "relative_base",
             TableType.SYMBOL_INDICES: "seqs_of_names",
             TableType.TOKEN_TABLE: "token_table",
             TableType.TOKEN_OFFSETS: "token_index",
         }[table_type]
 
+    def _emit_label(self, table_type: TableType) -> None:
+        name = GASGenerator._label(table_type)
+
         self._write(f".globl {name}\n")
-        self._write("\tALGN\n")
+        self._write("\t.balign 4\n")
         self._write(f"{name}:\n")
+
+    def _emit_end(self, table_type: TableType) -> None:
+        if table_type in GASGenerator.SIZED_TABLES:
+            name = GASGenerator._label(table_type)
+            self._write(f".size {name}, . - {name}\n")
+
+        self._write("\n")
 
     def _emit_comment_or_newline(self, comment: Optional[str]) -> None:
         if comment:
@@ -712,31 +744,51 @@ class GASGenerator(TableGenerator):
         return f".{string_type}{prefix}"
 
     @staticmethod
-    def _alternate_form_hex_fmt(value: Value) -> str:
+    def _alternate_form_hex_fmt(value: int) -> str:
         # Python doesn't handle the alternate form ("#") for hex numbers
         # which are 0 correctly (it unconditionally prefixes them with 0x)
         # so handle the zero case manually
-        if not value.data:
+        if not value:
             return "0"
 
-        return f"0x{value.data:x}"
+        return f"0x{value:x}"
 
     def emit(self, table_type: TableType, value: Value) -> None:
         self._emit_label(table_type)
 
-        if table_type == TableType.SYMBOL_BASE:
-            assert value.type == ValueType.U32
-
-            offset = GASGenerator._alternate_form_hex_fmt(value)
-            self._write(f"\tPTR\t_text + {offset}\n\n")
-            return
-
         prologue = GASGenerator._make_gas_prologue(table_type, value)
         self._write(f"\t{prologue}{value.data}\n\n")
 
+    @staticmethod
+    def _pc_relative_entry(symbol: Symbol, anchor: int) -> str:
+        offset = symbol.address - anchor
+        if not -(1 << 31) <= offset < (1 << 31):
+            raise RuntimeError(
+                f"Symbol {symbol.name} is out of range of _text"
+            )
+
+        return f"_text - . + ({offset})"
+
+    @staticmethod
+    def _absolute_entry(symbol: Symbol, anchor: int) -> str:
+        return GASGenerator._alternate_form_hex_fmt(
+            symbol.address & 0xFFFFFFFF
+        )
+
+    def emit_addresses(self, symbols: List[Symbol], anchor: int) -> None:
+        self._emit_label(TableType.SYMBOL_ADDRESSES)
+
+        for symbol in symbols:
+            self._write(f"\t.long\t{self._address_entry(symbol, anchor)}")
+            self._emit_comment_or_newline(symbol.canonical_name())
+
+        self._emit_end(TableType.SYMBOL_ADDRESSES)
+
     class ArrayEmitter(TableGenerator.ArrayEmitter):
+        _parent: 'GASGenerator'
+
         def __init__(
-            self, parent: 'TableGenerator', table_type: TableType,
+            self, parent: 'GASGenerator', table_type: TableType,
             type: ValueType
         ) -> None:
             super().__init__(parent, table_type, type)
@@ -749,11 +801,8 @@ class GASGenerator(TableGenerator):
             self, exc_type: Optional[type[BaseException]],
             ex: Optional[BaseException], traceback: Optional[TracebackType]
         ) -> Optional[bool]:
-            self._parent._write("\n")
+            self._parent._emit_end(self._table_type)
             return None
-
-        def __hex_format(self):
-            return self._table_type == TableType.SYMBOL_ADDRESSES
 
         def emit(
             self, value: Value, comment: Optional[str] = None
@@ -762,12 +811,7 @@ class GASGenerator(TableGenerator):
             self._parent._write(f"\t{prologue}")
 
             if value.type in (ValueType.U8, ValueType.U16, ValueType.U32):
-                if self.__hex_format():
-                    data = GASGenerator._alternate_form_hex_fmt(value)
-                else:
-                    data = str(value.data)
-
-                self._parent._write(data)
+                self._parent._write(str(value.data))
             elif value.type in (ValueType.U8_ARRAY, ValueType.U16_ARRAY):
                 assert isinstance(value.data, list)
                 hex_width = 2 if value.type == ValueType.U8_ARRAY else 4
@@ -795,7 +839,14 @@ def main() -> None:
     parser.add_argument("--linux-mode", action="store_true",
                         help="Enables GAS backend & linux-specific symbols"
                              " (fully compatible with kallsyms)")
+    parser.add_argument("--pc-relative", action="store_true",
+                        help="Emit the offsets as PC-relative references "
+                             "to _text instead of absolute addresses "
+                             "(--linux-mode only)")
     args = parser.parse_args()
+
+    if args.pc_relative and not args.linux_mode:
+        parser.error("--pc-relative requires --linux-mode")
 
     ctx = make_context(
         Mode.LINUX if args.linux_mode else Mode.ULTRA,
@@ -806,7 +857,7 @@ def main() -> None:
     byte_offset = 0
     offset_markers: List[int] = []
 
-    with ctx.make_table_generator(args.out_file) as gen:
+    with ctx.make_table_generator(args.out_file, args.pc_relative) as gen:
         gen.emit(TableType.SYMBOL_COUNT, Value.u32(len(ctx.symbols)))
 
         with gen.array(TableType.SYMBOL_NAMES, ValueType.U8_ARRAY) as arr:
@@ -854,18 +905,7 @@ def main() -> None:
             for marker in offset_markers:
                 arr.emit(Value.u16(marker))
 
-        base = ctx.address_base()
-
-        with gen.array(TableType.SYMBOL_ADDRESSES, ValueType.U32) as arr:
-            for symbol in ctx.symbols:
-                arr.emit(
-                    Value.u32(symbol.address - base),
-                    comment=symbol.canonical_name()
-                )
-
-        if ctx.HAS_RELATIVE_BASE:
-            offset = base - ctx.start_of_text()
-            gen.emit(TableType.SYMBOL_BASE, Value.u32(offset))
+        gen.emit_addresses(ctx.symbols, ctx.anchor())
 
         ctx.sort_by_name()
 
