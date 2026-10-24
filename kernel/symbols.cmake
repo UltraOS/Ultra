@@ -10,14 +10,18 @@ function(ultra_symbol_file)
         set(BINARY_FLAGS "--binary;${ARG_BINARY}")
     endif ()
 
+    # Regenerate the tables when the generator changes
+    set(GENERATOR ${ULTRA_SCRIPTS_DIR}/generate_symbol_tables.py)
+    set(DEPENDENCY_FLAGS "DEPENDS;${GENERATOR}")
+
     if (ARG_DEPENDENCY)
-        set(DEPENDENCY_FLAGS "DEPENDS;${ARG_BINARY}")
+        list(APPEND DEPENDENCY_FLAGS ${ARG_BINARY})
     endif ()
 
     add_custom_command(
         OUTPUT ${ARG_OUTPUT_PATH}
         COMMAND
-        Python3::Interpreter ${ULTRA_SCRIPTS_DIR}/generate_symbol_tables.py
+        Python3::Interpreter ${GENERATOR}
         ${ARG_OUTPUT_PATH} ${BINARY_FLAGS}
         ${DEPENDENCY_FLAGS}
         COMMAND_EXPAND_LISTS
