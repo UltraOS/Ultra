@@ -39,11 +39,14 @@ def to_uleb128(number: int, byte_idx: int) -> int:
 
 
 class Symbol(ABC):
-    def __init__(self, name: str, type: str, index: int, address: int) -> None:
+    def __init__(
+        self, name: str, type: str, index: int, address: int, size: int
+    ) -> None:
         self._name = name
         self._type = type
         self._index = index
         self._address = address
+        self._size = size
 
     @property
     def name(self) -> str:
@@ -64,6 +67,10 @@ class Symbol(ABC):
     @property
     def address(self) -> int:
         return self._address
+
+    @property
+    def size(self) -> int:
+        return self._size
 
     def is_weak(self) -> bool:
         # w is not considered as it's filtered out earlier
@@ -165,6 +172,7 @@ class Section:
 
 class Context(ABC):
     MAX_SYMBOL_LENGTH: int
+    HAS_SIZES: bool = False
 
     def __init__(
         self, text_start_name: str, text_end_name: str,
@@ -175,14 +183,16 @@ class Context(ABC):
 
         if binary_path:
             nm_output = subprocess.check_output(
-                ["nm", "-n", binary_path], universal_newlines=True
+                ["nm", "-n", "-S", binary_path], universal_newlines=True
             ).splitlines()
 
             raw_symbols = [e.split(" ") for e in nm_output]
             for sym in raw_symbols:
-                assert len(sym) == 3
+                assert len(sym) in (3, 4)
+                size = int(sym[1], 16) if len(sym) == 4 else 0
                 self.__add_symbol(
-                    sym[2], sym[1], len(self.__symbols), int(sym[0], 16)
+                    sym[-1], sym[-2], len(self.__symbols), int(sym[0], 16),
+                    size
                 )
 
             self.__symbols = list(filter(
@@ -207,7 +217,9 @@ class Context(ABC):
 
     @staticmethod
     @abstractmethod
-    def make_symbol(name: str, type: str, index: int, address: int) -> Symbol:
+    def make_symbol(
+        name: str, type: str, index: int, address: int, size: int
+    ) -> Symbol:
         pass
 
     @staticmethod
@@ -227,7 +239,7 @@ class Context(ABC):
             return
 
     def __add_symbol(
-        self, name: str, type: str, index: int, address: int
+        self, name: str, type: str, index: int, address: int, size: int
     ) -> None:
         # Explicitly skip the following:
         # - Undefined symbol: U
@@ -247,7 +259,7 @@ class Context(ABC):
                 f'Symbol "{name}" is too long, adjust MAX_SYMBOL_LENGTH'
             )
 
-        symbol = self.make_symbol(name, type, index, address)
+        symbol = self.make_symbol(name, type, index, address, size)
 
         self.__symbols.append(symbol)
         self._on_symbol_added(symbol)
@@ -270,8 +282,10 @@ class LinuxContext(Context):
         return self.__text_anchor
 
     @staticmethod
-    def make_symbol(name: str, type: str, index: int, address: int) -> Symbol:
-        return LinuxSymbol(name, type, index, address)
+    def make_symbol(
+        name: str, type: str, index: int, address: int, size: int
+    ) -> Symbol:
+        return LinuxSymbol(name, type, index, address, size)
 
     @staticmethod
     def make_table_generator(
@@ -314,6 +328,7 @@ class LinuxContext(Context):
 
 class UltraContext(Context):
     MAX_SYMBOL_LENGTH = 127
+    HAS_SIZES = True
     LINKER_SYMBOL_PREFIX: str = "g_linker_symbol_"
 
     @staticmethod
@@ -325,8 +340,10 @@ class UltraContext(Context):
         return UltraContext.LINKER_SYMBOL_PREFIX + "text_end"
 
     @staticmethod
-    def make_symbol(name: str, type: str, index: int, address: int) -> Symbol:
-        return UltraSymbol(name, type, index, address)
+    def make_symbol(
+        name: str, type: str, index: int, address: int, size: int
+    ) -> Symbol:
+        return UltraSymbol(name, type, index, address, size)
 
     @staticmethod
     def make_table_generator(
@@ -509,6 +526,7 @@ class TableType(Enum):
     SYMBOL_INDICES = 5
     TOKEN_TABLE = 6
     TOKEN_OFFSETS = 7
+    SYMBOL_SIZES = 8
 
 
 class TableGenerator(ABC):
@@ -596,6 +614,7 @@ class CGenerator(TableGenerator):
             TableType.SYMBOL_INDICES: "name_index_to_address_index",
             TableType.TOKEN_TABLE: "token_table",
             TableType.TOKEN_OFFSETS: "token_offsets",
+            TableType.SYMBOL_SIZES: "sizes",
         }[table_type]
 
     def _emit_label(
@@ -906,6 +925,14 @@ def main() -> None:
                 arr.emit(Value.u16(marker))
 
         gen.emit_addresses(ctx.symbols, ctx.anchor())
+
+        if ctx.HAS_SIZES:
+            with gen.array(TableType.SYMBOL_SIZES, ValueType.U32) as arr:
+                for symbol in ctx.symbols:
+                    arr.emit(
+                        Value.u32(symbol.size),
+                        comment=symbol.canonical_name()
+                    )
 
         ctx.sort_by_name()
 
