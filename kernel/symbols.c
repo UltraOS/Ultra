@@ -55,7 +55,7 @@ static const u8 *get_compressed_symbol_name_cursor(u32 index)
 
 error_t symbol_lookup_code_by_address(
     ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
-    size_t *out_offset_within
+    size_t *out_offset_within, size_t *out_size
 )
 {
     u32 rel_address, symbol_base;
@@ -80,6 +80,8 @@ error_t symbol_lookup_code_by_address(
     symbol_base = g_symbol_relative_addresses[begin];
     if (out_offset_within != nullptr)
         *out_offset_within = rel_address - symbol_base;
+    if (out_size != nullptr)
+        *out_size = g_symbol_sizes[begin];
 
     uncompress_symbol(
         get_compressed_symbol_name_cursor(begin),
