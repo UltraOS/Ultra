@@ -42,6 +42,12 @@ extern const u16 g_symbol_token_offsets[];
 extern const u32 g_symbol_relative_addresses[];
 
 /*
+ * An array of 'g_symbol_count' symbol sizes in bytes, in the same order as
+ * 'g_symbol_relative_addresses'.
+ */
+extern const u32 g_symbol_sizes[];
+
+/*
  * An array of 'g_symbol_count' 3-byte indices of names sorted in
  * lexicographical order that map names to their respective index in
  * 'g_symbol_relative_addresses' as well as the 'g_symbol_compressed_names'
