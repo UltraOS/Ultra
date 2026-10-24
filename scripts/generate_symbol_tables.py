@@ -165,6 +165,7 @@ class Section:
 
 class Context(ABC):
     MAX_SYMBOL_LENGTH: int
+    HAS_RELATIVE_BASE: bool = False
 
     def __init__(
         self, text_start_name: str, text_end_name: str,
@@ -198,6 +199,9 @@ class Context(ABC):
 
     def start_of_text(self) -> int:
         return self._text.begin
+
+    def address_base(self) -> int:
+        return self.start_of_text()
 
     def _should_drop(self, symbol: Symbol) -> bool:
         return not self._text.contains(symbol.address)
@@ -255,10 +259,14 @@ class Context(ABC):
 
 class LinuxContext(Context):
     MAX_SYMBOL_LENGTH = 511
+    HAS_RELATIVE_BASE = True
 
     def __init__(self, binary_path: Optional[str]):
         self.__init_text = Section("_sinittext", "_einittext", 0, 0)
         super().__init__("_stext", "_etext", binary_path)
+
+    def address_base(self) -> int:
+        return self.symbols[0].address if self.symbols else 0
 
     @staticmethod
     def make_symbol(name: str, type: str, index: int, address: int) -> Symbol:
@@ -572,7 +580,6 @@ class CGenerator(TableGenerator):
             TableType.SYMBOL_NAMES: "compressed_names",
             TableType.SYMBOL_MARKERS: "name_offsets",
             TableType.SYMBOL_ADDRESSES: "relative_addresses",
-            TableType.SYMBOL_BASE: "base",
             TableType.SYMBOL_INDICES: "name_index_to_address_index",
             TableType.TOKEN_TABLE: "token_table",
             TableType.TOKEN_OFFSETS: "token_offsets",
@@ -610,18 +617,9 @@ class CGenerator(TableGenerator):
     def emit(self, table_type: TableType, value: Value) -> None:
         assert value.type not in (ValueType.U8_ARRAY, ValueType.U16_ARRAY)
 
-        if table_type == TableType.SYMBOL_BASE:
-            self._write("const ptr_t ")
-            self._write(CGenerator.__table_type_to_string(table_type))
-        else:
-            self._emit_label(table_type, value.type)
-
+        self._emit_label(table_type, value.type)
         self._write(" = ")
         self._emit_value(value)
-
-        if table_type == TableType.SYMBOL_BASE:
-            self._write(" + (ptr_t)g_linker_symbol_text_begin")
-
         self._write(";\n\n")
 
     class ArrayEmitter(TableGenerator.ArrayEmitter):
@@ -856,17 +854,18 @@ def main() -> None:
             for marker in offset_markers:
                 arr.emit(Value.u16(marker))
 
-        first_symbol_address = ctx.symbols[0].address if ctx.symbols else 0
+        base = ctx.address_base()
 
         with gen.array(TableType.SYMBOL_ADDRESSES, ValueType.U32) as arr:
             for symbol in ctx.symbols:
                 arr.emit(
-                    Value.u32(symbol.address - first_symbol_address),
+                    Value.u32(symbol.address - base),
                     comment=symbol.canonical_name()
                 )
 
-        first_symbol_offset = first_symbol_address - ctx.start_of_text()
-        gen.emit(TableType.SYMBOL_BASE, Value.u32(first_symbol_offset))
+        if ctx.HAS_RELATIVE_BASE:
+            offset = base - ctx.start_of_text()
+            gen.emit(TableType.SYMBOL_BASE, Value.u32(offset))
 
         ctx.sort_by_name()
 
