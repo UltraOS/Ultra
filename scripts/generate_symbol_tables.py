@@ -123,9 +123,6 @@ class Symbol(ABC):
 
 
 class LinuxSymbol(Symbol):
-    def __init__(self, name: str, type: str, index: int, address: int) -> None:
-        super().__init__(name, type, index, address)
-
     def canonical_name(self) -> str:
         # Linux stores the type of the symbol as the first byte of the name
         return self._type + self._name
@@ -148,9 +145,6 @@ class LinuxSymbol(Symbol):
 
 
 class UltraSymbol(Symbol):
-    def __init__(self, name: str, type: str, index: int, address: int) -> None:
-        super().__init__(name, type, index, address)
-
     def canonical_name(self) -> str:
         return self.name
 
