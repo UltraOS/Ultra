@@ -159,6 +159,32 @@ def check_includes(ctx: Context) -> List[Finding]:
     return findings
 
 
+def check_private_includes(ctx: Context) -> List[Finding]:
+    findings = []
+
+    for path in tracked_sources(ctx):
+        # Linker script headers never reach C code
+        if not path.endswith(".h") or path.endswith(".ld.h"):
+            continue
+
+        if "private" in path.split("/"):
+            continue
+
+        text = read_source(ctx, path)
+
+        for number, line in enumerate(text.split("\n"), 1):
+            match = INCLUDE.match(line)
+            if match is None:
+                continue
+
+            if "private" in match.group("path").split("/"):
+                findings.append(Finding(
+                    path, number, "private/ header included by a public one"
+                ))
+
+    return findings
+
+
 def check_tabs(ctx: Context) -> List[Finding]:
     findings = []
 
@@ -659,6 +685,7 @@ CHECKS: Dict[str, Check] = {
     "formats": check_formats,
     "includes": check_includes,
     "null": check_null,
+    "private-includes": check_private_includes,
     "tabs": check_tabs,
     "variable-prefixes": check_variable_prefixes,
 }
