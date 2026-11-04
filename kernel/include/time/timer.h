@@ -15,6 +15,13 @@ struct timer;
 enum timer_result : u32 {
     // Don't re-arm, this timer is done (or has re-armed itself already)
     TIMER_RESULT_DONE = 0,
+
+    /*
+     * Re-arm the timer again. The callback is expected to have called
+     * timer_advance() to set a new deadline before returning this. This is a
+     * no-op if the timer was already re-armed earlier.
+     */
+    TIMER_RESULT_REARM,
 };
 
 typedef enum timer_result (*timer_fn_t)(struct timer *timer);
@@ -39,9 +46,8 @@ void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns);
 /*
  * Arm the timer to run its callback once at an absolute 'deadline_ns' in
  * ns_since_boot() time. If 'deadline_ns' is in the past, the callback is
- * invoked as soon as possible. To run it periodically, arm the timer again
- * from its callback, e.g. for timer_deadline() plus the period. Callable
- * from any context that may take a spinlock, including the callback itself.
+ * invoked as soon as possible. Callable from any context that may take a
+ * spinlock, including the callback itself.
  *
  * NOTE: The timer is armed on the calling CPU, unless its callback is running
  *       on another CPU at that moment, in which case it stays there. Arming a
@@ -57,6 +63,23 @@ static inline u64 timer_deadline(const struct timer *timer)
 {
     return timer->deadline_ns;
 }
+
+/*
+ * Move the deadline of 'timer' forward by whole periods of 'period_ns', to
+ * the first one after the current time, and return how many periods it
+ * moved. The slack the timer was armed with is kept. Only callable from the
+ * timer's own callback. Return TIMER_RESULT_REARM from the callback to re-arm
+ * the timer at the new deadline.
+ *
+ * NOTE: - If the timer was armed again after its callback started, this
+ *         returns 0 and keeps the deadline it was armed with. The caller must
+ *         ensure timer_advance() never happens at the same time as the timer
+ *         is armed from a different CPU.
+ *       - timer_cancel_nosync() returning false does not stop a callback that
+ *         returns TIMER_RESULT_REARM from re-arming the timer. Use
+ *         timer_cancel() if the target timer re-arms itself from the callback.
+ */
+u64 timer_advance(struct timer *timer, u64 period_ns);
 
 /*
  * Cancel a timer. The callback is guaranteed to not be running once this
