@@ -305,6 +305,20 @@ enum x86_cpu_vendor : u8 {
     X86_VENDOR_AMD,
 };
 
+#define X86_VFM_MODEL_MASK MAKE_BIT_MASK_U32(7, 0)
+#define X86_VFM_FAMILY_MASK MAKE_BIT_MASK_U32(15, 8)
+#define X86_VFM_VENDOR_MASK MAKE_BIT_MASK_U32(23, 16)
+
+/*
+ * A vendor, a family and a model number packed into a single value that
+ * identifies a CPU model. Model numbers are only unique within a family of
+ * one vendor.
+ */
+#define X86_VFM(vendor, family, model)               \
+    (BIT_FIELD_MAKE(X86_VFM_VENDOR_MASK, (vendor)) | \
+     BIT_FIELD_MAKE(X86_VFM_FAMILY_MASK, (family)) | \
+     BIT_FIELD_MAKE(X86_VFM_MODEL_MASK, (model)))
+
 struct x86_cpu_info {
     u32 max_cpuid;
     u32 max_extended_cpuid;
