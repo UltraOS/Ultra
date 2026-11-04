@@ -12,6 +12,7 @@ ultra_sources(
     entry.c
     entry.S
     cpu.c
+    cpu_match.c
     smp.c
     memory.c
     unwind.c
