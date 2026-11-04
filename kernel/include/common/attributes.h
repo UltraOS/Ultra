@@ -33,6 +33,7 @@
 #define USED __attribute__((used))
 #define WEAK __attribute__((weak))
 #define UNUSED_DECL __attribute__((unused))
+#define MUST_CHECK __attribute__((warn_unused_result))
 #define FALLTHROUGH __attribute__((fallthrough))
 
 #define SECTION_VAR(section, qualifiers, type) \
