@@ -7,6 +7,7 @@
 #include <common/minmax.h>
 #include <common/string.h>
 #include <common/bit.h>
+#include <common/overflow.h>
 
 #include <bug.h>
 #include <panic.h>
@@ -304,16 +305,16 @@ static bool area_fits(
     size_t size, size_t align, virt_addr_t *out_start
 )
 {
-    virt_addr_t start;
+    virt_addr_t start, end;
 
     start = MAX(area->start, vstart);
     start = ALIGN_UP(start, align);
 
     // The alignment, or the run itself, wrapped around the address space
-    if (start < area->start || start + size < start)
+    if (start < area->start || check_add_overflow(start, size, &end))
         return false;
 
-    if (start + size > area->end || start + size > vend)
+    if (end > area->end || end > vend)
         return false;
 
     *out_start = start;
@@ -492,11 +493,8 @@ static struct varea *varea_alloc_within(
     if (unlikely(size == 0))
         return nullptr;
 
-    if (guarded) {
-        if (unlikely(size + PAGE_SIZE < size))
-            return nullptr;
-        size += PAGE_SIZE;
-    }
+    if (guarded && check_add_overflow(size, PAGE_SIZE, &size))
+        return nullptr;
 
     area = alloc_from_cache(&s_varea_cache, behavior);
     info = alloc_from_cache(&s_vallocation_cache, behavior | ALLOC_ZEROED);
