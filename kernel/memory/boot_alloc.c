@@ -338,7 +338,7 @@ static INIT_CODE error_t allocate_within(
     phys_addr_t *out_addr
 )
 {
-    phys_addr_t range_begin;
+    phys_addr_t range_begin, range_end;
     size_t bytes_to_allocate;
     ssize_t mr_idx;
     struct memory_range *picked_mr = nullptr;
@@ -355,12 +355,11 @@ static INIT_CODE error_t allocate_within(
     if (lower_limit >= upper_limit)
         goto out_invalid_allocation;
 
-    // search gap is too small
-    if (lower_limit + bytes_to_allocate > upper_limit)
+    if (check_add_overflow(lower_limit, bytes_to_allocate, &range_end))
         goto out_invalid_allocation;
 
-    // overflow
-    if (lower_limit + bytes_to_allocate < lower_limit)
+    // search gap is too small
+    if (range_end > upper_limit)
         goto out_invalid_allocation;
 
     mr_idx = find_range(lower_limit, ALLOW_ONE_ABOVE_YES);
