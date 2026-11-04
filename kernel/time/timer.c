@@ -218,6 +218,21 @@ static void queue_insert(
     timer->flags |= TIMER_FLAG_QUEUED;
 }
 
+static void queue_requeue(
+    struct timer_queue *queue, struct timer *timer, u64 now_ns
+)
+{
+    if (timer->flags & TIMER_FLAG_QUEUED)
+        return;
+
+    /*
+     * Make sure the callback didn't forget to advance the timer, otherwise it
+     * would run again and again within this pass and cause us to hang.
+     */
+    BUG_ON(timer->deadline_ns <= now_ns);
+    queue_insert(queue, timer, timer->deadline_ns, timer->hard_deadline_ns);
+}
+
 void timer_arm_with_slack(struct timer *timer, u64 deadline_ns, u64 slack_ns)
 {
     struct timer_queue *queue;
@@ -268,6 +283,38 @@ void timer_cancel(struct timer *timer)
     }
 }
 
+u64 timer_advance(struct timer *timer, u64 period_ns)
+{
+    u64 now_ns, num_periods, advance_ns;
+
+    BUG_ON(period_ns == 0);
+
+    /*
+     * It was armed again since its callback started, so that deadline stands.
+     * Moving the deadline of a queued timer would break the order of the queue.
+     */
+    if (timer->flags & TIMER_FLAG_QUEUED)
+        return 0;
+
+    now_ns = ns_since_boot();
+    if (timer->deadline_ns > now_ns)
+        return 0;
+
+    num_periods = (now_ns - timer->deadline_ns) / period_ns + 1;
+
+    /*
+     * A hard deadline that wraps around would sit at the front of the queue
+     * and keep every timer behind it from running
+     */
+    BUG_ON(num_periods > (UINT64_MAX - timer->hard_deadline_ns) / period_ns);
+
+    advance_ns = num_periods * period_ns;
+    timer->deadline_ns += advance_ns;
+    timer->hard_deadline_ns += advance_ns;
+
+    return num_periods;
+}
+
 void timer_queue_set_event_device(struct event_device *dev)
 {
     struct timer_queue *queue;
@@ -287,6 +334,7 @@ void timer_queue_set_event_device(struct event_device *dev)
 static void queue_run_due(struct timer_queue *queue, u64 now_ns)
 {
     struct timer *timer;
+    enum timer_result result;
 
     for (;;) {
         timer = queue_first(queue);
@@ -299,10 +347,13 @@ static void queue_run_due(struct timer_queue *queue, u64 now_ns)
         timer->flags |= TIMER_FLAG_RUNNING;
         spin_unlock(&queue->lock);
 
-        timer->fn(timer);
+        result = timer->fn(timer);
 
         spin_lock(&queue->lock);
         timer->flags &= ~TIMER_FLAG_RUNNING;
+
+        if (result == TIMER_RESULT_REARM)
+            queue_requeue(queue, timer, now_ns);
     }
 }
 

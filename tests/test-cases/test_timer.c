@@ -291,6 +291,7 @@ TEST_CASE(timer_with_slack_alone_waits_until_the_slack_runs_out)
 struct periodic {
     struct timer timer;
     u64 period_ns;
+    u64 num_periods;
     int runs;
     bool cancel_result;
 };
@@ -316,6 +317,23 @@ static enum timer_result cancel_self(struct timer *timer)
     periodic->cancel_result = timer_cancel_nosync(timer);
 
     return TIMER_RESULT_DONE;
+}
+
+static enum timer_result advance(struct timer *timer)
+{
+    struct periodic *periodic;
+
+    periodic = container_of(timer, struct periodic, timer);
+    periodic->runs++;
+    periodic->num_periods = timer_advance(timer, periodic->period_ns);
+
+    return TIMER_RESULT_REARM;
+}
+
+static enum timer_result arm_and_ask_to_rearm(struct timer *timer)
+{
+    timer_arm(timer, 500);
+    return TIMER_RESULT_REARM;
 }
 
 TEST_CASE(timer_callback_can_rearm_itself)
@@ -356,6 +374,83 @@ TEST_CASE(timer_cancel_from_its_own_callback_reports_it_running)
     ASSERT_EQ(periodic.runs, 1);
     ASSERT(!periodic.cancel_result);
     ASSERT(timer_cancel_nosync(&periodic.timer));
+}
+
+TEST_CASE(timer_advance_rearms_for_the_next_period)
+{
+    struct periodic periodic = { .period_ns = 100 };
+    int arms_before;
+
+    reset_state();
+
+    timer_init(&periodic.timer, advance);
+    timer_arm(&periodic.timer, 100);
+
+    arms_before = s_num_arms;
+    take_interrupt_at(100);
+
+    ASSERT_EQ(periodic.runs, 1);
+    ASSERT_EQ(periodic.num_periods, 1);
+    ASSERT_EQ(timer_deadline(&periodic.timer), 200);
+    ASSERT_EQ(s_armed_for, 200);
+    ASSERT_EQ(s_num_arms, arms_before + 1);
+
+    ASSERT(timer_cancel_nosync(&periodic.timer));
+}
+
+TEST_CASE(timer_advance_skips_the_periods_it_missed)
+{
+    struct periodic periodic = { .period_ns = 100 };
+
+    reset_state();
+
+    timer_init(&periodic.timer, advance);
+    timer_arm(&periodic.timer, 100);
+
+    take_interrupt_at(450);
+
+    ASSERT_EQ(periodic.runs, 1);
+    ASSERT_EQ(periodic.num_periods, 4);
+    ASSERT_EQ(timer_deadline(&periodic.timer), 500);
+    ASSERT_EQ(s_armed_for, 500);
+
+    ASSERT(timer_cancel_nosync(&periodic.timer));
+}
+
+TEST_CASE(timer_advance_keeps_the_slack)
+{
+    struct periodic periodic = { .period_ns = 100 };
+
+    reset_state();
+
+    timer_init(&periodic.timer, advance);
+    timer_arm_with_slack(&periodic.timer, 100, 50);
+
+    take_interrupt_at(150);
+
+    ASSERT_EQ(periodic.num_periods, 1);
+    ASSERT_EQ(timer_deadline(&periodic.timer), 200);
+    ASSERT_EQ(s_armed_for, 250);
+
+    ASSERT(timer_cancel_nosync(&periodic.timer));
+}
+
+TEST_CASE(timer_armed_while_its_callback_runs_ignores_the_rearm)
+{
+    struct timer timer;
+
+    reset_state();
+
+    timer_init(&timer, arm_and_ask_to_rearm);
+    timer_arm(&timer, 100);
+
+    take_interrupt_at(100);
+
+    ASSERT_EQ(timer_deadline(&timer), 500);
+    ASSERT_EQ(s_armed_for, 500);
+
+    ASSERT(timer_cancel_nosync(&timer));
+    ASSERT(queue_first(this_cpu_ptr(&s_queue)) == nullptr);
 }
 
 TEST_CASE(timer_deadline_in_the_past_is_armed_for_now)
