@@ -4,6 +4,7 @@
 #include <common/string.h>
 #include <common/minmax.h>
 #include <common/align.h>
+#include <common/overflow.h>
 
 #include <boot/boot.h>
 #include <boot/ultra_protocol.h>
@@ -338,14 +339,15 @@ static INIT_CODE error_t allocate_within(
 )
 {
     phys_addr_t range_begin;
-    size_t bytes_to_allocate;;
+    size_t bytes_to_allocate;
     ssize_t mr_idx;
     struct memory_range *picked_mr = nullptr;
     struct memory_range allocated_mr;
+    bool overflow;
 
-    bytes_to_allocate = page_count * PAGE_SIZE;
+    overflow = check_mul_overflow(page_count, PAGE_SIZE, &bytes_to_allocate);
     BUG_ON_WITH_MSG(
-        bytes_to_allocate <= page_count,
+        page_count == 0 || overflow,
         "invalid allocation size (%zu pages)", page_count
     );
 
