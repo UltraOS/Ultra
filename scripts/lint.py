@@ -198,6 +198,42 @@ def check_tabs(ctx: Context) -> List[Finding]:
     return findings
 
 
+STATEMENT_EXPRESSION = re.compile(r"^#define\b.*\(\{\s*\\$")
+
+
+def indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def check_statement_expressions(ctx: Context) -> List[Finding]:
+    findings = []
+
+    for path in tracked_sources(ctx):
+        lines = read_source(ctx, path).split("\n")
+
+        for index, line in enumerate(lines):
+            if not STATEMENT_EXPRESSION.match(line):
+                continue
+
+            if indent_of(lines[index + 1]) != 4:
+                findings.append(Finding(
+                    path, index + 2,
+                    "indent the body of a statement expression once"
+                ))
+
+            end = index + 1
+            while lines[end].rstrip().endswith("\\"):
+                end += 1
+
+            if lines[end].strip().startswith("})") and indent_of(lines[end]):
+                findings.append(Finding(
+                    path, end + 1,
+                    "put the }) of a statement expression in the first column"
+                ))
+
+    return findings
+
+
 def check_file_end(ctx: Context) -> List[Finding]:
     findings = []
 
@@ -686,6 +722,7 @@ CHECKS: Dict[str, Check] = {
     "includes": check_includes,
     "null": check_null,
     "private-includes": check_private_includes,
+    "statement-expressions": check_statement_expressions,
     "tabs": check_tabs,
     "variable-prefixes": check_variable_prefixes,
 }
