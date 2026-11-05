@@ -280,3 +280,20 @@ TEST_CASE(list_for_each_entry_safe_remove_all)
     ASSERT_EQ(count, 3);
     ASSERT(list_is_empty(&head));
 }
+
+TEST_CASE(list_is_singular_with_exactly_one_entry)
+{
+    LIST_HEAD(head);
+    struct list_link a, b;
+
+    ASSERT_FALSE(list_is_singular(&head));
+
+    list_insert_prev(&head, &a);
+    ASSERT(list_is_singular(&head));
+
+    list_insert_prev(&head, &b);
+    ASSERT_FALSE(list_is_singular(&head));
+
+    list_remove(&a);
+    ASSERT(list_is_singular(&head));
+}
