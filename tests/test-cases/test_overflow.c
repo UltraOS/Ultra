@@ -48,3 +48,20 @@ TEST_CASE(check_overflow_judges_by_the_result_type)
     ASSERT_FALSE(check_sub_overflow(0u, 1u, &value));
     ASSERT_EQ(value, -1);
 }
+
+TEST_CASE(saturating_sub_stops_at_zero)
+{
+    u8 narrow = 10;
+    u32 calls = 0;
+
+    ASSERT_EQ(saturating_sub(10u, 3u), 7u);
+    ASSERT_EQ(saturating_sub(3u, 10u), 0u);
+    ASSERT_EQ(saturating_sub(UNSIGNED_MAX(u64), 1u), UNSIGNED_MAX(u64) - 1);
+    ASSERT_EQ(saturating_sub(5u, UNSIGNED_MAX(u64)), 0u);
+
+    ASSERT_EQ(saturating_sub(narrow, 300u), 0);
+    ASSERT(ARE_SAME_TYPE(saturating_sub(narrow, 1u), u8));
+
+    ASSERT_EQ(saturating_sub(10u, (calls++, 3u)), 7u);
+    ASSERT_EQ(calls, 1);
+}
