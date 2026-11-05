@@ -65,3 +65,9 @@ enum memory_order : u32 {
 
 #define atomic_cmpxchg_acq_rel(ptr, expected, desired) \
     atomic_cmpxchg_explicit(ptr, expected, desired, MO_ACQ_REL, MO_ACQUIRE)
+#define atomic_cmpxchg_relaxed(ptr, expected, desired) \
+    atomic_cmpxchg_explicit(ptr, expected, desired, MO_RELAXED, MO_RELAXED)
+#define atomic_cmpxchg_acquire(ptr, expected, desired) \
+    atomic_cmpxchg_explicit(ptr, expected, desired, MO_ACQUIRE, MO_RELAXED)
+#define atomic_cmpxchg_release(ptr, expected, desired) \
+    atomic_cmpxchg_explicit(ptr, expected, desired, MO_RELEASE, MO_RELAXED)

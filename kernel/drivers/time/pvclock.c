@@ -73,8 +73,7 @@ static u64 pvclock_read_stablize(u64 this_read)
          */
         if (this_read <= last_read)
             return last_read;
-    } while (!atomic_cmpxchg_explicit(&s_last_read_ns, &last_read, this_read,
-                                      MO_RELAXED, MO_RELAXED));
+    } while (!atomic_cmpxchg_relaxed(&s_last_read_ns, &last_read, this_read));
     return this_read;
 }
 

@@ -290,9 +290,7 @@ static inline pt_entry_word pt_entry_cmpxchg_populate(
     pt_entry_word expected = 0;
     bool success;
 
-    success = atomic_cmpxchg_explicit(
-        entry, &expected, value, MO_RELEASE, MO_RELAXED
-    );
+    success = atomic_cmpxchg_release(entry, &expected, value);
     if (success)
         return 0;
 
