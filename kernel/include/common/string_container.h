@@ -14,7 +14,7 @@ struct string {
     size_t size;
 };
 
-#define MAKE_STR(ptr, size) (struct string) { { (ptr) }, (size) }
+#define MAKE_STR(ptr, size) ((struct string) { { (ptr) }, (size) })
 #define NULL_STR() MAKE_STR(nullptr, 0)
 #define STR_CONSTEXPR(str) MAKE_STR(str, sizeof((str)) - 1)
 #define STR_RUNTIME(str) MAKE_STR(str, (str) ? strlen((str)) : 0)
