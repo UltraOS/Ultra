@@ -5,6 +5,7 @@
 #include <common/ctype.h>
 
 #include <param.h>
+#include <private/param.h>
 
 #define PARAM_SET_OPS_TEMPLATE(type)                              \
     error_t param_set_##type(                                     \
