@@ -161,7 +161,7 @@ void delay_ns(u64 ns)
         // TODO: maybe add an arch_early_delay_ns helper
         return;
 
-    deadline = ns_since_boot() + ns;
+    deadline = ns_from_now(ns);
     while (ns_since_boot() < deadline)
         arch_cpu_relax();
 }

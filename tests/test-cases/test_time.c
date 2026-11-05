@@ -268,6 +268,20 @@ TEST_CASE(keeper_without_device_is_zero)
     ASSERT_EQ(ns_since_boot(), 0);
 }
 
+TEST_CASE(ns_from_now_saturates)
+{
+    struct counter_device dev = TEST_CD("tsc", COUNTER_MASK(64), IDEAL);
+
+    time_test_reset();
+    counter_device_register(&dev, ONE_NS_PER_CYCLE_HZ);
+
+    g_counter_value = 1000;
+    ASSERT_EQ(ns_from_now(500), 1500);
+    ASSERT_EQ(ns_from_now(UNSIGNED_MAX(u64)), NO_DEADLINE);
+
+    counter_device_unregister(&dev);
+}
+
 TEST_CASE(keeper_accumulates_across_ticks)
 {
     struct counter_device dev = TEST_CD("tsc", COUNTER_MASK(64), IDEAL);
