@@ -5,10 +5,10 @@
 #define COMPARE(x, y, op) ((x) op (y) ? (x) : (y))
 
 #define RUNTIME_COMPARE(x, y, x_name, y_name, op) ({ \
-        typeof(x) x_name = x;                        \
-        typeof(y) y_name = y;                        \
-        COMPARE(x_name, y_name, op);                 \
-    })
+    typeof(x) x_name = x;                            \
+    typeof(y) y_name = y;                            \
+    COMPARE(x_name, y_name, op);                     \
+})
 
 #define DO_COMPARE(x, y, op)                                            \
     CHOOSE_EXPR(                                                        \
