@@ -62,6 +62,13 @@ static inline bool list_is_singular(const struct list_link *head)
     return !list_is_empty(head) && head->next == head->prev;
 }
 
+static inline bool list_is_first(
+    const struct list_link *head, const struct list_link *link
+)
+{
+    return head->next == link;
+}
+
 #define list_entry(ptr, type, member) container_of(ptr, type, member)
 
 #define list_first_entry(head, type, member) \

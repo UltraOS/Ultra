@@ -297,3 +297,17 @@ TEST_CASE(list_is_singular_with_exactly_one_entry)
     list_remove(&a);
     ASSERT(list_is_singular(&head));
 }
+
+TEST_CASE(list_is_first_follows_the_first_entry)
+{
+    LIST_HEAD(head);
+    struct list_link a, b;
+
+    list_insert_prev(&head, &a);
+    list_insert_prev(&head, &b);
+    ASSERT(list_is_first(&head, &a));
+    ASSERT_FALSE(list_is_first(&head, &b));
+
+    list_remove(&a);
+    ASSERT(list_is_first(&head, &b));
+}
