@@ -1,4 +1,5 @@
 #include <common/attributes.h>
+#include <common/error.h>
 #include <symbols.h>
 
 #include <private/arch/abortable_instructions.h>

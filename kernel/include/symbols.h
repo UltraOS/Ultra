@@ -1,5 +1,5 @@
 #include <common/types.h>
-#include <common/error.h>
+#include <common/string_container.h>
 #include <common/minmax.h>
 
 #include <linker.h>
@@ -38,8 +38,12 @@ static inline bool address_is_kernel_data(ptr_t address)
                                   LINKER_SYMBOL_ADDR(readwrite_data_end));
 }
 
-error_t symbol_lookup_code_by_address(
-    ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
+/*
+ * Look up the code symbol that 'address' falls into. Returns its name as a
+ * view of 'out_name_buf', or NULL_STR() if nothing matched.
+ */
+struct string symbol_lookup_code_by_address(
+    ptr_t address, char out_name_buf[static MAX_SYMBOL_LENGTH],
     size_t *out_offset_within, size_t *out_size
 );
 
@@ -47,9 +51,9 @@ error_t symbol_lookup_code_by_address(
  * Same as symbol_lookup_code_by_address(), but for data (variables).
  *
  * NOTE: unlike code symbol lookups, this honors the 'size' of the symbol and
- *       returns ENOENT if an address happens to be out-of-bounds.
+ *       returns NULL_STR() if an address happens to be out-of-bounds.
  */
-error_t symbol_lookup_data_by_address(
-    ptr_t address, char out_name_buf[MAX_SYMBOL_LENGTH],
+struct string symbol_lookup_data_by_address(
+    ptr_t address, char out_name_buf[static MAX_SYMBOL_LENGTH],
     size_t *out_offset_within, size_t *out_size
 );

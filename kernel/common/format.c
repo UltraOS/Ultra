@@ -81,6 +81,11 @@ static void write_many(
     fb_state->bytes_written += count;
 }
 
+static void write_str(struct fmt_buf_state *fb_state, struct string str)
+{
+    write_many(fb_state, str.text, str.size);
+}
+
 static char hex_char(bool upper, u64 value)
 {
     static const char s_upper_hex[] = "0123456789ABCDEF";
@@ -181,14 +186,14 @@ static void write_symbol(
 )
 {
     char sym[MAX_SYMBOL_LENGTH];
+    struct string name;
     size_t offset, size;
-    error_t ret;
     int len;
 
-    ret = symbol_lookup_code_by_address(
+    name = symbol_lookup_code_by_address(
         pc - is_return_address, sym, &offset, &size
     );
-    if (is_error(ret)) {
+    if (str_is_null(name)) {
         len = snprintf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
         write_many(fb_state, sym, len);
         return;
@@ -196,7 +201,7 @@ static void write_symbol(
 
     offset += is_return_address;
 
-    write_cstr(fb_state, sym);
+    write_str(fb_state, name);
     if (offset) {
         len = snprintf(sym, sizeof(sym), "+%zu/%zu", offset, size);
         write_many(fb_state, sym, len);
