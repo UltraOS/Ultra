@@ -52,6 +52,8 @@ static inline bool str_starts_with_caseless(
     return str_starts_with_with_cb(str, prefix, chars_caseless_compare);
 }
 
+bool str_ends_with(struct string str, struct string suffix);
+
 ssize_t str_find_with_cb(
     struct string str, bool (*is_match)(struct string str), size_t starting_at
 );

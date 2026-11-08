@@ -85,3 +85,12 @@ TEST_CASE(starts_with_caseless)
     ASSERT_FALSE(str_starts_with_caseless(STR("ASU"), STR("ASUS")));
     ASSERT_FALSE(str_starts_with_caseless(STR("BSUS X"), STR("ASUS")));
 }
+
+TEST_CASE(ends_with)
+{
+    ASSERT_TRUE(str_ends_with(STR("data+0x10/0x20"), STR("+0x10/0x20")));
+    ASSERT_TRUE(str_ends_with(STR("abc"), STR("abc")));
+    ASSERT_TRUE(str_ends_with(STR("abc"), STR("")));
+    ASSERT_FALSE(str_ends_with(STR("bc"), STR("abc")));
+    ASSERT_FALSE(str_ends_with(STR("abd"), STR("bc")));
+}

@@ -70,6 +70,17 @@ bool str_starts_with_with_cb(
     return true;
 }
 
+bool str_ends_with(struct string str, struct string suffix)
+{
+    struct string tail;
+
+    if (suffix.size > str.size)
+        return false;
+
+    tail = str_substring(str, str.size - suffix.size, str.size);
+    return str_equals(tail, suffix);
+}
+
 ssize_t str_find_with_cb(
     struct string str, bool (*is_match)(struct string str), size_t offset
 )
