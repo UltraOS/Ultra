@@ -97,11 +97,16 @@ void kthread_did_exit(struct task *task)
     complete_all(&task->kthread.exited);
 }
 
+void kthread_wait_for_exit(struct task *task)
+{
+    wait_for_completion(&task->kthread.exited);
+}
+
 void kthread_stop(struct task *task)
 {
     task_set_flag(task, TASK_FLAG_KTHREAD_SHOULD_STOP);
     wake_up_task(task, TASK_STATE_NEW | TASK_STATE_UNINTERRUPTIBLE);
-    wait_for_completion(&task->kthread.exited);
+    kthread_wait_for_exit(task);
 
     task_unref(task);
 }

@@ -43,6 +43,13 @@ NORETURN
 void kthread_exit(void);
 
 /*
+ * Wait until a kernel thread that was started has exited. The caller must
+ * hold a reference to the task, e.g. the one from kthread_create(), and
+ * still owns it afterwards.
+ */
+void kthread_wait_for_exit(struct task *task);
+
+/*
  * Ask a kernel thread to stop and wait until it has exited. The thread
  * has to cooperate by checking kthread_should_stop() whenever it is
  * woken.
