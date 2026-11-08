@@ -1,0 +1,46 @@
+name: Platform toolchain
+description: Build the platform toolchain, with GCC cached between runs
+
+inputs:
+  arch:
+    description: The architecture to build for
+    required: true
+  toolchain:
+    description: gcc or clang
+    required: true
+  lookup-only:
+    description: Don't restore a cached toolchain, only build a missing one
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.toolchain == 'gcc' }}
+      id: version
+      name: Get the toolchain version
+      shell: bash
+      run: |
+        python3 -c 'import scripts.build_utils.toolchain_builder as tb
+        print(f"key=gcc-{tb.GCC_VERSION}-binutils-{tb.BINUTILS_VERSION}")' \
+          >> "$GITHUB_OUTPUT"
+
+    - if: ${{ inputs.toolchain == 'gcc' }}
+      id: cache
+      name: Restore the toolchain cache
+      uses: actions/cache/restore@v4.2.2
+      with:
+        path: "${{ github.workspace }}/toolchain/tools-${{ inputs.toolchain }}-${{ inputs.arch }}"
+        key: "${{ runner.os }}-${{ runner.arch }}-${{ inputs.arch }}-${{ steps.version.outputs.key }}"
+        lookup-only: ${{ inputs.lookup-only }}
+
+    - if: ${{ inputs.lookup-only != 'true' || steps.cache.outputs.cache-hit != 'true' }}
+      name: Build the platform toolchain
+      shell: bash
+      run: "${{ github.workspace }}/build.py --arch ${{ inputs.arch }} --toolchain ${{ inputs.toolchain }} --no-tune-native --toolchain-only"
+
+    - if: ${{ inputs.toolchain == 'gcc' && steps.cache.outputs.cache-hit != 'true' }}
+      name: Save the toolchain cache
+      uses: actions/cache/save@v4.2.2
+      with:
+        path: "${{ github.workspace }}/toolchain/tools-${{ inputs.toolchain }}-${{ inputs.arch }}"
+        key: ${{ steps.cache.outputs.cache-primary-key }}

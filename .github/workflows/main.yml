@@ -45,7 +45,23 @@ jobs:
       - name: Check the coding conventions
         run: "${{ github.workspace }}/build.py --toolchain clang --lint"
 
+  toolchain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Build the GCC toolchain unless it is cached
+        uses: ./.github/actions/toolchain
+        with:
+          arch: x86_64
+          toolchain: gcc
+          lookup-only: true
+
   build:
+    needs: toolchain
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -66,31 +82,11 @@ jobs:
         with:
           submodules: true
 
-      - if: ${{ matrix.toolchain == 'gcc' }}
-        id: toolchain-version
-        name: Get the toolchain version
-        run: |
-          python3 -c 'import scripts.build_utils.toolchain_builder as tb
-          print(f"key=gcc-{tb.GCC_VERSION}-binutils-{tb.BINUTILS_VERSION}")' \
-            >> "$GITHUB_OUTPUT"
-
-      - if: ${{ matrix.toolchain == 'gcc' }}
-        id: toolchain-cache
-        name: Restore the toolchain cache
-        uses: actions/cache/restore@v4.2.2
-        with:
-          path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
-          key: "${{ runner.os }}-${{ runner.arch }}-${{ matrix.arch }}-${{ steps.toolchain-version.outputs.key }}"
-
       - name: Build the platform toolchain
-        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --toolchain ${{ matrix.toolchain }} --no-tune-native --toolchain-only"
-
-      - if: ${{ matrix.toolchain == 'gcc' && steps.toolchain-cache.outputs.cache-hit != 'true' }}
-        name: Save the toolchain cache
-        uses: actions/cache/save@v4.2.2
+        uses: ./.github/actions/toolchain
         with:
-          path: "${{ github.workspace }}/toolchain/tools-${{ matrix.toolchain }}-${{ matrix.arch }}"
-          key: ${{ steps.toolchain-cache.outputs.cache-primary-key }}
+          arch: ${{ matrix.arch }}
+          toolchain: ${{ matrix.toolchain }}
 
       - name: Build the kernel
         run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --config ${{ matrix.preset }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
