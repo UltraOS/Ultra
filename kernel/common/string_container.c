@@ -1,5 +1,6 @@
 #include <common/string_container.h>
 #include <common/ctype.h>
+#include <common/format.h>
 
 bool str_equals(struct string lhs, struct string rhs)
 {
@@ -117,4 +118,21 @@ ssize_t str_find(struct string str, struct string needle, size_t starting_at)
     }
 
     return -1;
+}
+
+struct string str_printf(
+    char *restrict buffer, size_t capacity, const char *fmt, ...
+)
+{
+    va_list list;
+    int written;
+
+    va_start(list, fmt);
+    written = vscnprintf(buffer, capacity, fmt, list);
+    va_end(list);
+
+    if (is_nerror(written))
+        return NULL_STR();
+
+    return MAKE_STR(buffer, written);
 }

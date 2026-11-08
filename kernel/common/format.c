@@ -186,16 +186,15 @@ static void write_symbol(
 )
 {
     char sym[MAX_SYMBOL_LENGTH];
-    struct string name;
+    struct string name, text;
     size_t offset, size;
-    int len;
 
     name = symbol_lookup_code_by_address(
         pc - is_return_address, sym, &offset, &size
     );
     if (str_is_null(name)) {
-        len = snprintf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
-        write_many(fb_state, sym, len);
+        text = str_printf(sym, sizeof(sym), "unknown/garbage <0x%016zX>", pc);
+        write_str(fb_state, text);
         return;
     }
 
@@ -203,8 +202,8 @@ static void write_symbol(
 
     write_str(fb_state, name);
     if (offset) {
-        len = snprintf(sym, sizeof(sym), "+%zu/%zu", offset, size);
-        write_many(fb_state, sym, len);
+        text = str_printf(sym, sizeof(sym), "+%zu/%zu", offset, size);
+        write_str(fb_state, text);
     }
 }
 

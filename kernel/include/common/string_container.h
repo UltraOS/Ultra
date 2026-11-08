@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/types.h>
+#include <common/attributes.h>
 #include <common/string.h>
 #include <common/ctype.h>
 
@@ -168,3 +169,12 @@ static inline void str_terminated_copy(char *dst, struct string str)
     memcpy(dst, str.text, str.size);
     dst[str.size] = '\0';
 }
+
+/*
+ * Same as scnprintf(), but returns what was written as a view of 'buffer'.
+ * Returns NULL_STR() if 'fmt' is invalid.
+ */
+PRINTF_DECL(3, 4)
+struct string str_printf(
+    char *restrict buffer, size_t capacity, const char *fmt, ...
+);
