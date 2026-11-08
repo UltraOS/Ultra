@@ -110,6 +110,11 @@ void kthread_wait_for_exit(struct task *task)
     wait_for_completion(&task->kthread.exited);
 }
 
+bool kthread_wait_for_exit_timeout(struct task *task, u64 timeout_ns)
+{
+    return wait_for_completion_timeout(&task->kthread.exited, timeout_ns);
+}
+
 void kthread_stop(struct task *task)
 {
     task_set_flag(task, TASK_FLAG_KTHREAD_SHOULD_STOP);

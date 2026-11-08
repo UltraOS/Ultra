@@ -50,6 +50,13 @@ void kthread_exit(void);
 void kthread_wait_for_exit(struct task *task);
 
 /*
+ * Same as kthread_wait_for_exit(), except the caller stops waiting once
+ * 'timeout_ns' have passed. Returns true if the thread has exited, false if
+ * it still hadn't when the timeout ran out.
+ */
+bool kthread_wait_for_exit_timeout(struct task *task, u64 timeout_ns);
+
+/*
  * Ask a kernel thread to stop and wait until it has exited. The thread
  * has to cooperate by checking kthread_should_stop() whenever it is
  * woken.
