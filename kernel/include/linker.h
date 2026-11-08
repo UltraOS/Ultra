@@ -27,6 +27,11 @@
 #define SECTION_ARRAY_ARGS(x) \
     SECTION_ARRAY_BEGIN(x), SECTION_ARRAY_SIZE(x)
 
+#define for_each_section_array_item(item, x) \
+    for ((item) = SECTION_ARRAY_BEGIN(x);    \
+         (item) < SECTION_ARRAY_END(x);      \
+         (item)++)
+
 #define ABORTABLE_INSTRUCTIONS_SECTION abortable_instructions
 #define BUG_TABLE_SECTION bug_table
 #define PARAMETERS_SECTION parameters

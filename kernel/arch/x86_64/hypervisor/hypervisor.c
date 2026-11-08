@@ -74,8 +74,7 @@ void INIT_CODE x86_detect_hypervisor(void)
 
     cpuid_has_hypervisor = all_cpus_have(X86_FEATURE_HYPERVISOR);
 
-    for (hv = SECTION_ARRAY_BEGIN(HYPERVISORS_SECTION);
-         hv < SECTION_ARRAY_END(HYPERVISORS_SECTION); ++hv) {
+    for_each_section_array_item(hv, HYPERVISORS_SECTION) {
         u32 this_priority = 0;
 
         if (cpuid_has_hypervisor && hv->max_leaf >= BASE_HYPERVISOR_LEAF)

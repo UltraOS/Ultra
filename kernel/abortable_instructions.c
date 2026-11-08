@@ -9,12 +9,9 @@ DECLARE_TYPED_SECTION_MARKERS(
 
 static const struct abortable_instruction *find_abortable_instruction(reg_t ip)
 {
-    ssize_t i;
     const struct abortable_instruction *ai;
 
-    for (i = 0; i < SECTION_ARRAY_SIZE(ABORTABLE_INSTRUCTIONS_SECTION); i++) {
-        ai = &SECTION_ARRAY_BEGIN(ABORTABLE_INSTRUCTIONS_SECTION)[i];
-
+    for_each_section_array_item(ai, ABORTABLE_INSTRUCTIONS_SECTION) {
         if (SELF_RELATIVE_TARGET(ai->try_pc_disp) == ip)
             return ai;
     }

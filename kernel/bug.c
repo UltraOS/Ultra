@@ -56,12 +56,9 @@ DECLARE_TYPED_SECTION_MARKERS(struct bug_entry, BUG_TABLE_SECTION);
 
 static struct bug_entry *find_bug_entry(reg_t pc)
 {
-    ssize_t i;
     struct bug_entry *entry;
 
-    for (i = 0; i < SECTION_ARRAY_SIZE(BUG_TABLE_SECTION); i++) {
-        entry = &SECTION_ARRAY_BEGIN(BUG_TABLE_SECTION)[i];
-
+    for_each_section_array_item(entry, BUG_TABLE_SECTION) {
         if (SELF_RELATIVE_TARGET(entry->pc_disp) == pc)
             return entry;
     }
