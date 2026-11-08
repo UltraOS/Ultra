@@ -8,6 +8,10 @@
 #define NORETURN _Noreturn
 #endif
 
+#ifdef __cplusplus
+#define restrict __restrict
+#endif
+
 #define PACKED __attribute__((packed))
 
 #ifdef __clang__
