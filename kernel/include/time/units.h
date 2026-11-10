@@ -23,6 +23,13 @@
 #define MS_PER_DAY  (24ull * MS_PER_HOUR)
 #define MS_PER_YEAR (365ull * MS_PER_DAY)
 
+#define MS_TO_NS(ms) ((ms) * NS_PER_MS)
+#define SEC_TO_NS(sec) ((sec) * NS_PER_SEC)
+
+#define NS_TO_US(ns) ((ns) / NS_PER_US)
+#define NS_TO_MS(ns) ((ns) / NS_PER_MS)
+#define NS_TO_SEC(ns) ((ns) / NS_PER_SEC)
+
 /*
  * A quantity broken down for display: 'value' and 'thousandths' are the
  * integral and fractional parts of the quantity expressed in 'unit'.

@@ -165,7 +165,6 @@ static void INIT_CODE early_tsc_calibrate(void)
 {
     u64 tsc_start, tsc_end, tsc_delta;
     u64 ref_start, ref_now, ref_delta, ref_ns;
-    u64 target_ns = EARLY_CALIBRATE_MS * NS_PER_MS;
     struct counter_device *ref_cd;
 
     ref_cd = current_counter_device();
@@ -190,7 +189,7 @@ static void INIT_CODE early_tsc_calibrate(void)
         }
 
         ref_ns = counter_device_cycles_to_ns(ref_cd, ref_delta);
-    } while (ref_ns < target_ns);
+    } while (ref_ns < MS_TO_NS(EARLY_CALIBRATE_MS));
 
     tsc_end = rdtsc();
     tsc_delta = tsc_end - tsc_start;

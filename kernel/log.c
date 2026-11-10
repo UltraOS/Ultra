@@ -242,8 +242,8 @@ static bool log_flush_console(struct console *con)
     if (rec.level > s_log_level)
         return true;
 
-    sec = rec.timestamp_ns / NS_PER_SEC;
-    usec = (rec.timestamp_ns % NS_PER_SEC) / 1000;
+    sec = NS_TO_SEC(rec.timestamp_ns);
+    usec = NS_TO_US(rec.timestamp_ns % NS_PER_SEC);
     stamp_len = snprintf(
         stamp, sizeof(stamp), "[%5llu.%06llu] ", sec, usec
     );
