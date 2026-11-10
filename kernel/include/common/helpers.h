@@ -30,6 +30,13 @@
 #define IS_POWER_OF_TWO_OR_ZERO(x) (((x) & ((x) - 1)) == 0)
 #define IS_POWER_OF_TWO(x) ((x) != 0 && IS_POWER_OF_TWO_OR_ZERO(x))
 
+#define CLASSIFY_TYPE(x) __builtin_classify_type(x)
+
+#define TYPE_CLASS_INTEGER 1
+#define TYPE_CLASS_POINTER 5
+#define TYPE_CLASS_STRUCT 12
+#define TYPE_CLASS_UNION 13
+
 #define DO_CONTAINER_OF(ptr, ptr_name, type, member) ({                    \
     char *ptr_name = (char*)(ptr);                                         \
     BUILD_BUG_ON(!ARE_SAME_TYPE(*(ptr), ((type*)sizeof(type))->member) &&  \
