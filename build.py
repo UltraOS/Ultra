@@ -10,7 +10,7 @@ import time
 import signal
 import sys
 from contextlib import contextmanager
-from typing import Optional, List, Callable, Iterator, Tuple
+from typing import Optional, Dict, List, Callable, Iterator, Tuple
 
 try:
     import scripts.kconfiglib.kconfiglib as kc
@@ -567,6 +567,11 @@ def main() -> None:
     build.add_argument("--reset-config", action="store_true",
                        help="Recreate the build directory's config from "
                             "--config, discarding the changes made to it")
+    build.add_argument("--optimization-level", type=int, choices=range(4),
+                       help="Override the optimization level of the config")
+    build.add_argument("--lto", action=argparse.BooleanOptionalAction,
+                       help="Override whether the config uses link-time "
+                            "optimization")
     build.add_argument("--menuconfig", action="store_true",
                        help="Run menuconfig to edit the current config file")
     build.add_argument("--guiconfig", action="store_true",
@@ -713,8 +718,14 @@ def main() -> None:
     build_dir = pg.project_root_relative(build_dir_name)
     os.makedirs(build_dir, exist_ok=True)
 
+    overrides: Dict[str, str] = {}
+    if args.optimization_level is not None:
+        overrides["OPTIMIZATION_LEVEL"] = str(args.optimization_level)
+    if args.lto is not None:
+        overrides["LTO"] = "y" if args.lto else "n"
+
     args.config = os.path.join(build_dir, ".config")
-    cl.prepare_config(args.config, config_layers, args.toolchain,
+    cl.prepare_config(args.config, config_layers, overrides, args.toolchain,
                       args.arch, args.reset_config)
 
     if args.menuconfig or args.guiconfig:

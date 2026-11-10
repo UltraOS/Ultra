@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import sys
 from typing import Dict, List, Optional, Set
@@ -22,6 +23,8 @@ TOOLCHAIN_TO_CONFIG_KEY = {
 
 MERGE_BASE = ".config.merge-base"
 MERGE_BASE_LAYER = "# layer: "
+
+OVERRIDES = ".config.overrides"
 
 
 def root_kconfig() -> kc.Kconfig:
@@ -176,9 +179,77 @@ def stamp_path(stamp: str) -> str:
     return stamp.split(" ", 1)[1]
 
 
+def read_overrides(path: str) -> Dict[str, Dict[str, str]]:
+    if not os.path.isfile(path):
+        return {}
+
+    with open(path) as f:
+        return json.load(f)
+
+
+def overrides_in_place(
+    record: Dict[str, Dict[str, str]], overrides: Dict[str, str],
+    cur_values: Dict[str, str]
+) -> bool:
+    for name, entry in record.items():
+        if overrides.get(name) != entry["value"]:
+            return False
+
+    return all(cur_values.get(name) == value
+               for name, value in overrides.items())
+
+
+def restore_overridden(
+    record: Dict[str, Dict[str, str]], overrides: Dict[str, str],
+    cur_values: Dict[str, str]
+) -> List[str]:
+    messages = []
+
+    for name, entry in record.items():
+        # The value was changed by hand after it was overridden, keep it
+        if cur_values.get(name) != entry["value"]:
+            continue
+
+        cur_values[name] = entry["replaced"]
+        if name not in overrides:
+            messages.append(f"restoring {name} {entry['value']} => "
+                            f"{entry['replaced']}, no longer overridden "
+                            "from the command line")
+
+    return messages
+
+
+def apply_overrides(
+    kconfig: kc.Kconfig, overrides: Dict[str, str], path: str
+) -> List[str]:
+    values = config_values(kconfig)
+    record = {}
+    messages = []
+
+    for name, value in overrides.items():
+        kconfig.syms[name].set_value(value)
+        if values[name] == value:
+            continue
+
+        record[name] = {"value": value, "replaced": values[name]}
+        messages.append(f"overriding {name} {values[name]} => {value} "
+                        "from the command line")
+
+    if not record:
+        if os.path.isfile(path):
+            os.remove(path)
+
+        return messages
+
+    with open(path, "w") as f:
+        json.dump(record, f, indent=4)
+
+    return messages
+
+
 def merge_config(
-    config: str, merge_base: str, layered: kc.Kconfig, layers: List[str],
-    toolchain: str, arch: str
+    config: str, merge_base: str, overrides_path: str, layered: kc.Kconfig,
+    layers: List[str], overrides: Dict[str, str], toolchain: str, arch: str
 ) -> None:
     where = display_path(config)
     stamps = layer_stamps(layers)
@@ -197,15 +268,17 @@ def merge_config(
         reader.load_config(merge_base)
         base_values = config_values(reader)
 
-    # Leave .config alone when nothing changed, rewriting it would
-    # make cmake reconfigure on every build
-    if old_stamps == stamps and base_values == new_values:
-        return
-
     reader.load_config(config)
     cur_values = config_values(reader)
+    record = read_overrides(overrides_path)
 
-    messages = []
+    # Leave .config alone when nothing changed, rewriting it would
+    # make cmake reconfigure on every build
+    if (old_stamps == stamps and base_values == new_values and
+            overrides_in_place(record, overrides, cur_values)):
+        return
+
+    messages = restore_overridden(record, overrides, cur_values)
     if old_paths is None and paths:
         messages.append(f"now made from {', '.join(paths)}")
 
@@ -276,21 +349,29 @@ def merge_config(
         messages.append(f"applied {applied} {changes} from "
                         f"{', '.join(changed) or 'Kconfig'}")
 
-    for message in messages + conflicts + hidden:
+    overridden = apply_overrides(layered, overrides, overrides_path)
+    for message in messages + conflicts + hidden + overridden:
         print(f"{where}: {message}")
 
     layered.write_config(config)
 
 
 def prepare_config(
-    config: str, layers: List[str], toolchain: str, arch: str, reset: bool
+    config: str, layers: List[str], overrides: Dict[str, str],
+    toolchain: str, arch: str, reset: bool
 ) -> None:
     merge_base = os.path.join(os.path.dirname(config), MERGE_BASE)
+    overrides_path = os.path.join(os.path.dirname(config), OVERRIDES)
     layered = load_layers(layers, toolchain, arch)
 
     if not reset and os.path.isfile(config):
-        merge_config(config, merge_base, layered, layers, toolchain, arch)
+        merge_config(config, merge_base, overrides_path, layered, layers,
+                     overrides, toolchain, arch)
         return
 
     write_merge_base(layered, layer_stamps(layers), merge_base)
+
+    for message in apply_overrides(layered, overrides, overrides_path):
+        print(f"{display_path(config)}: {message}")
+
     layered.write_config(config)
