@@ -42,8 +42,12 @@ jobs:
       - name: Build the platform toolchain
         run: "${{ github.workspace }}/build.py --toolchain clang --toolchain-only"
 
-      - name: Check the coding conventions
-        run: "${{ github.workspace }}/build.py --toolchain clang --lint"
+      - name: Check the coding conventions of every preset
+        run: |
+          for preset in configs/*.config; do
+            "${{ github.workspace }}/build.py" --toolchain clang \
+                --config "$(basename "$preset" .config)" --lint
+          done
 
   toolchain:
     runs-on: ubuntu-latest
