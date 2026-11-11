@@ -360,6 +360,7 @@ def hyper_get_iso_br() -> str:
     return ret
 
 
+QEMU_VERDICT_TIMEOUT_SECONDS = 120
 QEMU_DRAIN_SECONDS = 1
 
 # The colored console wraps parts of a line in escape sequences
@@ -415,10 +416,19 @@ def qemu_watch(
     return match
 
 
+# A QEMU run is judged by the same criteria as a baremetal run
+def verdict_pattern(criteria_name: Optional[str]) -> re.Pattern:
+    criteria = bmc.load_criteria(criteria_name)
+    failures = "|".join(criteria["failures"])
+    return re.compile(
+        f"(?P<success>{criteria['success']})|(?P<failure>{failures})".encode()
+    )
+
+
 def run_qemu(
     arch: str, image_path: str, image_type: str, debug: bool, uefi_boot: bool,
     uefi_firmware: str, kvm: bool, la57: bool, headless: bool, dry: bool,
-    run_for: Optional[float] = None
+    run_for: Optional[float] = None, verdict: Optional[re.Pattern] = None
 ) -> Optional[subprocess.Popen]:
     extra_args = []
     force_uefi = False
@@ -472,6 +482,27 @@ def run_qemu(
     if dry:
         print(" ".join(args))
         return None
+
+    if verdict is not None:
+        qp = subprocess.Popen(args, stdout=subprocess.PIPE)
+        try:
+            match = qemu_watch(qp, QEMU_VERDICT_TIMEOUT_SECONDS, verdict)
+        except KeyboardInterrupt:
+            qp.terminate()
+            qp.wait()
+            sys.exit(130)
+
+        if match is None:
+            print("Run did not finish", file=sys.stderr)
+            sys.exit(2)
+
+        failure = match.group("failure")
+        if failure is not None:
+            print(f"Run failed: {failure.decode(errors='replace')}",
+                  file=sys.stderr)
+            sys.exit(1)
+
+        sys.exit(0)
 
     if run_for is not None and not debug:
         qp = subprocess.Popen(args, stdout=subprocess.PIPE)
@@ -572,6 +603,18 @@ def main() -> None:
                        help="Paths to the hyper UEFI binaries "
                             "(BOOT{X64,AA64}.EFI)")
 
+    boot_tests = parser.add_argument_group(
+        "Boot tests",
+        "Boot the kernel headless and exit with the verdict, in QEMU unless "
+        "--baremetal is given"
+    )
+    boot_tests.add_argument("--boot-test", action="store_true",
+                            help="Check that the kernel boots until it idles "
+                                 "(the default for --baremetal)")
+    boot_tests.add_argument("--criteria", metavar="NAME",
+                            help="Judge the run by criteria-NAME.json "
+                                 "instead of criteria.json")
+
     qemu = parser.add_argument_group("QEMU")
     qemu.add_argument("--run", action="store_true",
                       help="Run in QEMU after building")
@@ -629,6 +672,11 @@ def main() -> None:
     rc = bmc.early_action(args, hyper_pxe_loaders)
     if rc is not None:
         sys.exit(rc)
+
+    if args.criteria is not None:
+        args.boot_test = True
+    if args.boot_test:
+        args.headless = True
 
     # A changed command line only reaches QEMU through a new image
     if args.cmdline and args.machines is None and args.make_image is None:
@@ -739,9 +787,13 @@ def main() -> None:
         if args.la57 and args.arch != "x86_64":
             raise RuntimeError("--la57 is only supported on x86_64")
 
+        verdict: Optional[re.Pattern] = None
+        if args.boot_test:
+            verdict = verdict_pattern(args.criteria)
+
         qp = run_qemu(args.arch, image_path, args.image_type, is_debug,
                       uefi_boot, args.uefi_firmware_path, args.kvm, args.la57,
-                      args.headless, args.dry, args.run_for)
+                      args.headless, args.dry, args.run_for, verdict)
 
     if args.debug:
         assert qp

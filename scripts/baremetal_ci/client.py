@@ -142,17 +142,18 @@ def git_meta() -> Dict[str, str]:
 
 
 def add_run_args(target: argparse._ActionsContainer, prefix: str = "",
-                 cmdline: bool = True, run_for: bool = True,
-                 log_dir: bool = True) -> None:
+                 cmdline: bool = True, criteria: bool = True,
+                 run_for: bool = True, log_dir: bool = True) -> None:
     if cmdline:
         target.add_argument(f"--{prefix}cmdline", dest="cmdline",
                             metavar="ARGS",
                             help="Extra kernel command line, appended "
                                  "after the machine's console line and "
                                  "the server's base")
-    target.add_argument(f"--{prefix}criteria", dest="criteria",
-                        metavar="NAME",
-                        help="Judge the run by criteria-NAME.json")
+    if criteria:
+        target.add_argument(f"--{prefix}criteria", dest="criteria",
+                            metavar="NAME",
+                            help="Judge the run by criteria-NAME.json")
     target.add_argument(f"--{prefix}timeout", dest="timeout",
                         type=float, metavar="SECONDS",
                         help="Give up on a run after this long, the "
@@ -187,8 +188,8 @@ def add_build_args(group: argparse._ActionsContainer) -> None:
                        metavar=("HOST", "CONFIG"),
                        help="Install or update the CI server on HOST "
                             "with the server CONFIG")
-    add_run_args(group, prefix="baremetal-", cmdline=False, run_for=False,
-                 log_dir=False)
+    add_run_args(group, prefix="baremetal-", cmdline=False, criteria=False,
+                 run_for=False, log_dir=False)
 
 
 def require_server(args: argparse.Namespace,
