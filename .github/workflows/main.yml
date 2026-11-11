@@ -60,7 +60,7 @@ jobs:
           toolchain: gcc
           lookup-only: true
 
-  build:
+  build-and-boot:
     needs: toolchain
     runs-on: ${{ matrix.os }}
 
@@ -88,8 +88,8 @@ jobs:
           arch: ${{ matrix.arch }}
           toolchain: ${{ matrix.toolchain }}
 
-      - name: Build the kernel
-        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --config ${{ matrix.preset }} --toolchain ${{ matrix.toolchain }} --no-tune-native"
+      - name: Build and boot the kernel
+        run: "${{ github.workspace }}/build.py --arch ${{ matrix.arch }} --config ${{ matrix.preset }} --toolchain ${{ matrix.toolchain }} --no-tune-native --boot-test"
 
   ktest:
     needs: toolchain
