@@ -7,7 +7,6 @@ import re
 import selectors
 import shutil
 import time
-import urllib.request
 import signal
 import sys
 from contextlib import contextmanager
@@ -24,6 +23,7 @@ try:
     import scripts.build_utils.package_manager as pm
     import scripts.build_utils.toolchain_builder as tb
     import scripts.build_utils.toolchain_args as ta
+    import scripts.build_utils.download as dl
     import scripts.image_utils.ultra as ultr
     import scripts.image_utils.uefi as uefi
     import scripts.image_utils.path_guesser as pg
@@ -339,7 +339,7 @@ def hyper_get_binary(name: str, optional: bool = False) -> Optional[str]:
         base_url += hyper_version
         file_url = f"{base_url}/{name}"
         try:
-            urllib.request.urlretrieve(file_url, binary_path)
+            dl.download([file_url], binary_path)
         except Exception as ex:
             print(f"Failed to retrieve {name}:", ex)
             return None
