@@ -91,11 +91,27 @@ static struct string do_lookup_symbol(
     );
 }
 
+/*
+ * This silences a false positive -Wmaybe-uninitialized warning that GCC
+ * otherwise produces if LTO is enabled.
+ */
+static inline void clear_lookup_results(
+    size_t *out_offset_within, size_t *out_size
+)
+{
+    if (out_offset_within)
+        *out_offset_within = 0;
+    if (out_size)
+        *out_size = 0;
+}
+
 struct string symbol_lookup_code_by_address(
     ptr_t address, char out_name_buf[static MAX_SYMBOL_LENGTH],
     size_t *out_offset_within, size_t *out_size
 )
 {
+    clear_lookup_results(out_offset_within, out_size);
+
     if (unlikely(!address_is_kernel_code(address)))
         return NULL_STR();
 
@@ -109,6 +125,8 @@ struct string symbol_lookup_data_by_address(
     size_t *out_offset_within, size_t *out_size
 )
 {
+    clear_lookup_results(out_offset_within, out_size);
+
     if (unlikely(!address_is_kernel_data(address)))
         return NULL_STR();
 
