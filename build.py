@@ -611,6 +611,10 @@ def main() -> None:
     boot_tests.add_argument("--boot-test", action="store_true",
                             help="Check that the kernel boots until it idles "
                                  "(the default for --baremetal)")
+    boot_tests.add_argument("--ktest", nargs="?", const="all",
+                            metavar="TESTS",
+                            help="Run the in-kernel tests selected by TESTS "
+                                 "(default: all)")
     boot_tests.add_argument("--criteria", metavar="NAME",
                             help="Judge the run by criteria-NAME.json "
                                  "instead of criteria.json")
@@ -672,6 +676,18 @@ def main() -> None:
     rc = bmc.early_action(args, hyper_pxe_loaders)
     if rc is not None:
         sys.exit(rc)
+
+    if args.ktest is not None:
+        if args.config is not None:
+            sys.exit("--config cannot be combined with --ktest")
+        if args.criteria is not None:
+            sys.exit("--criteria cannot be combined with --ktest")
+        args.config = "ktest"
+        args.criteria = "ktest"
+
+        if args.cmdline:
+            args.cmdline += " "
+        args.cmdline += f"ktest.run={args.ktest}"
 
     if args.criteria is not None:
         args.boot_test = True
