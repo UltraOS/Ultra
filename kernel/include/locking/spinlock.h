@@ -20,7 +20,7 @@ struct spinlock {
 };
 
 #define SPINLOCK_INIT(name) (struct spinlock) { { .control = 0 } }
-#define DEFINE_SPINLOCK(name) struct spinlock name = SPINLOCK_INIT(name);
+#define DEFINE_SPINLOCK(name) struct spinlock name = SPINLOCK_INIT(name)
 
 static inline void spin_lock_init(struct spinlock *lock)
 {

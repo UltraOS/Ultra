@@ -234,6 +234,32 @@ def check_statement_expressions(ctx: Context) -> List[Finding]:
     return findings
 
 
+DEFINITION_MACRO = re.compile(r"^#define (?:DEFINE|DECLARE)_\w+")
+
+
+def check_definition_macros(ctx: Context) -> List[Finding]:
+    findings = []
+
+    for path in tracked_sources(ctx):
+        lines = read_source(ctx, path).split("\n")
+
+        for index, line in enumerate(lines):
+            if not DEFINITION_MACRO.match(line):
+                continue
+
+            end = index
+            while lines[end].rstrip().endswith("\\"):
+                end += 1
+
+            if lines[end].rstrip().endswith(";"):
+                findings.append(Finding(
+                    path, end + 1,
+                    "drop the ; at the end of a definition macro"
+                ))
+
+    return findings
+
+
 def check_file_end(ctx: Context) -> List[Finding]:
     findings = []
 
@@ -716,6 +742,7 @@ def check_configs(ctx: Context) -> List[Finding]:
 CHECKS: Dict[str, Check] = {
     "comments": check_comments,
     "configs": check_configs,
+    "definition-macros": check_definition_macros,
     "enum-types": check_enum_types,
     "file-end": check_file_end,
     "formats": check_formats,

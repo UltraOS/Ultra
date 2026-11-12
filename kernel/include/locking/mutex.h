@@ -16,7 +16,7 @@ struct mutex {
 };
 
 #define MUTEX_INIT(name) (struct mutex) { SPINLOCK_INIT(name.lock) }
-#define DEFINE_MUTEX(name) struct mutex name = MUTEX_INIT(name);
+#define DEFINE_MUTEX(name) struct mutex name = MUTEX_INIT(name)
 
 void mutex_init(struct mutex*);
 

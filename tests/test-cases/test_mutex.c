@@ -32,7 +32,7 @@ TEST_CASE(mutex_try_lock_semantics)
 
 TEST_CASE(mutex_static_init)
 {
-    DEFINE_MUTEX(static_mutex)
+    DEFINE_MUTEX(static_mutex);
 
     ASSERT(mutex_try_lock(&static_mutex));
     ASSERT(!mutex_try_lock(&static_mutex));
